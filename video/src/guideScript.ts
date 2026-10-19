@@ -1,0 +1,112 @@
+// ルール説明動画の台本（Aki が Chika に説明する。ルールブック v0.8 準拠）
+// w: 話す人（a=Aki, c=Chika）／ f: 表情 ／ t: 日本語の台詞 ／ en: 画面に大きく出す英文（宣言や交渉の例）
+// s: 場面（Guide.tsx の図）／ h: 図の中で強調する箇所
+export type GLine = { s: string; w: 'a' | 'c'; f: string; t: string; en?: string; h?: string };
+
+export const CHAPTERS: Record<string, string> = {
+  title: 'はじめに', goal: '01 勝ち方', setup: '02 準備', flow: '03 手番の流れ', income: '03 収入', seven: '03 7の出目',
+  cards: '04 カード', actions: '05 行動', farm: '05 作物と動物', market: '05 市場', orders: '06 注文', joint: '06 共同注文',
+  trade: '04 交渉', bank: '04 銀行と港', english: '07 英語のルール', end: 'まとめ',
+};
+
+export const GUIDE: GLine[] = [
+  // はじめに
+  { s: 'title', w: 'c', f: 'laugh', t: 'Akiお姉ちゃん！ WORD FARMって、どうやって遊ぶの？' },
+  { s: 'title', w: 'a', f: 'happy', t: 'いいわ、順番に説明するわね。英語で交渉して、英語の注文を読んで、農場の産物を届けるゲームよ。' },
+  { s: 'title', w: 'c', f: 'surprised', t: '英語で！？ わたし、英語ちょっと苦手かも…' },
+  { s: 'title', w: 'a', f: 'normal', t: '大丈夫。文法は審査しないし、日本語を使う方法もちゃんとあるわ。3〜4人で、70〜90分くらいね。' },
+  // 01 勝ち方
+  { s: 'goal', w: 'a', f: 'explain', t: '目標は勝利点8点。注文を届けると点がもらえるの。' },
+  { s: 'goal', w: 'a', f: 'explain', t: '大事なのは、自分の手番の途中で8点に届いたら、その場で勝ちってこと。', h: 'win' },
+  { s: 'goal', w: 'c', f: 'talk', t: 'じゃあ、ほかの人の手番に8点を超えたら？' },
+  { s: 'goal', w: 'a', f: 'thinking', t: '共同注文が完成すると、そういうこともあるわ。その人は、自分の手番が来た時点で8点以上なら勝ち。カタンと同じね。', h: 'offturn' },
+  { s: 'goal', w: 'a', f: 'normal', t: '注文の山がなくなったら、そのラウンドの最後まで遊んで、点の多い人の勝ちよ。', h: 'end' },
+  // 02 準備
+  { s: 'setup', w: 'a', f: 'explain', t: 'これがマップ。六角タイル13枚で、まん中がMarket。ほかの12枚は6種類が2枚ずつよ。', h: 'tiles' },
+  { s: 'setup', w: 'c', f: 'smile', t: 'grow、buy、feed、sell、seed、animal…6種類だね！' },
+  { s: 'setup', w: 'a', f: 'explain', t: '数字と港の位置は毎回同じ。タイルの種類と、2:1の港の種類だけを毎回シャッフルするの。3:1の港は2つで、位置も決まっているわ。', h: 'harbors' },
+  { s: 'setup', w: 'a', f: 'explain', t: '拠点はタイルの角に置くの。隣の角に誰かの拠点があるところには置けない。道はないわ。', h: 'bases' },
+  { s: 'setup', w: 'a', f: 'normal', t: '1人2個ずつ。開始プレイヤーから時計回りに1個、次は逆回りに1個ね。', h: 'bases' },
+  { s: 'setup', w: 'a', f: 'explain', t: '2個目の拠点に接するタイルから、単語カードを1枚ずつもらえるわ。', h: 'bases' },
+  { s: 'setup', w: 'c', f: 'talk', t: '最初の持ち物は？' },
+  { s: 'setup', w: 'a', f: 'explain', t: '3コインと、growとsellのカード、それに無料券2枚。注文カードを3枚、共同注文を2枚、表にして始めるの。', h: 'start' },
+  // 03 手番の流れ
+  { s: 'flow', w: 'a', f: 'explain', t: '手番は3つの段階。1つ目は収入、2つ目は収穫、3つ目は交渉と行動よ。' },
+  { s: 'flow', w: 'c', f: 'smile', t: '収入、収穫、交渉と行動！ 覚えた！' },
+  { s: 'income', w: 'a', f: 'explain', t: 'まずサイコロを2個振るの。出た数字のタイルの角に拠点がある人は、全員、そのタイルのカードを1枚もらえる。', h: 'roll' },
+  { s: 'income', w: 'c', f: 'surprised', t: 'えっ、自分の手番じゃなくても、もらえるの？' },
+  { s: 'income', w: 'a', f: 'happy', t: 'そう。だから出やすい数字の近くに拠点を置くのがコツよ。6と8がいちばん出やすいわ。' },
+  { s: 'income', w: 'a', f: 'normal', t: '手番の人が何ももらえなかったら、好きなカードを1枚もらえる。救済ね。' },
+  { s: 'seven', w: 'a', f: 'explain', t: '7が出たらMarket day。まず手札が7枚以上の人は、半分を捨てるの。端数は切り捨て。', h: 'discard' },
+  { s: 'seven', w: 'c', f: 'troubled', t: 'うう、ため込みすぎると損するんだ…' },
+  { s: 'seven', w: 'a', f: 'explain', t: 'そのあと全員が好きなカードを1枚もらえるわ。手番の人から時計回りに選ぶの。', h: 'pick' },
+  // 04 カード
+  { s: 'cards', w: 'a', f: 'explain', t: 'カードは単語カード。grow、buy、feed、sellと、作物のカード、動物のカードがあるわ。' },
+  { s: 'cards', w: 'a', f: 'explain', t: 'カードと産物は呼び分けるの。カードは carrot card、収穫した産物は carrot。', en: 'a carrot card ／ a carrot' },
+  { s: 'cards', w: 'c', f: 'talk', t: 'carrot card と carrot…。カードと本物のニンジンだね！' },
+  { s: 'cards', w: 'a', f: 'normal', t: '手札の中身は秘密。でも枚数は公開よ。産物、コイン、点は全部公開。' },
+  // 05 行動
+  { s: 'actions', w: 'a', f: 'explain', t: '行動は、カードを英文の順に並べて、声に出して宣言するの。回数の上限はないわ。カードがある限り何度でも。', h: 'all' },
+  { s: 'actions', w: 'a', f: 'explain', t: '植えるときは grow と作物のカード。', en: 'I grow potatoes.', h: 'grow' },
+  { s: 'actions', w: 'c', f: 'talk', t: 'アイ・グロウ・ポテトズ！', en: 'I grow potatoes.' },
+  { s: 'actions', w: 'a', f: 'happy', t: '上手ね。植えた作物は、次の自分の手番に3つ収穫できるわ。収穫したら区画は空くの。', h: 'grow' },
+  { s: 'farm', w: 'a', f: 'explain', t: 'ニンジンは高く売れる分、肥料も要るの。feedカードも並べて、こう言うのよ。', en: 'I grow carrots and feed the soil.', h: 'carrot' },
+  { s: 'farm', w: 'a', f: 'explain', t: 'ニワトリは buy と chicken のカードと2コイン。餌をやると卵が2つ。', en: 'I buy a chicken.', h: 'chicken' },
+  { s: 'farm', w: 'a', f: 'explain', t: '牛は4コインと、牧草のためのgrowも要るわ。そのかわり、餌をやるとミルクが3つすぐに出る。', en: 'I buy a cow and grow grass.', h: 'cow' },
+  { s: 'farm', w: 'c', f: 'laugh', t: '牛さん！ 強いけど高いんだね！', en: 'I feed the cow!' },
+  { s: 'farm', w: 'a', f: 'normal', t: '農場は1人4区画。1つの区画に作物か動物を1つ。餌は1頭につき1手番に1回までよ。', h: 'fields' },
+  { s: 'market', w: 'a', f: 'explain', t: '産物は市場で売れるわ。sellカード1枚で、同じ種類を好きな数だけまとめて売れるの。', en: 'I sell four eggs.' },
+  { s: 'market', w: 'a', f: 'explain', t: 'ニンジンとミルクは1つ2コイン、ほかは1コインよ。', h: 'prices' },
+  { s: 'market', w: 'a', f: 'explain', t: '5コインで拠点を1個足すこともできる。全部で3個までね。', en: 'I build a farmhouse.' },
+  { s: 'market', w: 'c', f: 'smile', t: '拠点が増えたら、もらえるカードも増えるね！' },
+  // 06 注文
+  { s: 'orders', w: 'a', f: 'explain', t: 'ここからが本番。注文カードよ。表には英文、裏に条件が書いてあるの。', h: 'card' },
+  { s: 'orders', w: 'a', f: 'explain', t: '絵が付いているのは「易」の注文だけ。それ以外は英文を読んで判断するのよ。', h: 'card' },
+  { s: 'orders', w: 'c', f: 'troubled', t: 'えーっと…。ミルクを送って…ない？ 卵とニンジンも？', en: 'Please don’t send milk. We need two eggs and two carrots.', h: 'trap' },
+  { s: 'orders', w: 'a', f: 'exasperated', t: '逆よ。don’t send milk は「ミルクは送らないで」。欲しいのは卵2つとニンジン2つ。これが否定の罠ね。', h: 'trap' },
+  { s: 'orders', w: 'c', f: 'shy', t: 'あはは…ちゃんと読まなきゃ！' },
+  { s: 'orders', w: 'a', f: 'explain', t: '届けるときは sell カードを使って宣言する。宛先は英文の言葉を使ってね。', en: 'I sell two eggs and two carrots to the cafe.', h: 'deliver' },
+  { s: 'orders', w: 'a', f: 'explain', t: '書かれた数ちょうどを出すの。at least とある注文だけ、多くてもいいわ。', h: 'deliver' },
+  { s: 'orders', w: 'a', f: 'happy', t: '報酬は書かれた点と2コイン。点は0.5点から3点よ。', h: 'reward' },
+  { s: 'orders', w: 'a', f: 'angry', t: '読み違えて条件を満たしていなかったら不成立。出したsellカードは捨てて、その手番のうちはその注文に再挑戦できないわ。', h: 'miss' },
+  { s: 'orders', w: 'c', f: 'surprised', t: 'こわっ！ ちゃんと裏を確かめる前に、よく読もう…' },
+  { s: 'orders', w: 'a', f: 'normal', t: '注文は届いたらすぐ山から補充して、手番の人が読み上げる。1コイン払って、表の注文を1枚流すこともできるわ。1手番に1回までね。', h: 'flush' },
+  // 06 共同注文
+  { s: 'joint', w: 'a', f: 'explain', t: '共同注文は2枚、別に表にしておくの。それぞれ3行あって、全員で1行ずつ出し合って完成させるのよ。', h: 'cards' },
+  { s: 'joint', w: 'a', f: 'explain', t: 'sellカード1枚で、1行分の産物をカードに置くの。1行は1人で出す。', en: 'I bring three eggs to the summer camp.', h: 'line' },
+  { s: 'joint', w: 'a', f: 'normal', t: '同じ人が出せるのは、2枚を合わせて1手番に1行まで。', h: 'line' },
+  { s: 'joint', w: 'a', f: 'explain', t: '3行そろったら完成。出した人がそれぞれ自分の行の点をもらって、完成させた人はさらに0.5点。コインはもらえないわ。', h: 'done' },
+  { s: 'joint', w: 'c', f: 'smile', t: 'みんなで作るんだ！ 仲良しの注文だね！' },
+  { s: 'joint', w: 'a', f: 'thinking', t: 'でも、トップの人にも点が入るなら、完成させたくないかもしれない。そこが駆け引きよ。' },
+  { s: 'joint', w: 'a', f: 'explain', t: '誰かが最初の行を出したラウンドから3ラウンドで完成しなかったら時間切れ。出した人は行の点の半分をもらえる。0.5点刻みで切り捨てよ。', h: 'timeout' },
+  { s: 'joint', w: 'a', f: 'normal', t: 'まだ誰も出していない共同注文は、時間切れにならないわ。', h: 'timeout' },
+  // 04 交渉
+  { s: 'trade', w: 'a', f: 'explain', t: '交渉は、手番の人と、ほかの誰か1人の間だけ。手番でない人どうしは交換できないの。', h: 'who' },
+  { s: 'trade', w: 'a', f: 'explain', t: 'カードも産物もコインも交換に使えるわ。お互いに1つ以上を出すこと。回数は何回でもいいの。', h: 'what' },
+  { s: 'trade', w: 'a', f: 'explain', t: 'たとえば、こう持ちかけるの。', en: 'I’ll give you two carrot cards for your feed card.' },
+  { s: 'trade', w: 'c', f: 'smug', t: 'No way. How about three eggs?', en: 'No way. How about three eggs?' },
+  { s: 'trade', w: 'a', f: 'happy', t: 'Deal! …ふふ、上手じゃない。', en: 'Deal!' },
+  { s: 'bank', w: 'a', f: 'explain', t: '自分の手番中は銀行も使えるわ。同じカード4枚を、好きなカード1枚に替えられる。', h: 'bank' },
+  { s: 'bank', w: 'a', f: 'explain', t: '港の角に拠点があれば有利よ。3:1の港なら同じカード3枚、2:1の港なら、その種類のカード2枚で好きな1枚。', h: 'harbor' },
+  { s: 'bank', w: 'a', f: 'normal', t: '5コインで好きなカードを1枚買うこともできる。何回でもいいわ。', h: 'coin' },
+  { s: 'bank', w: 'a', f: 'thinking', t: '産物そのものも買えるけど、高いわ。ジャガイモ、小麦、卵は10コイン、ニンジンとミルクは15コイン。1手番に1つまでよ。', h: 'prod' },
+  { s: 'bank', w: 'c', f: 'troubled', t: '15コイン！？ 高すぎ！ 交渉でもらう方がいいね…' },
+  { s: 'bank', w: 'a', f: 'happy', t: 'その通り。足りないものは、まず英語で頼んでみるの。' },
+  // 07 英語のルール
+  { s: 'english', w: 'a', f: 'explain', t: '交渉は英語でするの。ただし、ルールの確認や説明は日本語でいいわ。', h: 'basic' },
+  { s: 'english', w: 'c', f: 'troubled', t: 'でも、単語が分からなかったら？' },
+  { s: 'english', w: 'a', f: 'explain', t: '先に Japanese word! と宣言すれば、日本語の単語を1つ使えるわ。1コインよ。', en: 'Japanese word!', h: 'word' },
+  { s: 'english', w: 'a', f: 'explain', t: '交渉を1件まるごと日本語にするのは2コイン。日本語で話せるのは払った本人だけで、相手は英語で返すの。', h: 'talk' },
+  { s: 'english', w: 'a', f: 'angry', t: '宣言しないで日本語を話したら2コイン。気をつけてね。', h: 'slip' },
+  { s: 'english', w: 'a', f: 'happy', t: 'それと、全員に無料券が2枚あるわ。1枚で、単語1つか、交渉1件を無料で日本語にできるの。', h: 'ticket' },
+  { s: 'english', w: 'c', f: 'laugh', t: '無料券！ 困ったときの切り札だ！' },
+  { s: 'english', w: 'a', f: 'explain', t: '英語で聞くのはタダよ。言い方や意味が分からなかったら、こう聞けばいいの。', en: 'How do you say ニンジン? ／ What does “dozen” mean?', h: 'ask' },
+  { s: 'english', w: 'a', f: 'normal', t: '文法は審査しないわ。通じれば成立。言い直しを手伝うのは大歓迎よ。', h: 'grammar' },
+  { s: 'english', w: 'c', f: 'smile', t: 'three milks って言っても、通じればいいんだね！' },
+  { s: 'english', w: 'a', f: 'exasperated', t: '本当は three bottles of milk よ。…でも、通じたからセーフ。', en: 'three bottles of milk' },
+  // まとめ
+  { s: 'end', w: 'a', f: 'explain', t: 'まとめるわね。サイコロで収入、作物と動物を育てて、英語の注文を読んで届ける。交渉は英語で。', h: 'sum1' },
+  { s: 'end', w: 'a', f: 'normal', t: '自分の手番中に8点に届いた人の勝ち。細かいことは、ルールブックで確かめてね。', h: 'sum2' },
+  { s: 'end', w: 'c', f: 'laugh', t: 'わかった！ 早くやろう、Akiお姉ちゃん！', en: 'Let’s play WORD FARM!' },
+  { s: 'end', w: 'a', f: 'happy', t: 'ええ。英語は間違えても大丈夫。楽しく遊びましょう。', en: 'Let’s play!' },
+];

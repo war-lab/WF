@@ -4,15 +4,15 @@ import { AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig, Eas
 import { buildBeats, Beat, G, NAMES, FPS } from './timeline';
 import { DEFS } from './defs';
 
-const C = {
+export const C = {
   bg: '#f3f5ef', paper: '#ffffff', ink: '#1d2a22', muted: '#5b685f', rule: '#d5dbd2', leaf: '#2f6b3a', wheat: '#f1d77a', wheatInk: '#3b2f05',
   warn: '#9a3b1f', sea: '#cfe1e3', soil: '#8a6a48', table: '#e6ede3',
 };
-const PCOL = ['#2f6b3a', '#a2453a', '#c99a1c', '#3b6ea8'];
+export const PCOL = ['#2f6b3a', '#a2453a', '#c99a1c', '#3b6ea8'];
 
 // ---------- 表情（public/faces/<キャラ>_<表情>.png） ----------
 // 0 Aki 冷静なお姉さん／1 Ben 陽気なお兄さん／2 Chika 元気な女の子／3 Dan 英国紳士
-const FKEY = ['aki', 'ben', 'chika', 'dan'];
+export const FKEY = ['aki', 'ben', 'chika', 'dan'];
 type Mood = 'say' | 'think' | 'win' | 'no' | 'sad' | 'wow' | 'smug' | 'yes' | 'shy';
 const FACE: Record<Mood, string[]> = {
   say: ['explain', 'talk', 'talk', 'explain'],
@@ -49,19 +49,19 @@ const Avatar: React.FC<{ src: string; size: number; ring: string }> = ({ src, si
     <Img src={staticFile(src)} style={{ position: 'absolute', width: size * 1.6, left: -size * 0.3, top: -size * 0.12 }} />
   </div>
 );
-const VARS: React.CSSProperties = {
+export const VARS: React.CSSProperties = {
   ['--bg' as any]: C.bg, ['--paper' as any]: C.paper, ['--ink' as any]: C.ink, ['--muted' as any]: C.muted, ['--rule' as any]: C.rule,
   ['--leaf' as any]: C.leaf, ['--wheat' as any]: C.wheat, ['--wheat-ink' as any]: C.wheatInk, ['--warn' as any]: C.warn,
   ['--sky' as any]: '#e3ece4', ['--hill' as any]: '#9cc39a', ['--soil' as any]: C.soil, ['--barn' as any]: '#a2453a', ['--barn-roof' as any]: '#5b2a24',
   ['--carrot' as any]: '#e07b2a', ['--potato' as any]: '#b88a55', ['--grain' as any]: '#d9a92e', ['--egg' as any]: '#f3ead8', ['--milk' as any]: '#ffffff', ['--line' as any]: '#1d2a22',
 };
-const JPF = '"Yu Gothic UI","Yu Gothic","Meiryo","Hiragino Sans",sans-serif';
-const ENF = '"Segoe UI","Helvetica Neue",Arial,sans-serif';
-const ICON: Record<string, string> = { grow: 'i-grow', buy: 'i-buy', feed: 'i-feed', sell: 'i-sell', seed: 'i-seed', animal: 'i-animal' };
-const PICON: Record<string, string> = { carrot: 'p-carrot', potato: 'p-potato', wheat: 'p-wheat', egg: 'p-egg', milk: 'p-milk' };
+export const JPF = '"Yu Gothic UI","Yu Gothic","Meiryo","Hiragino Sans",sans-serif';
+export const ENF = '"Segoe UI","Helvetica Neue",Arial,sans-serif';
+export const ICON: Record<string, string> = { grow: 'i-grow', buy: 'i-buy', feed: 'i-feed', sell: 'i-sell', seed: 'i-seed', animal: 'i-animal' };
+export const PICON: Record<string, string> = { carrot: 'p-carrot', potato: 'p-potato', wheat: 'p-wheat', egg: 'p-egg', milk: 'p-milk' };
 const LEVELS = G.players.map((p: any) => p.level);
 
-const Icon: React.FC<{ id: string; size: number; style?: React.CSSProperties }> = ({ id, size, style }) => (
+export const Icon: React.FC<{ id: string; size: number; style?: React.CSSProperties }> = ({ id, size, style }) => (
   <svg width={size} height={size} style={style}><use href={`#${id}`} width={size} height={size} /></svg>
 );
 
@@ -84,7 +84,7 @@ function useBoardGeom() {
   }, []);
 }
 
-const Board: React.FC<{ beat: Beat; local: number }> = ({ beat, local }) => {
+export const Board: React.FC<{ beat: Beat; local: number }> = ({ beat, local }) => {
   const g = useBoardGeom();
   const board = G.timeline[0].board;
   const roll = beat.kind === 'roll' ? beat.turn?.roll : undefined;
@@ -129,7 +129,7 @@ const Board: React.FC<{ beat: Beat; local: number }> = ({ beat, local }) => {
 
 // ---------- ダイス ----------
 const PIPS: Record<number, number[][]> = { 1: [[0, 0]], 2: [[-1, -1], [1, 1]], 3: [[-1, -1], [0, 0], [1, 1]], 4: [[-1, -1], [1, -1], [-1, 1], [1, 1]], 5: [[-1, -1], [1, -1], [0, 0], [-1, 1], [1, 1]], 6: [[-1, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [1, 1]] };
-const Die: React.FC<{ v: number; rot: number; x: number }> = ({ v, rot, x }) => (
+export const Die: React.FC<{ v: number; rot: number; x: number }> = ({ v, rot, x }) => (
   <svg width={70} height={70} style={{ position: 'absolute', left: x, top: 0, transform: `rotate(${rot}deg)` }}>
     <rect x={3} y={3} width={64} height={64} rx={12} fill="#fff" stroke={C.ink} strokeWidth={3} />
     {(PIPS[v] || []).map(([a, b], i) => <circle key={i} cx={35 + a * 16} cy={35 + b * 16} r={6} fill={C.ink} />)}
