@@ -1,0 +1,771 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>WORD FARM ルールブック</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* レイアウト：1段組みの冊子。英文は「宣言カード」の帯で示し、表は参照用に罫線を細く */
+:root{
+  --bg:#f6f7f2;        /* 生成りより少し緑寄りの紙 */
+  --paper:#ffffff;
+  --ink:#1d2a22;       /* 深い葉の色を帯びた墨 */
+  --muted:#5b685f;
+  --rule:#d5dbd2;
+  --leaf:#2f6b3a;      /* アクセント：畑の緑 */
+  --wheat:#f1d77a;     /* 英文の帯：麦の黄 */
+  --wheat-ink:#3b2f05;
+  --warn:#9a3b1f;
+  --sky:#e3ece4; --hill:#9cc39a; --soil:#8a6a48; --barn:#a2453a; --barn-roof:#5b2a24;
+  --carrot:#e07b2a; --potato:#b88a55; --grain:#d9a92e; --egg:#f3ead8; --milk:#ffffff; --line:#1d2a22;
+  --p1:#2f6b3a; --p2:#a2453a; --p3:#c99a1c; --p4:#3b6ea8; --table:#e6ede3; --sea:#cfe1e3;
+  --f-display:"Dela Gothic One","Hiragino Sans","Yu Gothic",sans-serif;
+  --f-body:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic","Meiryo",sans-serif;
+  --f-en:"IBM Plex Mono",ui-monospace,"Consolas",monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#121a15; --paper:#18221c; --ink:#e4ebe5; --muted:#a3b0a7; --rule:#2c3a31;
+    --leaf:#7fc48b; --wheat:#5a4a12; --wheat-ink:#f6e7ad; --warn:#e8916f; color-scheme:dark;
+    --sky:#1c2a22; --hill:#2f5434; --soil:#6b5238; --barn:#8e3e34; --barn-roof:#4a2420;
+    --carrot:#e8904a; --potato:#b08a5e; --grain:#d4a83a; --egg:#e9dfc8; --milk:#e8eee9; --line:#0c120e;
+    --p1:#7fc48b; --p2:#e07a6c; --p3:#e3bf4f; --p4:#7aa6d8; --table:#1a261f; --sea:#14262b;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#121a15; --paper:#18221c; --ink:#e4ebe5; --muted:#a3b0a7; --rule:#2c3a31;
+  --leaf:#7fc48b; --wheat:#5a4a12; --wheat-ink:#f6e7ad; --warn:#e8916f; color-scheme:dark;
+  --sky:#1c2a22; --hill:#2f5434; --soil:#6b5238; --barn:#8e3e34; --barn-roof:#4a2420;
+  --carrot:#e8904a; --potato:#b08a5e; --grain:#d4a83a; --egg:#e9dfc8; --milk:#e8eee9; --line:#0c120e;
+  --p1:#7fc48b; --p2:#e07a6c; --p3:#e3bf4f; --p4:#7aa6d8; --table:#1a261f; --sea:#14262b;
+}
+/* はじめに */
+.chain{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:14px}
+.chain span{background:var(--paper);border:1px solid var(--rule);border-radius:999px;padding:4px 12px;display:inline-flex;gap:6px;align-items:center}
+.chain span.goal{background:var(--leaf);color:var(--paper);border-color:var(--leaf);font-weight:700}
+.chain i{font-style:normal;color:var(--leaf);font-weight:700}
+.steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;list-style:none;padding:0;margin:0}
+@media (max-width:640px){ .steps{grid-template-columns:repeat(2,minmax(0,1fr))} }
+.step{background:var(--paper);border:1px solid var(--rule);border-radius:8px;padding:12px;display:grid;gap:6px;align-content:start;min-width:0}
+.step svg{width:44px;height:44px}
+.step b{font-size:15px}
+.step b .n{color:var(--leaf);font-family:var(--f-en);margin-right:6px}
+.step p{font-size:13px;color:var(--muted);margin:0}
+.loop{font-size:13px;color:var(--muted);text-align:right}
+.map{width:100%;height:auto;display:block}
+.map text{font-family:var(--f-body)}
+.map text.en{font-family:var(--f-en);background:none;padding:0}
+/* 凡例 */
+.legend{list-style:none;padding:0;display:grid;gap:6px;font-size:13px}
+.legend li{display:block}
+.legend li>.tok:first-child,.legend li>svg:first-child{margin-right:8px;vertical-align:middle}
+.tok{font-family:var(--f-en);font-size:12px;font-weight:700;background:var(--wheat);color:var(--wheat-ink);border-radius:999px;padding:1px 8px;flex:none}
+.tok.mk{border-radius:4px}
+/* イラスト */
+.hero{width:100%;height:auto;display:block;border-radius:8px;max-width:100%}
+.ico{width:28px;height:28px;vertical-align:middle;flex:none}
+.ico.sm{width:20px;height:20px}
+.board{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
+.tile{display:grid;justify-items:center;gap:2px;font-size:12px;color:var(--muted)}
+.tile svg{width:100%;max-width:96px;height:auto}
+.tile b{font-family:var(--f-en);color:var(--ink);font-size:13px}
+@media (max-width:560px){ .board{grid-template-columns:repeat(3,minmax(0,1fr))} }
+.cards{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start}
+.card-svg{width:150px;max-width:100%;height:auto}
+.card-svg.wide{width:300px}
+.act td:nth-child(2){min-width:9.5em}
+.prodcell{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.75;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:32px 64px}
+.book{max-width:760px;margin:0 auto;display:grid;gap:28px}
+header{display:grid;gap:10px;padding-bottom:20px;border-bottom:3px solid var(--leaf)}
+.kicker{font-size:12px;letter-spacing:.14em;color:var(--leaf);font-weight:700}
+h1{font-family:var(--f-display);font-weight:400;font-size:clamp(34px,7vw,52px);line-height:1.1;margin:0;letter-spacing:.02em;text-wrap:balance}
+.lead{margin:0;color:var(--muted);max-width:60ch}
+.facts{display:flex;flex-wrap:wrap;gap:8px 20px;margin:4px 0 0;padding:0;list-style:none;font-size:14px}
+.facts b{color:var(--leaf)}
+section{display:grid;gap:12px}
+h2{font-family:var(--f-display);font-weight:400;font-size:22px;margin:0;display:flex;gap:12px;align-items:baseline;text-wrap:balance}
+h2 .no{font-family:var(--f-en);font-size:13px;color:var(--leaf);letter-spacing:.06em}
+h3{font-size:16px;margin:8px 0 0;font-weight:700}
+p{margin:0;max-width:65ch}
+ul,ol{margin:0;padding-left:1.4em;display:grid;gap:4px}
+.en{font-family:var(--f-en);font-size:14px;background:var(--wheat);color:var(--wheat-ink);padding:1px 6px;border-radius:3px;white-space:nowrap}
+.say{display:grid;gap:6px;padding:12px 16px;background:var(--paper);border-left:4px solid var(--wheat);font-family:var(--f-en);font-size:14px}
+.box{background:var(--paper);border:1px solid var(--rule);border-radius:6px;padding:16px 18px;display:grid;gap:10px}
+.flow{counter-reset:s;list-style:none;padding:0;display:grid;gap:8px}
+.flow li{counter-increment:s;display:grid;grid-template-columns:2.2em 1fr;gap:10px;align-items:start}
+.flow li::before{content:counter(s);font-family:var(--f-display);color:var(--paper);background:var(--leaf);width:1.8em;height:1.8em;border-radius:50%;display:grid;place-items:center;font-size:13px;margin-top:2px}
+.flow small{color:var(--muted);display:block;font-size:13px}
+.tbl{overflow-x:auto;border:1px solid var(--rule);border-radius:6px;background:var(--paper)}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--rule);vertical-align:top}
+th{font-size:12px;letter-spacing:.06em;color:var(--muted);font-weight:700;background:var(--bg)}
+tr:last-child td{border-bottom:0}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.note{font-size:13px;color:var(--muted)}
+.warn{color:var(--warn);font-weight:700}
+.lvl{font-size:12px;border:1px solid var(--rule);border-radius:10px;padding:0 8px;white-space:nowrap}
+footer{font-size:12px;color:var(--muted);border-top:1px solid var(--rule);padding-top:12px}
+a:focus-visible{outline:2px solid var(--leaf);outline-offset:2px}
+@media (max-width:480px){ body{font-size:14px} .en{white-space:normal} }
+@media print{
+  :root{--bg:#fff;--paper:#fff;--ink:#000;--muted:#333;--rule:#999;--wheat:#eee;--wheat-ink:#000;--leaf:#000}
+  body{padding:0} .book{max-width:none;gap:16px} section{break-inside:avoid-page}
+}
+</style>
+<style>html{color-scheme:light dark}body{margin:0;font-size:14px}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <!-- 産地アイコン（48×48） -->
+    <symbol id="i-grow" viewBox="0 0 48 48"><path d="M6 40h36" stroke="var(--soil)" stroke-width="4" stroke-linecap="round"/><path d="M24 40V20" stroke="var(--leaf)" stroke-width="3.5" stroke-linecap="round"/><path d="M24 26c-10 0-14-6-14-12 8 0 14 4 14 12z" fill="var(--leaf)"/><path d="M24 22c0-8 6-12 14-12 0 6-4 12-14 12z" fill="var(--hill)"/></symbol>
+    <symbol id="i-buy" viewBox="0 0 48 48"><g fill="var(--grain)" stroke="var(--line)" stroke-width="2"><ellipse cx="24" cy="36" rx="14" ry="5"/><ellipse cx="24" cy="29" rx="14" ry="5"/><ellipse cx="24" cy="22" rx="14" ry="5"/><ellipse cx="24" cy="15" rx="14" ry="5"/></g><path d="M21 15h6" stroke="var(--line)" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-feed" viewBox="0 0 48 48"><path d="M12 8c0 0 2-4 12-4s12 4 12 4" fill="none" stroke="var(--line)" stroke-width="2.5"/><path d="M9 16h30l-4 26H13z" fill="var(--soil)" stroke="var(--line)" stroke-width="2"/><g fill="var(--grain)"><circle cx="18" cy="14" r="3"/><circle cx="24" cy="12" r="3"/><circle cx="30" cy="14" r="3"/><circle cx="21" cy="10" r="2.5"/><circle cx="27" cy="10" r="2.5"/></g></symbol>
+    <symbol id="i-sell" viewBox="0 0 48 48"><rect x="6" y="16" width="36" height="24" rx="2" fill="var(--potato)" stroke="var(--line)" stroke-width="2"/><path d="M6 24h36M6 32h36" stroke="var(--line)" stroke-width="2"/><circle cx="16" cy="12" r="5" fill="var(--carrot)"/><circle cx="27" cy="11" r="5" fill="var(--egg)" stroke="var(--line)" stroke-width="1.5"/><circle cx="36" cy="13" r="4" fill="var(--grain)"/></symbol>
+    <symbol id="i-seed" viewBox="0 0 48 48"><path d="M10 6h28v36H10z" fill="var(--paper)" stroke="var(--line)" stroke-width="2"/><path d="M10 14h28" stroke="var(--line)" stroke-width="2"/><g fill="var(--soil)"><ellipse cx="18" cy="24" rx="2.5" ry="3.5"/><ellipse cx="29" cy="22" rx="2.5" ry="3.5"/><ellipse cx="23" cy="31" rx="2.5" ry="3.5"/><ellipse cx="31" cy="34" rx="2.5" ry="3.5"/><ellipse cx="16" cy="36" rx="2.5" ry="3.5"/></g></symbol>
+    <symbol id="i-animal" viewBox="0 0 48 48"><path d="M12 12c-4-2-6-6-6-8 4 0 8 2 10 5M36 12c4-2 6-6 6-8-4 0-8 2-10 5" fill="none" stroke="var(--line)" stroke-width="2.5" stroke-linecap="round"/><rect x="11" y="9" width="26" height="30" rx="12" fill="var(--paper)" stroke="var(--line)" stroke-width="2"/><path d="M14 17c4-4 8-3 9 2-3 3-7 3-9-2z" fill="var(--line)"/><circle cx="18" cy="20" r="1.8" fill="var(--paper)"/><circle cx="30" cy="20" r="1.8" fill="var(--line)"/><ellipse cx="24" cy="32" rx="10" ry="6.5" fill="var(--barn)" opacity=".35"/><circle cx="20" cy="32" r="1.6" fill="var(--line)"/><circle cx="28" cy="32" r="1.6" fill="var(--line)"/></symbol>
+    <!-- 産物アイコン（32×32） -->
+    <symbol id="p-carrot" viewBox="0 0 32 32"><path d="M10 10l12 3-12 17z" fill="var(--carrot)" stroke="var(--line)" stroke-width="1.5" stroke-linejoin="round"/><path d="M15 11c-2-4-1-8 1-9M17 12c1-4 4-7 7-7M14 11c-4-1-6-4-6-6" stroke="var(--leaf)" stroke-width="2.2" fill="none" stroke-linecap="round"/></symbol>
+    <symbol id="p-potato" viewBox="0 0 32 32"><path d="M6 17c0-7 6-10 12-10s9 4 8 10-6 9-12 9-8-4-8-9z" fill="var(--potato)" stroke="var(--line)" stroke-width="1.5"/><g fill="var(--soil)"><circle cx="12" cy="15" r="1.2"/><circle cx="19" cy="13" r="1.2"/><circle cx="17" cy="20" r="1.2"/></g></symbol>
+    <symbol id="p-wheat" viewBox="0 0 32 32"><path d="M16 30V8" stroke="var(--grain)" stroke-width="2" stroke-linecap="round"/><g fill="var(--grain)" stroke="var(--line)" stroke-width="1"><ellipse cx="12.5" cy="12" rx="2.5" ry="4" transform="rotate(-30 12.5 12)"/><ellipse cx="19.5" cy="12" rx="2.5" ry="4" transform="rotate(30 19.5 12)"/><ellipse cx="12.5" cy="18" rx="2.5" ry="4" transform="rotate(-30 12.5 18)"/><ellipse cx="19.5" cy="18" rx="2.5" ry="4" transform="rotate(30 19.5 18)"/><ellipse cx="16" cy="6" rx="2.3" ry="4"/></g></symbol>
+    <symbol id="p-egg" viewBox="0 0 32 32"><path d="M16 4c6 0 10 9 10 15s-4 9-10 9-10-3-10-9S10 4 16 4z" fill="var(--egg)" stroke="var(--line)" stroke-width="1.5"/></symbol>
+    <symbol id="p-milk" viewBox="0 0 32 32"><path d="M12 3h8v5l4 5v15a2 2 0 0 1-2 2H10a2 2 0 0 1-2-2V13l4-5z" fill="var(--milk)" stroke="var(--line)" stroke-width="1.5" stroke-linejoin="round"/><path d="M8 17h16v6H8z" fill="var(--leaf)" opacity=".8"/></symbol>
+  </defs>
+</svg>
+
+<div class="book">
+<header>
+  <svg class="hero" viewBox="0 0 760 230" role="img" aria-label="畑と納屋、ダイス2個、英語の吹き出しがある農場の絵">
+    <rect width="760" height="230" fill="var(--sky)"/>
+    <circle cx="640" cy="58" r="30" fill="var(--grain)"/>
+    <path d="M0 150 C140 100 260 120 380 140 S620 110 760 135 V230 H0z" fill="var(--hill)"/>
+    <!-- 畑の畝 -->
+    <path d="M0 230 L140 160 L300 160 L360 230z" fill="var(--soil)"/>
+    <g stroke="var(--leaf)" stroke-width="5" stroke-linecap="round" stroke-dasharray="2 14">
+      <path d="M30 228 L160 166"/><path d="M95 228 L198 166"/><path d="M160 228 L236 166"/><path d="M225 228 L274 166"/><path d="M290 228 L300 190"/>
+    </g>
+    <!-- 納屋 -->
+    <g>
+      <path d="M430 118 L480 82 L530 118 z" fill="var(--barn-roof)"/>
+      <rect x="436" y="116" width="88" height="70" fill="var(--barn)"/>
+      <rect x="464" y="144" width="32" height="42" fill="var(--barn-roof)"/>
+      <path d="M464 144 L496 186 M496 144 L464 186" stroke="var(--sky)" stroke-width="3"/>
+      <rect x="472" y="122" width="16" height="12" fill="var(--sky)"/>
+    </g>
+    <!-- 柵 -->
+    <g stroke="var(--paper)" stroke-width="4" stroke-linecap="round">
+      <path d="M550 182 H740"/><path d="M550 168 H740"/>
+      <path d="M560 160 V190 M600 160 V190 M640 160 V190 M680 160 V190 M720 160 V190"/>
+    </g>
+    <!-- ダイス -->
+    <g transform="translate(600 196) rotate(-12)">
+      <rect x="-20" y="-20" width="40" height="40" rx="7" fill="var(--paper)" stroke="var(--line)" stroke-width="2"/>
+      <circle cx="-9" cy="-9" r="3.4" fill="var(--line)"/><circle cx="9" cy="9" r="3.4" fill="var(--line)"/><circle cx="9" cy="-9" r="3.4" fill="var(--line)"/><circle cx="-9" cy="9" r="3.4" fill="var(--line)"/>
+    </g>
+    <g transform="translate(652 202) rotate(10)">
+      <rect x="-20" y="-20" width="40" height="40" rx="7" fill="var(--paper)" stroke="var(--line)" stroke-width="2"/>
+      <circle cx="-9" cy="-9" r="3.4" fill="var(--line)"/><circle cx="0" cy="0" r="3.4" fill="var(--line)"/><circle cx="9" cy="9" r="3.4" fill="var(--line)"/>
+    </g>
+    <!-- 吹き出し -->
+    <g transform="translate(150 28)">
+      <rect width="230" height="54" rx="12" fill="var(--paper)" stroke="var(--line)" stroke-width="2"/>
+      <path d="M40 54 L32 76 L62 54" fill="var(--paper)" stroke="var(--line)" stroke-width="2" stroke-linejoin="round"/>
+      <path d="M41 52 L61 52" stroke="var(--paper)" stroke-width="4"/>
+      <text x="115" y="34" text-anchor="middle" font-family="IBM Plex Mono, Consolas, monospace" font-size="19" fill="var(--ink)">I grow carrots.</text>
+    </g>
+    <!-- 人参 -->
+    <use href="#p-carrot" x="330" y="168" width="40" height="40"/>
+    <use href="#p-egg" x="372" y="176" width="30" height="30"/>
+    <use href="#p-milk" x="398" y="166" width="38" height="38"/>
+  </svg>
+  <div class="kicker">
+試遊版ルール　v0.3</div>
+  <h1>WORD FARM</h1>
+  <p class="lead">英語で交渉し、英文の注文を読み、農場の産物を届けて点を稼ぐボードゲーム。文法は審査しません。通じればOKです。</p>
+  <ul class="facts">
+    <li><b>人数</b>　3〜4人</li>
+    <li><b>時間</b>　60〜80分（目安）</li>
+    <li><b>勝利点</b>　8点（3人戦・4人戦とも）</li>
+  </ul>
+</header>
+
+<section>
+  <h2>はじめに</h2>
+  <h3>ゲームの目的</h3>
+  <p>産地に拠点を置いて単語カードを集め、英文を宣言して農場を育てる。できた産物を、英文で書かれた注文どおりに届けて点を稼ぐ。<b>先に勝利点8点を取った人の勝ち。</b>足りないカードは、英語の交渉で手に入れる。</p>
+  <div class="chain" aria-label="点を取るまでの流れ">
+    <span><svg class="ico sm"><use href="#i-seed"/></svg>産地に拠点</span><i>→</i>
+    <span>単語カード</span><i>→</i>
+    <span><svg class="ico sm"><use href="#i-grow"/></svg>植える・飼う</span><i>→</i>
+    <span><svg class="ico sm"><use href="#p-carrot"/></svg><svg class="ico sm"><use href="#p-egg"/></svg><svg class="ico sm"><use href="#p-milk"/></svg>産物</span><i>→</i>
+    <span>英文の注文を読んで届ける</span><i>→</i>
+    <span class="goal">点＋2コイン</span>
+  </div>
+
+  <h3>1ターンの流れ</h3>
+  <ol class="steps">
+    <li class="step">
+      <svg viewBox="0 0 48 48" aria-hidden="true"><g transform="rotate(-10 18 26)"><rect x="4" y="12" width="26" height="26" rx="5" fill="var(--paper)" stroke="var(--line)" stroke-width="2"/><circle cx="11" cy="19" r="2.4" fill="var(--line)"/><circle cx="23" cy="31" r="2.4" fill="var(--line)"/><circle cx="17" cy="25" r="2.4" fill="var(--line)"/></g><rect x="24" y="6" width="20" height="20" rx="4" fill="var(--paper)" stroke="var(--line)" stroke-width="2" transform="rotate(12 34 16)"/><circle cx="34" cy="16" r="2.2" fill="var(--line)"/></svg>
+      <b><span class="n">1</span>収入</b>
+      <p>手番の人がサイコロ2個を振る。出た数字のタイルの角に拠点がある<b>全員</b>が、単語カードをもらう。</p>
+    </li>
+    <li class="step">
+      <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M6 22h36l-5 20H11z" fill="var(--potato)" stroke="var(--line)" stroke-width="2"/><path d="M14 22c0-8 4-12 10-12s10 4 10 12" fill="none" stroke="var(--line)" stroke-width="2.5"/><use href="#p-carrot" x="10" y="8" width="18" height="18"/><use href="#p-potato" x="22" y="12" width="16" height="16"/></svg>
+      <b><span class="n">2</span>収穫</b>
+      <p>前の自分のターンまでに植えた作物が実る。1区画につき産物3つを手元に取り、<b>その区画は空く</b>。牛に餌をやっていれば、ここでミルク3つを受け取る。</p>
+    </li>
+    <li class="step">
+      <svg viewBox="0 0 48 48" aria-hidden="true"><rect x="3" y="6" width="30" height="20" rx="6" fill="var(--paper)" stroke="var(--line)" stroke-width="2"/><path d="M10 26l-3 7 9-7" fill="var(--paper)" stroke="var(--line)" stroke-width="2" stroke-linejoin="round"/><text x="18" y="20" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10" fill="var(--ink)">Hi!</text><rect x="20" y="24" width="24" height="18" rx="5" fill="var(--wheat)" stroke="var(--line)" stroke-width="2"/><path d="M36 42l3 5-8-5" fill="var(--wheat)" stroke="var(--line)" stroke-width="2" stroke-linejoin="round"/></svg>
+      <b><span class="n">3</span>交渉と行動</b>
+      <p>英語で交換を持ちかけ、英文を宣言して行動する。<b>行動は2回まで</b>、交渉は何度でも、順番は自由。</p>
+    </li>
+    <li class="step">
+      <svg viewBox="0 0 48 48" aria-hidden="true"><g stroke="var(--line)" stroke-width="2"><rect x="8" y="12" width="16" height="24" rx="3" fill="var(--paper)" transform="rotate(-14 16 24)"/><rect x="16" y="10" width="16" height="24" rx="3" fill="var(--paper)"/><rect x="24" y="12" width="16" height="24" rx="3" fill="var(--paper)" transform="rotate(14 32 24)"/></g><text x="24" y="44" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10" font-weight="700" fill="var(--leaf)">next</text></svg>
+      <b><span class="n">4</span>終了</b>
+      <p>左隣の人の番へ。手札の上限はない。7が出たときだけ、手札の多い人は捨てる（03）。</p>
+    </li>
+  </ol>
+  <p class="loop">↻ これを勝利点に届く人が出るまで繰り返す</p>
+
+  <h3>産地マップ（例）</h3>
+  <svg class="map" viewBox="0 0 606 416" role="img" aria-label="六角タイル13枚の産地マップ。中央にMarket、海岸線に港6つ、4人の初期拠点が交点に置かれている">
+<rect x="1" y="1" width="604" height="414" rx="18" fill="var(--sea)"/>
+<path d="M483.3 104.0 L521.6 81.9" stroke="var(--soil)" stroke-width="6" stroke-linecap="round"/>
+<circle cx="521.6" cy="81.9" r="21" fill="var(--paper)" stroke="var(--line)" stroke-width="2"/>
+<use href="#i-grow" x="509.6" y="64.9" width="24" height="24"/>
+<text x="521.6" y="97.9" text-anchor="middle" class="en" font-size="10" font-weight="700" fill="var(--ink)">2:1</text>
+<path d="M483.3 312.0 L521.6 334.1" stroke="var(--soil)" stroke-width="6" stroke-linecap="round"/>
+<circle cx="521.6" cy="334.1" r="21" fill="var(--paper)" stroke="var(--line)" stroke-width="2"/>
+<use href="#i-seed" x="509.6" y="317.1" width="24" height="24"/>
+<text x="521.6" y="350.1" text-anchor="middle" class="en" font-size="10" font-weight="700" fill="var(--ink)">2:1</text>
+<path d="M348.2 338.0 L362.7 379.8" stroke="var(--soil)" stroke-width="6" stroke-linecap="round"/>
+<circle cx="362.7" cy="379.8" r="21" fill="var(--paper)" stroke="var(--line)" stroke-width="2"/>
+<text x="362.7" y="384.8" text-anchor="middle" class="en" font-size="14" font-weight="700" fill="var(--ink)">3:1</text>
+<path d="M123.0 312.0 L84.8 334.1" stroke="var(--soil)" stroke-width="6" stroke-linecap="round"/>
+<circle cx="84.8" cy="334.1" r="21" fill="var(--paper)" stroke="var(--line)" stroke-width="2"/>
+<use href="#i-sell" x="72.8" y="317.1" width="24" height="24"/>
+<text x="84.8" y="350.1" text-anchor="middle" class="en" font-size="10" font-weight="700" fill="var(--ink)">2:1</text>
+<path d="M123.0 104.0 L84.8 81.9" stroke="var(--soil)" stroke-width="6" stroke-linecap="round"/>
+<circle cx="84.8" cy="81.9" r="21" fill="var(--paper)" stroke="var(--line)" stroke-width="2"/>
+<text x="84.8" y="86.9" text-anchor="middle" class="en" font-size="14" font-weight="700" fill="var(--ink)">3:1</text>
+<path d="M258.1 78.0 L243.7 36.2" stroke="var(--soil)" stroke-width="6" stroke-linecap="round"/>
+<circle cx="243.7" cy="36.2" r="21" fill="var(--paper)" stroke="var(--line)" stroke-width="2"/>
+<use href="#i-animal" x="231.7" y="19.2" width="24" height="24"/>
+<text x="243.7" y="52.2" text-anchor="middle" class="en" font-size="10" font-weight="700" fill="var(--ink)">2:1</text>
+<polygon points="213.1,156.0 168.1,182.0 123.0,156.0 123.0,104.0 168.1,78.0 213.1,104.0" fill="var(--paper)" stroke="var(--leaf)" stroke-width="2.5"/>
+<use href="#i-buy" x="151.1" y="94.0" width="34" height="34"/>
+<circle cx="168.1" cy="144.0" r="14" fill="var(--wheat)" stroke="var(--line)" stroke-width="1.2"/>
+<text x="168.1" y="149.0" text-anchor="middle" class="en" font-size="14" font-weight="700" fill="var(--wheat-ink)">3</text>
+<circle cx="165.5" cy="165.0" r="1.7" fill="var(--muted)"/>
+<circle cx="170.7" cy="165.0" r="1.7" fill="var(--muted)"/>
+<polygon points="303.2,156.0 258.1,182.0 213.1,156.0 213.1,104.0 258.1,78.0 303.2,104.0" fill="var(--paper)" stroke="var(--leaf)" stroke-width="2.5"/>
+<use href="#i-seed" x="241.1" y="94.0" width="34" height="34"/>
+<circle cx="258.1" cy="144.0" r="14" fill="var(--wheat)" stroke="var(--line)" stroke-width="1.2"/>
+<text x="258.1" y="149.0" text-anchor="middle" class="en" font-size="14" font-weight="700" fill="var(--wheat-ink)">5</text>
+<circle cx="250.3" cy="165.0" r="1.7" fill="var(--muted)"/>
+<circle cx="255.5" cy="165.0" r="1.7" fill="var(--muted)"/>
+<circle cx="260.7" cy="165.0" r="1.7" fill="var(--muted)"/>
+<circle cx="265.9" cy="165.0" r="1.7" fill="var(--muted)"/>
+<polygon points="393.2,156.0 348.2,182.0 303.2,156.0 303.2,104.0 348.2,78.0 393.2,104.0" fill="var(--paper)" stroke="var(--leaf)" stroke-width="2.5"/>
+<use href="#i-grow" x="331.2" y="94.0" width="34" height="34"/>
+<circle cx="348.2" cy="144.0" r="14" fill="var(--wheat)" stroke="var(--line)" stroke-width="1.2"/>
+<text x="348.2" y="149.0" text-anchor="middle" class="en" font-size="14" font-weight="700" fill="var(--warn)">8</text>
+<circle cx="337.8" cy="165.0" r="1.7" fill="var(--muted)"/>
+<circle cx="343.0" cy="165.0" r="1.7" fill="var(--muted)"/>
+<circle cx="348.2" cy="165.0" r="1.7" fill="var(--muted)"/>
+<circle cx="353.4" cy="165.0" r="1.7" fill="var(--muted)"/>
+<circle cx="358.6" cy="165.0" r="1.7" fill="var(--muted)"/>
+<polygon points="483.3,156.0 438.3,182.0 393.2,156.0 393.2,104.0 438.3,78.0 483.3,104.0" fill="var(--paper)" stroke="var(--leaf)" stroke-width="2.5"/>
+<use href="#i-feed" x="421.3" y="94.0" width="34" height="34"/>
+<circle cx="438.3" cy="144.0" r="14" fill="var(--wheat)" stroke="var(--line)" stroke-width="1.2"/>
+<text x="438.3" y="149.0" text-anchor="middle" class="en" font-size="14" font-weight="700" fill="var(--wheat-ink)">11</text>
+<circle cx="435.7" cy="165.0" r="1.7" fill="var(--muted)"/>
+<circle cx="440.9" cy="165.0" r="1.7" fill="var(--muted)"/>
+<polygon points="168.1,234.0 123.0,260.0 78.0,234.0 78.0,182.0 123.0,156.0 168.1,182.0" fill="var(--paper)" stroke="var(--leaf)" stroke-width="2.5"/>
+<use href="#i-sell" x="106.0" y="172.0" width="34" height="34"/>
+<circle cx="123.0" cy="222.0" r="14" fill="var(--wheat)" stroke="var(--line)" stroke-width="1.2"/>
+<text x="123.0" y="227.0" text-anchor="middle" class="en" font-size="14" font-weight="700" fill="var(--warn)">8</text>
+<circle cx="112.6" cy="243.0" r="1.7" fill="var(--muted)"/>
+<circle cx="117.8" cy="243.0" r="1.7" fill="var(--muted)"/>
+<circle cx="123.0" cy="243.0" r="1.7" fill="var(--muted)"/>
+<circle cx="128.2" cy="243.0" r="1.7" fill="var(--muted)"/>
+<circle cx="133.4" cy="243.0" r="1.7" fill="var(--muted)"/>
+<polygon points="258.1,234.0 213.1,260.0 168.1,234.0 168.1,182.0 213.1,156.0 258.1,182.0" fill="var(--paper)" stroke="var(--leaf)" stroke-width="2.5"/>
+<use href="#i-animal" x="196.1" y="172.0" width="34" height="34"/>
+<circle cx="213.1" cy="222.0" r="14" fill="var(--wheat)" stroke="var(--line)" stroke-width="1.2"/>
+<text x="213.1" y="227.0" text-anchor="middle" class="en" font-size="14" font-weight="700" fill="var(--wheat-ink)">4</text>
+<circle cx="207.9" cy="243.0" r="1.7" fill="var(--muted)"/>
+<circle cx="213.1" cy="243.0" r="1.7" fill="var(--muted)"/>
+<circle cx="218.3" cy="243.0" r="1.7" fill="var(--muted)"/>
+<polygon points="348.2,234.0 303.2,260.0 258.1,234.0 258.1,182.0 303.2,156.0 348.2,182.0" fill="var(--wheat)" stroke="var(--line)" stroke-width="2"/>
+<text x="303.2" y="206.0" text-anchor="middle" class="en" font-size="15" font-weight="700" fill="var(--wheat-ink)">Market</text>
+<text x="303.2" y="224.0" text-anchor="middle" font-size="11" fill="var(--wheat-ink)">7＝全員1枚</text>
+<polygon points="438.3,234.0 393.2,260.0 348.2,234.0 348.2,182.0 393.2,156.0 438.3,182.0" fill="var(--paper)" stroke="var(--leaf)" stroke-width="2.5"/>
+<use href="#i-seed" x="376.2" y="172.0" width="34" height="34"/>
+<circle cx="393.2" cy="222.0" r="14" fill="var(--wheat)" stroke="var(--line)" stroke-width="1.2"/>
+<text x="393.2" y="227.0" text-anchor="middle" class="en" font-size="14" font-weight="700" fill="var(--wheat-ink)">12</text>
+<circle cx="393.2" cy="243.0" r="1.7" fill="var(--muted)"/>
+<polygon points="528.3,234.0 483.3,260.0 438.3,234.0 438.3,182.0 483.3,156.0 528.3,182.0" fill="var(--paper)" stroke="var(--leaf)" stroke-width="2.5"/>
+<use href="#i-animal" x="466.3" y="172.0" width="34" height="34"/>
+<circle cx="483.3" cy="222.0" r="14" fill="var(--wheat)" stroke="var(--line)" stroke-width="1.2"/>
+<text x="483.3" y="227.0" text-anchor="middle" class="en" font-size="14" font-weight="700" fill="var(--warn)">6</text>
+<circle cx="472.9" cy="243.0" r="1.7" fill="var(--muted)"/>
+<circle cx="478.1" cy="243.0" r="1.7" fill="var(--muted)"/>
+<circle cx="483.3" cy="243.0" r="1.7" fill="var(--muted)"/>
+<circle cx="488.5" cy="243.0" r="1.7" fill="var(--muted)"/>
+<circle cx="493.7" cy="243.0" r="1.7" fill="var(--muted)"/>
+<polygon points="213.1,312.0 168.1,338.0 123.0,312.0 123.0,260.0 168.1,234.0 213.1,260.0" fill="var(--paper)" stroke="var(--leaf)" stroke-width="2.5"/>
+<use href="#i-grow" x="151.1" y="250.0" width="34" height="34"/>
+<circle cx="168.1" cy="300.0" r="14" fill="var(--wheat)" stroke="var(--line)" stroke-width="1.2"/>
+<text x="168.1" y="305.0" text-anchor="middle" class="en" font-size="14" font-weight="700" fill="var(--wheat-ink)">2</text>
+<circle cx="168.1" cy="321.0" r="1.7" fill="var(--muted)"/>
+<polygon points="303.2,312.0 258.1,338.0 213.1,312.0 213.1,260.0 258.1,234.0 303.2,260.0" fill="var(--paper)" stroke="var(--leaf)" stroke-width="2.5"/>
+<use href="#i-feed" x="241.1" y="250.0" width="34" height="34"/>
+<circle cx="258.1" cy="300.0" r="14" fill="var(--wheat)" stroke="var(--line)" stroke-width="1.2"/>
+<text x="258.1" y="305.0" text-anchor="middle" class="en" font-size="14" font-weight="700" fill="var(--warn)">6</text>
+<circle cx="247.7" cy="321.0" r="1.7" fill="var(--muted)"/>
+<circle cx="252.9" cy="321.0" r="1.7" fill="var(--muted)"/>
+<circle cx="258.1" cy="321.0" r="1.7" fill="var(--muted)"/>
+<circle cx="263.3" cy="321.0" r="1.7" fill="var(--muted)"/>
+<circle cx="268.5" cy="321.0" r="1.7" fill="var(--muted)"/>
+<polygon points="393.2,312.0 348.2,338.0 303.2,312.0 303.2,260.0 348.2,234.0 393.2,260.0" fill="var(--paper)" stroke="var(--leaf)" stroke-width="2.5"/>
+<use href="#i-buy" x="331.2" y="250.0" width="34" height="34"/>
+<circle cx="348.2" cy="300.0" r="14" fill="var(--wheat)" stroke="var(--line)" stroke-width="1.2"/>
+<text x="348.2" y="305.0" text-anchor="middle" class="en" font-size="14" font-weight="700" fill="var(--wheat-ink)">9</text>
+<circle cx="340.4" cy="321.0" r="1.7" fill="var(--muted)"/>
+<circle cx="345.6" cy="321.0" r="1.7" fill="var(--muted)"/>
+<circle cx="350.8" cy="321.0" r="1.7" fill="var(--muted)"/>
+<circle cx="356.0" cy="321.0" r="1.7" fill="var(--muted)"/>
+<polygon points="483.3,312.0 438.3,338.0 393.2,312.0 393.2,260.0 438.3,234.0 483.3,260.0" fill="var(--paper)" stroke="var(--leaf)" stroke-width="2.5"/>
+<use href="#i-sell" x="421.3" y="250.0" width="34" height="34"/>
+<circle cx="438.3" cy="300.0" r="14" fill="var(--wheat)" stroke="var(--line)" stroke-width="1.2"/>
+<text x="438.3" y="305.0" text-anchor="middle" class="en" font-size="14" font-weight="700" fill="var(--wheat-ink)">10</text>
+<circle cx="433.1" cy="321.0" r="1.7" fill="var(--muted)"/>
+<circle cx="438.3" cy="321.0" r="1.7" fill="var(--muted)"/>
+<circle cx="443.5" cy="321.0" r="1.7" fill="var(--muted)"/>
+<g transform="translate(303.2 104.0)"><path d="M-9 4 L-9 -4 L0 -11 L9 -4 L9 4 Z" fill="var(--p1)" stroke="var(--line)" stroke-width="1.6"/></g>
+<g transform="translate(483.3 312.0)"><path d="M-9 4 L-9 -4 L0 -11 L9 -4 L9 4 Z" fill="var(--p1)" stroke="var(--line)" stroke-width="1.6"/></g>
+<g transform="translate(168.1 182.0)"><path d="M-9 4 L-9 -4 L0 -11 L9 -4 L9 4 Z" fill="var(--p2)" stroke="var(--line)" stroke-width="1.6"/></g>
+<g transform="translate(393.2 156.0)"><path d="M-9 4 L-9 -4 L0 -11 L9 -4 L9 4 Z" fill="var(--p2)" stroke="var(--line)" stroke-width="1.6"/></g>
+<g transform="translate(213.1 260.0)"><path d="M-9 4 L-9 -4 L0 -11 L9 -4 L9 4 Z" fill="var(--p3)" stroke="var(--line)" stroke-width="1.6"/></g>
+<g transform="translate(123.0 260.0)"><path d="M-9 4 L-9 -4 L0 -11 L9 -4 L9 4 Z" fill="var(--p3)" stroke="var(--line)" stroke-width="1.6"/></g>
+<g transform="translate(303.2 260.0)"><path d="M-9 4 L-9 -4 L0 -11 L9 -4 L9 4 Z" fill="var(--p4)" stroke="var(--line)" stroke-width="1.6"/></g>
+<g transform="translate(438.3 234.0)"><path d="M-9 4 L-9 -4 L0 -11 L9 -4 L9 4 Z" fill="var(--p4)" stroke="var(--line)" stroke-width="1.6"/></g>
+</svg>
+  <ul class="legend">
+    <li><svg class="ico sm" viewBox="-12 -14 24 22" aria-hidden="true"><path d="M-9 4 L-9 -4 L0 -11 L9 -4 L9 4 Z" fill="var(--p1)" stroke="var(--line)" stroke-width="1.6"/></svg>拠点：タイルの角（交点）に置く。色はプレイヤーごと</li>
+    <li><span class="tok">8</span>数字：この数字が出たら、このタイルの角にある拠点1個につき1枚もらう。赤字の6と8が最も出やすい。下の点の数が出やすさ。<b>数字と港の位置は毎回同じ</b>で、タイルの種類と港の種類だけが毎回変わる</li>
+    <li><span class="tok">3:1</span>汎用港：同じカード3枚 → 好きな1枚。絵の付いた <span class="tok">2:1</span> は専門港で、その種類の同じカード2枚 → 好きな1枚。どちらも、桟橋がつながった角1か所に拠点を置いた人だけが使える</li>
+    <li><span class="tok mk">Market</span>中央のタイル。数字も特典もない（カタンの砂漠と同じ）。7が出たら、置き場所に関係なく全員が好きな1枚</li>
+  </ul>
+
+  <h3>テーブルの手前</h3>
+  <svg class="map" viewBox="0 0 760 360" role="img" aria-label="注文3枚と山札、ダイス、銀行、4人分の農場シート">
+    <rect x="1" y="1" width="758" height="358" rx="16" fill="var(--table)" stroke="var(--rule)" stroke-width="2"/>
+    <text x="24" y="30" font-size="14" font-weight="700" fill="var(--ink)">注文（表向き3枚）</text>
+    <g transform="translate(24 40)"><rect width="56" height="80" rx="6" fill="var(--paper)" stroke="var(--line)" stroke-width="1.5"/><rect width="56" height="16" rx="6" fill="var(--leaf)"/><text x="28" y="12" text-anchor="middle" class="en" font-size="10" fill="var(--paper)">#1</text><use href="#p-carrot" x="14" y="24" width="28" height="28"/><text x="28" y="68" text-anchor="middle" class="en" font-size="11" fill="var(--ink)">×3</text></g>
+    <g transform="translate(88 40)"><rect width="56" height="80" rx="6" fill="var(--paper)" stroke="var(--line)" stroke-width="1.5"/><rect width="56" height="16" rx="6" fill="var(--leaf)"/><text x="28" y="12" text-anchor="middle" class="en" font-size="10" fill="var(--paper)">#7</text><rect x="8" y="26" width="40" height="4" rx="2" fill="var(--rule)"/><rect x="8" y="36" width="34" height="4" rx="2" fill="var(--rule)"/><rect x="8" y="46" width="38" height="4" rx="2" fill="var(--rule)"/><text x="28" y="70" text-anchor="middle" font-size="9" fill="var(--muted)">英文のみ</text></g>
+    <g transform="translate(152 40)"><rect width="56" height="80" rx="6" fill="var(--paper)" stroke="var(--line)" stroke-width="1.5"/><rect width="56" height="16" rx="6" fill="var(--leaf)"/><text x="28" y="12" text-anchor="middle" class="en" font-size="10" fill="var(--paper)">#16</text><rect x="8" y="26" width="40" height="4" rx="2" fill="var(--rule)"/><rect x="8" y="36" width="30" height="4" rx="2" fill="var(--rule)"/><rect x="8" y="46" width="36" height="4" rx="2" fill="var(--rule)"/><text x="28" y="70" text-anchor="middle" font-size="9" fill="var(--muted)">英文のみ</text></g>
+    <g transform="translate(222 44)"><rect x="5" y="5" width="50" height="76" rx="6" fill="var(--leaf)" opacity=".5"/><rect width="50" height="76" rx="6" fill="var(--leaf)" stroke="var(--line)" stroke-width="1.5"/><text x="25" y="43" text-anchor="middle" font-size="12" fill="var(--paper)">山札</text></g>
+    <g transform="translate(330 76) rotate(-12)"><rect x="-17" y="-17" width="34" height="34" rx="6" fill="var(--paper)" stroke="var(--line)" stroke-width="2"/><circle cx="-8" cy="-8" r="3" fill="var(--line)"/><circle cx="0" cy="0" r="3" fill="var(--line)"/><circle cx="8" cy="8" r="3" fill="var(--line)"/></g>
+    <g transform="translate(372 92) rotate(14)"><rect x="-17" y="-17" width="34" height="34" rx="6" fill="var(--paper)" stroke="var(--line)" stroke-width="2"/><circle cx="-8" cy="-8" r="3" fill="var(--line)"/><circle cx="8" cy="8" r="3" fill="var(--line)"/></g>
+    <text x="430" y="30" font-size="14" font-weight="700" fill="var(--ink)">銀行</text>
+    <g transform="translate(430 40)"><rect width="310" height="80" rx="8" fill="var(--paper)" stroke="var(--rule)" stroke-width="1.5"/><use href="#i-buy" x="10" y="16" width="46" height="46"/><text x="64" y="26" font-size="12" fill="var(--ink)">コイン・単語カード・産物を置く場所</text><text x="64" y="46" font-size="11" fill="var(--muted)">同じカード4枚 → 好きな1枚（港なら3:1・2:1）</text><text x="64" y="64" font-size="11" fill="var(--muted)">4コイン → 好きな1枚</text></g>
+    <text x="24" y="156" font-size="14" font-weight="700" fill="var(--ink)">各自の農場（4区画）・手札・コイン</text>
+    <g transform="translate(20 166)"><rect width="170" height="180" rx="10" fill="var(--paper)" stroke="var(--line)" stroke-width="1.5"/><rect width="170" height="26" rx="10" fill="var(--p1)"/><rect y="16" width="170" height="10" fill="var(--p1)"/><text x="12" y="18" font-size="13" font-weight="700" fill="var(--paper)">プレイヤー1</text>
+      <rect x="10" y="34" width="72" height="56" rx="6" fill="var(--soil)" opacity=".35"/><use href="#i-grow" x="28" y="36" width="36" height="36"/><text x="46" y="84" text-anchor="middle" font-size="10" fill="var(--ink)">carrot</text>
+      <rect x="88" y="34" width="72" height="56" rx="6" fill="var(--soil)" opacity=".35"/><use href="#i-grow" x="106" y="36" width="36" height="36"/><text x="124" y="84" text-anchor="middle" font-size="10" fill="var(--ink)">wheat</text>
+      <rect x="10" y="96" width="72" height="56" rx="6" fill="none" stroke="var(--rule)" stroke-dasharray="4 3"/><text x="46" y="128" text-anchor="middle" font-size="11" fill="var(--muted)">空き</text>
+      <rect x="88" y="96" width="72" height="56" rx="6" fill="none" stroke="var(--rule)" stroke-dasharray="4 3"/><text x="124" y="128" text-anchor="middle" font-size="11" fill="var(--muted)">空き</text>
+      <text x="12" y="160" font-size="11" fill="var(--ink)">手元：carrot 3</text><text x="12" y="174" font-size="11" fill="var(--muted)">手札5枚・3コイン・2点</text></g>
+    <g transform="translate(205 166)"><rect width="170" height="180" rx="10" fill="var(--paper)" stroke="var(--line)" stroke-width="1.5"/><rect width="170" height="26" rx="10" fill="var(--p2)"/><rect y="16" width="170" height="10" fill="var(--p2)"/><text x="12" y="18" font-size="13" font-weight="700" fill="var(--paper)">プレイヤー2</text>
+      <rect x="10" y="34" width="72" height="56" rx="6" fill="var(--hill)" opacity=".5"/><use href="#i-animal" x="26" y="36" width="40" height="40"/><text x="46" y="86" text-anchor="middle" font-size="10" fill="var(--ink)">牛</text>
+      <rect x="88" y="34" width="72" height="56" rx="6" fill="var(--soil)" opacity=".35"/><use href="#i-grow" x="106" y="36" width="36" height="36"/><text x="124" y="84" text-anchor="middle" font-size="10" fill="var(--ink)">potato</text>
+      <rect x="10" y="96" width="72" height="56" rx="6" fill="none" stroke="var(--rule)" stroke-dasharray="4 3"/><text x="46" y="128" text-anchor="middle" font-size="11" fill="var(--muted)">空き</text>
+      <rect x="88" y="96" width="72" height="56" rx="6" fill="none" stroke="var(--rule)" stroke-dasharray="4 3"/><text x="124" y="128" text-anchor="middle" font-size="11" fill="var(--muted)">空き</text>
+      <text x="12" y="170" font-size="11" fill="var(--muted)">手札3枚・1コイン・0点</text></g>
+    <g transform="translate(390 166)"><rect width="170" height="180" rx="10" fill="var(--paper)" stroke="var(--line)" stroke-width="1.5"/><rect width="170" height="26" rx="10" fill="var(--p3)"/><rect y="16" width="170" height="10" fill="var(--p3)"/><text x="12" y="18" font-size="13" font-weight="700" fill="var(--line)">プレイヤー3</text>
+      <rect x="10" y="34" width="72" height="56" rx="6" fill="var(--hill)" opacity=".5"/><text x="46" y="66" text-anchor="middle" font-size="12" fill="var(--ink)">ニワトリ</text>
+      <rect x="88" y="34" width="72" height="56" rx="6" fill="var(--hill)" opacity=".5"/><text x="124" y="66" text-anchor="middle" font-size="12" fill="var(--ink)">ニワトリ</text>
+      <rect x="10" y="96" width="72" height="56" rx="6" fill="var(--soil)" opacity=".35"/><use href="#i-grow" x="28" y="98" width="36" height="36"/><text x="46" y="146" text-anchor="middle" font-size="10" fill="var(--ink)">carrot</text>
+      <rect x="88" y="96" width="72" height="56" rx="6" fill="none" stroke="var(--rule)" stroke-dasharray="4 3"/><text x="124" y="128" text-anchor="middle" font-size="11" fill="var(--muted)">空き</text>
+      <text x="12" y="160" font-size="11" fill="var(--ink)">手元：egg 4</text><text x="12" y="174" font-size="11" fill="var(--muted)">手札4枚・2コイン・3点</text></g>
+    <g transform="translate(575 166)"><rect width="170" height="180" rx="10" fill="var(--paper)" stroke="var(--line)" stroke-width="1.5"/><rect width="170" height="26" rx="10" fill="var(--p4)"/><rect y="16" width="170" height="10" fill="var(--p4)"/><text x="12" y="18" font-size="13" font-weight="700" fill="var(--paper)">プレイヤー4</text>
+      <rect x="10" y="34" width="72" height="56" rx="6" fill="var(--soil)" opacity=".35"/><use href="#i-grow" x="28" y="36" width="36" height="36"/><text x="46" y="84" text-anchor="middle" font-size="10" fill="var(--ink)">wheat</text>
+      <rect x="88" y="34" width="72" height="56" rx="6" fill="none" stroke="var(--rule)" stroke-dasharray="4 3"/><text x="124" y="66" text-anchor="middle" font-size="11" fill="var(--muted)">空き</text>
+      <rect x="10" y="96" width="72" height="56" rx="6" fill="none" stroke="var(--rule)" stroke-dasharray="4 3"/><text x="46" y="128" text-anchor="middle" font-size="11" fill="var(--muted)">空き</text>
+      <rect x="88" y="96" width="72" height="56" rx="6" fill="none" stroke="var(--rule)" stroke-dasharray="4 3"/><text x="124" y="128" text-anchor="middle" font-size="11" fill="var(--muted)">空き</text>
+      <text x="12" y="170" font-size="11" fill="var(--muted)">手札6枚・3コイン・0点</text></g>
+  </svg>
+  <p class="note">産地マップ・注文・銀行は全員で共有する。農場・産物・コイン・点は公開、手札は枚数だけ公開。絵は途中経過の一例。収穫した産物は区画ではなく、農場シートの外（手元）に置く。</p>
+</section>
+
+<section>
+  <h2><span class="no">01</span>勝ち方と終わり方</h2>
+  <ul>
+    <li><b>自分の手番中に勝利点8点に届いたら、その場で勝ち。</b></li>    <li>表向きの注文も山も0枚になったら、そのラウンドの最後の人まで遊んで終了。点が一番多い人の勝ち。同点ならコインの多い人、それでも同じなら同順位。</li>
+  </ul>
+</section>
+
+<section>
+  <h2><span class="no">02</span>準備</h2>
+  <ol>
+    <li><b>数字トークンと港は、図の位置に固定して置く</b>（カタンと同じ）。数字は12枚（2・3・4・5・6・6・8・8・9・10・11・12）、港は6つ。この配置は、6と8が隣り合わず、港の角のタイルに6・8が来ないように決めてある。</li>
+    <li><b>タイルを並べる</b>：六角タイル13枚を4枚・5枚・4枚の3段に並べる。中央は<b>Market</b>（数字なし）。残り12枚は6種類（grow / buy / feed / sell / seed / animal）×2枚を、次の条件を満たすように置く。
+      <ul>
+        <li>各種類の2枚は、出やすい数字（5・6・8・9）のマスに1枚、出にくい数字（2・3・4・10・11・12）のマスに1枚。</li>
+        <li>sellの出やすい方は、6か8のマス。</li>
+        <li>同じ種類のタイルは隣り合わせない。</li>
+      </ul>
+      <div class="box">
+        <b>紙で並べる手順</b>（アプリでは自動で並べる）
+        <ol>
+          <li>sellのタイル1枚を、6か8のマス（4か所）のどれかに先に置く。</li>
+          <li>残りを「出やすいマス用」5枚（sell以外の各種類1枚）と「出にくいマス用」6枚（各種類1枚）に分け、それぞれシャッフルして、出やすいマス（5・6・8・9）と出にくいマス（2・3・4・10・11・12）に置く。</li>
+          <li>同じ種類が隣り合っていたら、その一方を<b>同じ組の別のタイルと入れ替える</b>。手順1のsellは動かさない。たいてい1〜2回で直る（模擬では2万回試して、すべて3回以内で直った）。</li>
+        </ol>
+      </div>
+    </li>
+    <li><b>港の種類を決める</b>：汎用港 2つ（<span class="tok">3:1</span>：同じカード3枚 → 好きな1枚）と、専門港 4つ（<span class="tok">2:1</span>：6種類からランダムに4種類。その種類の同じカード2枚 → 好きな1枚）を、港の種類札を裏向きにシャッフルして6つの港に割り当てる。seedの港は同じ作物カード2枚（例：carrot 2枚）、animalの港は同じ動物カード2枚に使える。種類を混ぜて出すことはできない。港を使えるのは、桟橋がつながった外側の角に拠点を置いた人だけ。</li>
+    <li>各自、<b>3コイン</b>、単語カード<b>2枚（grow, sell）</b>、<b>無料券2枚</b>（07）を持つ。</li>
+    <li><b>拠点を置く</b>：拠点は<b>タイルの角（交点）</b>に置く。開始プレイヤーをランダムに決め、席順に1個ずつ、逆順にもう1個置く（1人2個）。
+      <ul>
+        <li><b>距離ルール</b>：隣の交点（辺1本でつながる交点）に誰かの拠点がある場所には置けない。道は使わない。</li>
+        <li><b>2個目に置いた拠点</b>に接するタイル1枚につき、そのタイルの単語カードを1枚もらう（Marketは除く）。seedなら作物、animalなら動物の種類を選ぶ。</li>
+        <li>3人戦では、さらに好きな単語カードを1枚ずつ取る。</li>
+      </ul>
+    </li>
+    <li>注文カードをシャッフルし、3枚を表向きに並べる。開始プレイヤーが声に出して読む。最初の手番は開始プレイヤーから。</li>
+  </ol>
+  <p class="note">公開情報：手札の中身は非公開、手札の枚数は公開。産物・コイン・点・農場・拠点は公開。</p>
+</section>
+
+<section>
+  <h2><span class="no">03</span>収入の詳細</h2>
+  <p class="note">手番の流れの全体像は「はじめに」を参照。ここでは1の収入だけを詳しく書く。</p>
+  <div class="tbl"><table>
+    <thead><tr><th>出目</th><th>何が起きるか</th></tr></thead>
+    <tbody>
+      <tr><td class="num">2〜6・8〜12</td><td>その数字のタイルの角に拠点がある全員が、拠点1個につき1枚。1枚のタイルに自分の拠点が2個接していれば2枚。seedは作物を、animalは動物を選ぶ</td></tr>
+      <tr><td class="num">7</td><td><b>Market day</b>：まず、単語カードを<b>7枚以上</b>持っている人は、<b>半分（端数切り捨て）</b>を自分で選んで捨てる（例：7枚なら3枚、9枚なら4枚）。そのあと全員が好きな単語カードを1枚もらう。手番の人から時計回りに行う</td></tr>
+    </tbody>
+  </table></div>
+  <p class="note">手番の人が何ももらえなかったときは、好きな単語カードを1枚もらう。</p>
+</section>
+
+<section>
+  <h2><span class="no">04</span>交渉（英語のみ）</h2>
+  <ul>
+    <li>交換は<b>手番の人と、他の誰か1人の間だけ</b>。手番でない人同士は交換できない。手番でない人から手番の人へ持ちかけるのは自由。</li>
+    <li>単語カード・産物・コインのどれでも交換できる。1手番の交換回数に上限はない。<b>双方が1つ以上を出す</b>（一方的に渡すことはできない）。</li>
+    <li>単語カードは <span class="en">carrot card</span>、産物は <span class="en">carrot</span> と呼び分ける。</li>
+  </ul>
+  <div class="say">
+    <span>"Does anyone have a sell card?"</span>
+    <span>"I'll give you two carrot cards for your feed card."</span>
+    <span>"No way. How about three eggs?"</span>
+    <span>"Deal!"</span>
+  </div>
+  <h3>銀行（自分の手番中のみ・行動は使わない）</h3>
+  <ul>
+    <li>同じ単語カード4枚 → 好きな単語カード1枚</li>
+    <li>汎用港の角に拠点がある：同じカード3枚 → 好きな1枚</li>
+    <li>専門港の角に拠点がある：その種類のカード2枚 → 好きな1枚</li>
+    <li>4コイン → 好きな単語カード1枚</li>
+  </ul>
+</section>
+
+<section>
+  <h2><span class="no">05</span>行動（1手番に2回まで）</h2>
+  <p>必要なカードを英文の順に並べ、<b>声に出して言う</b>。使ったカードは捨てる。</p>
+  <div class="tbl"><table class="act">
+    <thead class="act-h"><tr><th>宣言する英文</th><th>必要なもの</th><th>効果</th></tr></thead>
+    <tbody>
+      <tr><td><span class="en">I grow carrots.</span><br><span class="en">I grow potatoes.</span><br><span class="en">I grow wheat.</span></td><td>grow＋作物カード、空き区画</td><td>植える。次の自分の手番に産物3つを収穫し、区画は空く</td></tr>
+      <tr><td><span class="en">I buy a chicken.</span></td><td>buy＋chicken＋2コイン、空き区画</td><td>ニワトリを置く。買った手番から餌をやれる</td></tr>
+      <tr><td><span class="en">I buy a cow.</span></td><td>buy＋cow＋4コイン、空き区画</td><td>牛を置く。買った手番から餌をやれる</td></tr>
+      <tr><td><span class="en">I feed the chicken.</span></td><td>feed</td><td>卵2つ。1羽につき1手番1回</td></tr>
+      <tr><td><span class="en">I feed the cow.</span></td><td>feed</td><td>ミルク3つが<b>次の自分の手番の初めに</b>出る（それまで牛の上に置いておく）。1頭につき1手番1回</td></tr>
+      <tr><td><span class="en">I sell four eggs.</span><br><span class="en">I sell two bottles of milk.</span></td><td>sell</td><td>同じ種類の産物を、好きな数だけまとめて市場に売る</td></tr>
+      <tr><td><span class="en">I sell three carrots to the cafe.</span></td><td>sell</td><td>注文を達成する（06）</td></tr>
+      <tr><td><span class="en">I have three animals.</span></td><td>なし（sellカード不要）</td><td>動物の数の注文（#15）を達成する。実際の頭数を言えばよい（<span class="en">I have four animals.</span>）。動物は手放さない</td></tr>
+      <tr><td><span class="en">I build a farmhouse.</span></td><td>3コイン</td><td>拠点を1個追加（初期の2個と合わせて合計3個まで）。距離ルールを守れば、空いているどの交点にも置ける（道は不要）。置いたときにカードはもらえない</td></tr>
+    </tbody>
+  </table></div>
+  <div class="tbl"><table>
+    <thead><tr><th>市場価格</th><th class="num">1つあたり</th></tr></thead>
+    <tbody>
+      <tr><td><span class="prodcell"><svg class="ico sm"><use href="#p-carrot"/></svg>carrot <svg class="ico sm"><use href="#p-potato"/></svg>potato <svg class="ico sm"><use href="#p-wheat"/></svg>wheat <svg class="ico sm"><use href="#p-egg"/></svg>egg</span></td><td class="num">1コイン</td></tr>
+      <tr><td><span class="prodcell"><svg class="ico sm"><use href="#p-milk"/></svg>milk</span></td><td class="num">2コイン</td></tr>
+    </tbody>
+  </table></div>
+  <p class="note">区画は1人4つ。1区画に作物1ロットか動物1頭を置く。動物は置いたら移動しない。収穫した産物と受け取ったミルク・卵は区画に置かず、手元に置く。数え方：<span class="en">a bag of wheat</span> ＝小麦1つ、<span class="en">a bottle of milk</span> ＝ミルク1つ。小麦とミルクは複数形にしない（<span class="en">wheat</span>、<span class="en">milk</span>）。</p>
+</section>
+
+<section>
+  <h2><span class="no">06</span>注文</h2>
+  <div class="cards" role="img" aria-label="単語カード sell と、注文カード #1 の見本">
+    <svg class="card-svg" viewBox="0 0 150 210">
+      <rect x="2" y="2" width="146" height="206" rx="12" fill="var(--paper)" stroke="var(--line)" stroke-width="2"/>
+      <rect x="10" y="10" width="130" height="190" rx="8" fill="none" stroke="var(--leaf)" stroke-width="1.5" stroke-dasharray="4 4"/>
+      <text x="22" y="34" font-family="IBM Plex Mono,monospace" font-size="11" fill="var(--muted)">WORD</text>
+      <use href="#i-sell" x="35" y="52" width="80" height="80"/>
+      <text x="75" y="172" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="30" font-weight="500" fill="var(--ink)">sell</text>
+    </svg>
+    <svg class="card-svg wide" viewBox="0 0 300 210">
+      <rect x="2" y="2" width="296" height="206" rx="12" fill="var(--paper)" stroke="var(--line)" stroke-width="2"/>
+      <rect x="2" y="2" width="296" height="40" rx="12" fill="var(--leaf)"/>
+      <rect x="2" y="30" width="296" height="12" fill="var(--leaf)"/>
+      <text x="18" y="28" font-family="IBM Plex Mono,monospace" font-size="15" fill="var(--paper)">ORDER #1</text>
+      <circle cx="262" cy="22" r="15" fill="var(--wheat)" stroke="var(--line)" stroke-width="1.5"/>
+      <text x="262" y="28" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="15" font-weight="700" fill="var(--wheat-ink)">1.5</text>
+      <text x="20" y="82" font-family="IBM Plex Mono,monospace" font-size="17" fill="var(--ink)">The cafe needs</text>
+      <text x="20" y="106" font-family="IBM Plex Mono,monospace" font-size="17" fill="var(--ink)">three carrots.</text>
+      <use href="#p-carrot" x="20" y="132" width="44" height="44"/>
+      <use href="#p-carrot" x="62" y="132" width="44" height="44"/>
+      <use href="#p-carrot" x="104" y="132" width="44" height="44"/>
+      <text x="282" y="192" text-anchor="end" font-family="IBM Plex Mono,monospace" font-size="11" fill="var(--muted)">+2 coins</text>
+    </svg>
+  </div>
+  <p class="note">絵が付くのは「易」の注文だけ。「中」「難」の注文は英文だけで、条件はカードの裏に書いてある。届けると宣言してから裏返して確かめる。</p>
+  <ul>
+    <li>表向きの注文は、山がある限り3枚。達成されたらすぐに山から補充し、手番の人が読み上げる。</li>
+    <li><b>達成の仕方</b>：条件どおりの産物を出し、sellカード1枚と行動1回を使って宣言する（#15はsellカード不要）。宛先は注文の英文にある言葉を使う（<span class="en">to the cafe</span> など）。宛先が書かれていない注文は自由でよく、言えなくても不成立にはしない。</li>
+    <li><b>報酬</b>：注文に書かれた点＋<b>2コイン</b>。</li>
+    <li><b>出す数</b>：書かれた数ちょうどを出す。<span class="en">at least</span> とある注文だけは、多くてもよい。</li>
+    <li><b>読み違えたら</b>：条件を満たしていなかったら不成立。出したsellカードは捨てる（行動と産物は戻す）。</li>
+    <li>達成した注文カードは自分の前に表向きに置く。点はその合計で数える（0.5点刻み）。</li>
+    <li><b>注文は毎回ちがう</b>：アプリでは、ゲームごとに注文36枚を自動で作る。紙で遊ぶときは、08の印刷用の36枚を使う。</li>
+    <li><b>注文を流す</b>：手番に1回、1コイン払って表向きの注文1枚を捨て、山から補充できる（行動は使わない）。補充した注文は手番の人が読み上げる。</li>
+  </ul>
+</section>
+
+<section>
+  <h2><span class="no">07</span>英語のルール</h2>
+  <p><b>No Japanese</b>：交渉は英語で行う。日本語を使うときはコインを銀行に払うか、無料券を使う。<b>ルールの確認や説明は日本語でよい</b>（支払い不要）。対象は交渉の発言だけ。</p>
+  <div class="tbl"><table>
+    <thead><tr><th>使い方</th><th class="num">支払い</th></tr></thead>
+    <tbody>
+      <tr><td>日本語の単語を1つ使う（先に <span class="en">Japanese word!</span> と宣言する）</td><td class="num">1コイン</td></tr>
+      <tr><td>交渉1件を日本語で話す。話せるのは払った本人だけで、相手は英語で返す。成立・不成立どちらでもその1件で終わり</td><td class="num">2コイン</td></tr>
+      <tr><td>宣言せずに日本語を話した</td><td class="num">2コイン</td></tr>
+    </tbody>
+  </table></div>
+  <ul>
+    <li><b>無料券</b>：全員が2枚ずつ持つ。1枚で、日本語の単語1つか、交渉1件分の日本語を無料にできる。</li>
+    <li>宣言して使う分は、コインか無料券が足りなければ使えない。宣言せずに話した分でコインが足りないときは、足りない分を借りにし、次にコインを得たときに払う。</li>
+    <li><b>聞くのはタダ</b>：<span class="en">How do you say 人参?</span>（日本語の単語を1つ挟むのは可）、<span class="en">What does 'brewery' mean?</span></li>
+    <li><b>文法は裁かない</b>：英文は通じれば成立。言い直しを手伝うのは歓迎。</li>
+    <li>上級者は、合意すれば支払いを2倍にする。</li>
+  </ul>
+  <p class="note">取り締まりは厳密にしない。笑って済む程度で運用する。</p>
+</section>
+
+<section>
+  <h2><span class="no">08</span>注文の作り方</h2>
+  <p>注文は、英文の型・産物・数・宛先を組み合わせて作る。アプリではゲームごとに36枚を自動で作るので、毎回ちがう注文が出る。</p>
+  <div class="tbl"><table>
+    <thead><tr><th>難易度</th><th>英文の型（例）</th><th>読みどころ</th></tr></thead>
+    <tbody>
+      <tr><td><span class="lvl">易</span></td><td>The cafe needs three carrots. ／ Can you bring me an egg? ／ Four bags of wheat, please.</td><td>産物1種類、1〜4つ。絵が付く</td></tr>
+      <tr><td><span class="lvl">中</span></td><td>Grandma would like two eggs and a bottle of milk. ／ The bakery is looking for eggs and potatoes, two of each.</td><td>2種類の組み合わせ。of each（〜ずつ）</td></tr>
+      <tr><td><span class="lvl">中</span></td><td>Please don’t send carrots. We need two eggs and a bottle of milk.</td><td>否定の罠。送ってはいけない産物が先に出てくる</td></tr>
+      <tr><td><span class="lvl">中</span></td><td>A school class wants to visit a farm with at least three animals.</td><td>動物の頭数。at least（以上）</td></tr>
+      <tr><td><span class="lvl">難</span></td><td>Half a dozen eggs, please. ／ We need five crops in total. Anything but carrots! ／ We want the same number of carrots and potatoes, at least two of each.</td><td>言い換え（半ダース＝6）、合計、同数</td></tr>
+    </tbody>
+  </table></div>
+  <p class="note">点は0.5〜3点。必要な産物が多いほど、種類が多いほど高く、「難」の英文は0.5点上乗せする。目安：ニンジン3つ＝1.5点、卵2つとミルク1本＝2点、卵を半ダース＝3点。</p>
+  <h3>紙で遊ぶときの注文36枚（印刷用）</h3>
+  <p class="note">カードを作るときと答え合わせ用。<b>遊んでいる間は、この一覧を見ない。</b>表に英文、裏に「条件」を書く。絵を付けるのは「易」の注文だけ。どの注文も達成すると2コインもらえる。</p>
+  <details><summary>一覧を開く（答えが書いてある）</summary>
+  <div class="tbl"><table>
+    <thead><tr><th class="num">#</th><th>英文</th><th>条件</th><th class="num">点</th><th>難易度</th></tr></thead>
+    <tbody>
+      <tr><td class="num">1</td><td>Four bottles of milk, please.</td><td>milk×4</td><td class="num">2</td><td><span class="lvl">易</span></td></tr>
+      <tr><td class="num">2</td><td>Please don’t send carrots. We need two bottles of milk and a bag of wheat.</td><td>milk×2, wheat×1</td><td class="num">2</td><td><span class="lvl">中</span></td></tr>
+      <tr><td class="num">3</td><td>The soup kitchen is looking for eggs and potatoes, two of each.</td><td>egg×2, potato×2</td><td class="num">2.5</td><td><span class="lvl">中</span></td></tr>
+      <tr><td class="num">4</td><td>We want the same number of carrots and potatoes, at least two of each.</td><td>carrot と potato を同じ数ずつ、2つ以上</td><td class="num">2.5</td><td><span class="lvl">難</span></td></tr>
+      <tr><td class="num">5</td><td>Two potatoes, please.</td><td>potato×2</td><td class="num">1</td><td><span class="lvl">易</span></td></tr>
+      <tr><td class="num">6</td><td>The hotel would like two carrots and three bottles of milk.</td><td>carrot×2, milk×3</td><td class="num">2.5</td><td><span class="lvl">中</span></td></tr>
+      <tr><td class="num">7</td><td>Please don’t send potatoes. We need three bags of wheat and two bottles of milk.</td><td>wheat×3, milk×2</td><td class="num">2.5</td><td><span class="lvl">中</span></td></tr>
+      <tr><td class="num">8</td><td>We need four crops in total. Anything but carrots!</td><td>potato と wheat を合わせて4（ちょうど）</td><td class="num">2.5</td><td><span class="lvl">難</span></td></tr>
+      <tr><td class="num">9</td><td>A school class wants to visit a farm with at least two animals.</td><td>動物2頭以上を持っている</td><td class="num">1.5</td><td><span class="lvl">中</span></td></tr>
+      <tr><td class="num">10</td><td>Please don’t send milk. We need three eggs and two bags of wheat.</td><td>egg×3, wheat×2</td><td class="num">3</td><td><span class="lvl">中</span></td></tr>
+      <tr><td class="num">11</td><td>Please don’t send wheat. We need three eggs and two bottles of milk.</td><td>egg×3, milk×2</td><td class="num">3</td><td><span class="lvl">中</span></td></tr>
+      <tr><td class="num">12</td><td>We need five crops in total. Anything but potatoes!</td><td>carrot と wheat を合わせて5（ちょうど）</td><td class="num">3</td><td><span class="lvl">難</span></td></tr>
+      <tr><td class="num">13</td><td>Four eggs, please.</td><td>egg×4</td><td class="num">2</td><td><span class="lvl">易</span></td></tr>
+      <tr><td class="num">14</td><td>A school class wants to visit a farm with at least three animals.</td><td>動物3頭以上を持っている</td><td class="num">2.5</td><td><span class="lvl">中</span></td></tr>
+      <tr><td class="num">15</td><td>Please don’t send carrots. We need two eggs and two bottles of milk.</td><td>egg×2, milk×2</td><td class="num">2.5</td><td><span class="lvl">中</span></td></tr>
+      <tr><td class="num">16</td><td>The bakery would like a bag of wheat and two bottles of milk.</td><td>wheat×1, milk×2</td><td class="num">2</td><td><span class="lvl">中</span></td></tr>
+      <tr><td class="num">17</td><td>We need half a dozen eggs for the cake.</td><td>egg×6</td><td class="num">3</td><td><span class="lvl">難</span></td></tr>
+      <tr><td class="num">18</td><td>Four carrots, please.</td><td>carrot×4</td><td class="num">2</td><td><span class="lvl">易</span></td></tr>
+      <tr><td class="num">19</td><td>The bakery is looking for eggs and carrots, one of each.</td><td>egg×1, carrot×1</td><td class="num">1.5</td><td><span class="lvl">中</span></td></tr>
+      <tr><td class="num">20</td><td>Please don’t send wheat. We need three carrots and three eggs.</td><td>carrot×3, egg×3</td><td class="num">3</td><td><span class="lvl">中</span></td></tr>
+      <tr><td class="num">21</td><td>We need five crops in total. Anything but carrots!</td><td>potato と wheat を合わせて5（ちょうど）</td><td class="num">3</td><td><span class="lvl">難</span></td></tr>
+      <tr><td class="num">22</td><td>Three bottles of milk, please.</td><td>milk×3</td><td class="num">1.5</td><td><span class="lvl">易</span></td></tr>
+      <tr><td class="num">23</td><td>The school is looking for eggs and carrots, one of each.</td><td>egg×1, carrot×1</td><td class="num">1.5</td><td><span class="lvl">中</span></td></tr>
+      <tr><td class="num">24</td><td>Please don’t send potatoes. We need a carrot and three bags of wheat.</td><td>carrot×1, wheat×3</td><td class="num">2</td><td><span class="lvl">中</span></td></tr>
+      <tr><td class="num">25</td><td>The hotel would like three bags of wheat and a bottle of milk.</td><td>wheat×3, milk×1</td><td class="num">2</td><td><span class="lvl">中</span></td></tr>
+      <tr><td class="num">26</td><td>Can you bring me three bags of wheat?</td><td>wheat×3</td><td class="num">1.5</td><td><span class="lvl">易</span></td></tr>
+      <tr><td class="num">27</td><td>The bakery would like three eggs and three carrots.</td><td>egg×3, carrot×3</td><td class="num">3</td><td><span class="lvl">中</span></td></tr>
+      <tr><td class="num">28</td><td>We need four crops in total. Anything but wheat!</td><td>carrot と potato を合わせて4（ちょうど）</td><td class="num">2.5</td><td><span class="lvl">難</span></td></tr>
+      <tr><td class="num">29</td><td>Please don’t send potatoes. We need a carrot and three eggs.</td><td>carrot×1, egg×3</td><td class="num">2.5</td><td><span class="lvl">中</span></td></tr>
+      <tr><td class="num">30</td><td>We need four crops in total. Anything but potatoes!</td><td>carrot と wheat を合わせて4（ちょうど）</td><td class="num">2.5</td><td><span class="lvl">難</span></td></tr>
+      <tr><td class="num">31</td><td>Can you bring me four bottles of milk?</td><td>milk×4</td><td class="num">2</td><td><span class="lvl">易</span></td></tr>
+      <tr><td class="num">32</td><td>Please don’t send potatoes. We need an egg and a bag of wheat.</td><td>egg×1, wheat×1</td><td class="num">1.5</td><td><span class="lvl">中</span></td></tr>
+      <tr><td class="num">33</td><td>Can you bring me three bottles of milk?</td><td>milk×3</td><td class="num">1.5</td><td><span class="lvl">易</span></td></tr>
+      <tr><td class="num">34</td><td>Please don’t send eggs. We need three bottles of milk and a potato.</td><td>milk×3, potato×1</td><td class="num">2</td><td><span class="lvl">中</span></td></tr>
+      <tr><td class="num">35</td><td>Two eggs, please.</td><td>egg×2</td><td class="num">1</td><td><span class="lvl">易</span></td></tr>
+      <tr><td class="num">36</td><td>The hotel needs two eggs.</td><td>egg×2</td><td class="num">1</td><td><span class="lvl">易</span></td></tr>
+    </tbody>
+  </table></div>
+  </details>
+</section>
+
+<section>
+  <h2><span class="no">09</span>紙で遊ぶときの用意</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>物</th><th>数</th></tr></thead>
+    <tbody>
+      <tr><td>六角タイル（6種類×2枚＋Market 1枚）</td><td>13枚</td></tr>
+      <tr><td>数字トークン（2・3・4・5・6・6・8・8・9・10・11・12）</td><td>12枚</td></tr>
+      <tr><td>港マーカー（3:1が2つ、2:1が4つ）</td><td>6個</td></tr>
+      <tr><td>港の種類札（grow / buy / feed / sell / seed / animal）</td><td>6枚。裏向きで4枚引いて専門港に当てる</td></tr>
+      <tr><td>無料券</td><td>1人2枚</td></tr>
+      <tr><td>単語カード（grow 14 / buy 8 / feed 14 / sell 18 / carrot・potato・wheat 各8 / cow・chicken 各6）</td><td>90枚</td></tr>
+      <tr><td>注文カード（表に英文、裏に条件。絵は「易」の注文だけ）</td><td>36枚（08の一覧）</td></tr>
+      <tr><td>6面ダイス</td><td>2個</td></tr>
+      <tr><td>拠点コマ（色違い）</td><td>1人3個</td></tr>
+      <tr><td>産物トークン・コイン</td><td>適量（おはじき・付箋・ポーカーチップで代用可）</td></tr>
+      <tr><td>農場シート（4区画）</td><td>1人1枚</td></tr>
+    </tbody>
+  </table></div>
+  <p class="note">最初の1局は、トランプに付箋を貼る程度で十分。カードの山が尽きた種類は、捨て札から戻す。それでもなければ、そのカードはもらえない。</p>
+  <h3>印刷用の盤面</h3>
+  <p class="note">数字と港の位置だけを書き込んだ盤面。タイルの種類の札をこの上に並べる（02の手順）。港の種類は、港の種類札で決める。</p>
+  <svg class="map" viewBox="0 0 606 416" role="img" aria-label="六角タイル13枚の産地マップ。中央にMarket、海岸線に港6つ、4人の初期拠点が交点に置かれている">
+<rect x="1" y="1" width="604" height="414" rx="18" fill="var(--sea)"/>
+<path d="M483.3 104.0 L521.6 81.9" stroke="var(--soil)" stroke-width="6" stroke-linecap="round"/>
+<circle cx="521.6" cy="81.9" r="21" fill="var(--paper)" stroke="var(--line)" stroke-width="2"/>
+<text x="521.6" y="86.9" text-anchor="middle" font-size="12" font-weight="700" fill="var(--ink)">港</text>
+<path d="M483.3 312.0 L521.6 334.1" stroke="var(--soil)" stroke-width="6" stroke-linecap="round"/>
+<circle cx="521.6" cy="334.1" r="21" fill="var(--paper)" stroke="var(--line)" stroke-width="2"/>
+<text x="521.6" y="339.1" text-anchor="middle" font-size="12" font-weight="700" fill="var(--ink)">港</text>
+<path d="M348.2 338.0 L362.7 379.8" stroke="var(--soil)" stroke-width="6" stroke-linecap="round"/>
+<circle cx="362.7" cy="379.8" r="21" fill="var(--paper)" stroke="var(--line)" stroke-width="2"/>
+<text x="362.7" y="384.8" text-anchor="middle" font-size="12" font-weight="700" fill="var(--ink)">港</text>
+<path d="M123.0 312.0 L84.8 334.1" stroke="var(--soil)" stroke-width="6" stroke-linecap="round"/>
+<circle cx="84.8" cy="334.1" r="21" fill="var(--paper)" stroke="var(--line)" stroke-width="2"/>
+<text x="84.8" y="339.1" text-anchor="middle" font-size="12" font-weight="700" fill="var(--ink)">港</text>
+<path d="M123.0 104.0 L84.8 81.9" stroke="var(--soil)" stroke-width="6" stroke-linecap="round"/>
+<circle cx="84.8" cy="81.9" r="21" fill="var(--paper)" stroke="var(--line)" stroke-width="2"/>
+<text x="84.8" y="86.9" text-anchor="middle" font-size="12" font-weight="700" fill="var(--ink)">港</text>
+<path d="M258.1 78.0 L243.7 36.2" stroke="var(--soil)" stroke-width="6" stroke-linecap="round"/>
+<circle cx="243.7" cy="36.2" r="21" fill="var(--paper)" stroke="var(--line)" stroke-width="2"/>
+<text x="243.7" y="41.2" text-anchor="middle" font-size="12" font-weight="700" fill="var(--ink)">港</text>
+<polygon points="213.1,156.0 168.1,182.0 123.0,156.0 123.0,104.0 168.1,78.0 213.1,104.0" fill="var(--paper)" stroke="var(--leaf)" stroke-width="2.5"/>
+<circle cx="168.1" cy="144.0" r="14" fill="var(--wheat)" stroke="var(--line)" stroke-width="1.2"/>
+<text x="168.1" y="149.0" text-anchor="middle" class="en" font-size="14" font-weight="700" fill="var(--wheat-ink)">3</text>
+<circle cx="165.5" cy="165.0" r="1.7" fill="var(--muted)"/>
+<circle cx="170.7" cy="165.0" r="1.7" fill="var(--muted)"/>
+<text x="168.1" y="118.0" text-anchor="middle" font-size="10" fill="var(--muted)">出にくい</text>
+<polygon points="303.2,156.0 258.1,182.0 213.1,156.0 213.1,104.0 258.1,78.0 303.2,104.0" fill="var(--paper)" stroke="var(--leaf)" stroke-width="2.5"/>
+<circle cx="258.1" cy="144.0" r="14" fill="var(--wheat)" stroke="var(--line)" stroke-width="1.2"/>
+<text x="258.1" y="149.0" text-anchor="middle" class="en" font-size="14" font-weight="700" fill="var(--wheat-ink)">5</text>
+<circle cx="250.3" cy="165.0" r="1.7" fill="var(--muted)"/>
+<circle cx="255.5" cy="165.0" r="1.7" fill="var(--muted)"/>
+<circle cx="260.7" cy="165.0" r="1.7" fill="var(--muted)"/>
+<circle cx="265.9" cy="165.0" r="1.7" fill="var(--muted)"/>
+<text x="258.1" y="118.0" text-anchor="middle" font-size="10" fill="var(--muted)">出やすい</text>
+<polygon points="393.2,156.0 348.2,182.0 303.2,156.0 303.2,104.0 348.2,78.0 393.2,104.0" fill="var(--paper)" stroke="var(--leaf)" stroke-width="2.5"/>
+<circle cx="348.2" cy="144.0" r="14" fill="var(--wheat)" stroke="var(--line)" stroke-width="1.2"/>
+<text x="348.2" y="149.0" text-anchor="middle" class="en" font-size="14" font-weight="700" fill="var(--warn)">8</text>
+<circle cx="337.8" cy="165.0" r="1.7" fill="var(--muted)"/>
+<circle cx="343.0" cy="165.0" r="1.7" fill="var(--muted)"/>
+<circle cx="348.2" cy="165.0" r="1.7" fill="var(--muted)"/>
+<circle cx="353.4" cy="165.0" r="1.7" fill="var(--muted)"/>
+<circle cx="358.6" cy="165.0" r="1.7" fill="var(--muted)"/>
+<text x="348.2" y="118.0" text-anchor="middle" font-size="10" fill="var(--muted)">出やすい</text>
+<polygon points="483.3,156.0 438.3,182.0 393.2,156.0 393.2,104.0 438.3,78.0 483.3,104.0" fill="var(--paper)" stroke="var(--leaf)" stroke-width="2.5"/>
+<circle cx="438.3" cy="144.0" r="14" fill="var(--wheat)" stroke="var(--line)" stroke-width="1.2"/>
+<text x="438.3" y="149.0" text-anchor="middle" class="en" font-size="14" font-weight="700" fill="var(--wheat-ink)">11</text>
+<circle cx="435.7" cy="165.0" r="1.7" fill="var(--muted)"/>
+<circle cx="440.9" cy="165.0" r="1.7" fill="var(--muted)"/>
+<text x="438.3" y="118.0" text-anchor="middle" font-size="10" fill="var(--muted)">出にくい</text>
+<polygon points="168.1,234.0 123.0,260.0 78.0,234.0 78.0,182.0 123.0,156.0 168.1,182.0" fill="var(--paper)" stroke="var(--leaf)" stroke-width="2.5"/>
+<circle cx="123.0" cy="222.0" r="14" fill="var(--wheat)" stroke="var(--line)" stroke-width="1.2"/>
+<text x="123.0" y="227.0" text-anchor="middle" class="en" font-size="14" font-weight="700" fill="var(--warn)">8</text>
+<circle cx="112.6" cy="243.0" r="1.7" fill="var(--muted)"/>
+<circle cx="117.8" cy="243.0" r="1.7" fill="var(--muted)"/>
+<circle cx="123.0" cy="243.0" r="1.7" fill="var(--muted)"/>
+<circle cx="128.2" cy="243.0" r="1.7" fill="var(--muted)"/>
+<circle cx="133.4" cy="243.0" r="1.7" fill="var(--muted)"/>
+<text x="123.0" y="196.0" text-anchor="middle" font-size="10" fill="var(--muted)">出やすい</text>
+<polygon points="258.1,234.0 213.1,260.0 168.1,234.0 168.1,182.0 213.1,156.0 258.1,182.0" fill="var(--paper)" stroke="var(--leaf)" stroke-width="2.5"/>
+<circle cx="213.1" cy="222.0" r="14" fill="var(--wheat)" stroke="var(--line)" stroke-width="1.2"/>
+<text x="213.1" y="227.0" text-anchor="middle" class="en" font-size="14" font-weight="700" fill="var(--wheat-ink)">4</text>
+<circle cx="207.9" cy="243.0" r="1.7" fill="var(--muted)"/>
+<circle cx="213.1" cy="243.0" r="1.7" fill="var(--muted)"/>
+<circle cx="218.3" cy="243.0" r="1.7" fill="var(--muted)"/>
+<text x="213.1" y="196.0" text-anchor="middle" font-size="10" fill="var(--muted)">出にくい</text>
+<polygon points="348.2,234.0 303.2,260.0 258.1,234.0 258.1,182.0 303.2,156.0 348.2,182.0" fill="var(--wheat)" stroke="var(--line)" stroke-width="2"/>
+<text x="303.2" y="206.0" text-anchor="middle" class="en" font-size="15" font-weight="700" fill="var(--wheat-ink)">Market</text>
+<text x="303.2" y="224.0" text-anchor="middle" font-size="11" fill="var(--wheat-ink)">7＝全員1枚</text>
+<polygon points="438.3,234.0 393.2,260.0 348.2,234.0 348.2,182.0 393.2,156.0 438.3,182.0" fill="var(--paper)" stroke="var(--leaf)" stroke-width="2.5"/>
+<circle cx="393.2" cy="222.0" r="14" fill="var(--wheat)" stroke="var(--line)" stroke-width="1.2"/>
+<text x="393.2" y="227.0" text-anchor="middle" class="en" font-size="14" font-weight="700" fill="var(--wheat-ink)">12</text>
+<circle cx="393.2" cy="243.0" r="1.7" fill="var(--muted)"/>
+<text x="393.2" y="196.0" text-anchor="middle" font-size="10" fill="var(--muted)">出にくい</text>
+<polygon points="528.3,234.0 483.3,260.0 438.3,234.0 438.3,182.0 483.3,156.0 528.3,182.0" fill="var(--paper)" stroke="var(--leaf)" stroke-width="2.5"/>
+<circle cx="483.3" cy="222.0" r="14" fill="var(--wheat)" stroke="var(--line)" stroke-width="1.2"/>
+<text x="483.3" y="227.0" text-anchor="middle" class="en" font-size="14" font-weight="700" fill="var(--warn)">6</text>
+<circle cx="472.9" cy="243.0" r="1.7" fill="var(--muted)"/>
+<circle cx="478.1" cy="243.0" r="1.7" fill="var(--muted)"/>
+<circle cx="483.3" cy="243.0" r="1.7" fill="var(--muted)"/>
+<circle cx="488.5" cy="243.0" r="1.7" fill="var(--muted)"/>
+<circle cx="493.7" cy="243.0" r="1.7" fill="var(--muted)"/>
+<text x="483.3" y="196.0" text-anchor="middle" font-size="10" fill="var(--muted)">出やすい</text>
+<polygon points="213.1,312.0 168.1,338.0 123.0,312.0 123.0,260.0 168.1,234.0 213.1,260.0" fill="var(--paper)" stroke="var(--leaf)" stroke-width="2.5"/>
+<circle cx="168.1" cy="300.0" r="14" fill="var(--wheat)" stroke="var(--line)" stroke-width="1.2"/>
+<text x="168.1" y="305.0" text-anchor="middle" class="en" font-size="14" font-weight="700" fill="var(--wheat-ink)">2</text>
+<circle cx="168.1" cy="321.0" r="1.7" fill="var(--muted)"/>
+<text x="168.1" y="274.0" text-anchor="middle" font-size="10" fill="var(--muted)">出にくい</text>
+<polygon points="303.2,312.0 258.1,338.0 213.1,312.0 213.1,260.0 258.1,234.0 303.2,260.0" fill="var(--paper)" stroke="var(--leaf)" stroke-width="2.5"/>
+<circle cx="258.1" cy="300.0" r="14" fill="var(--wheat)" stroke="var(--line)" stroke-width="1.2"/>
+<text x="258.1" y="305.0" text-anchor="middle" class="en" font-size="14" font-weight="700" fill="var(--warn)">6</text>
+<circle cx="247.7" cy="321.0" r="1.7" fill="var(--muted)"/>
+<circle cx="252.9" cy="321.0" r="1.7" fill="var(--muted)"/>
+<circle cx="258.1" cy="321.0" r="1.7" fill="var(--muted)"/>
+<circle cx="263.3" cy="321.0" r="1.7" fill="var(--muted)"/>
+<circle cx="268.5" cy="321.0" r="1.7" fill="var(--muted)"/>
+<text x="258.1" y="274.0" text-anchor="middle" font-size="10" fill="var(--muted)">出やすい</text>
+<polygon points="393.2,312.0 348.2,338.0 303.2,312.0 303.2,260.0 348.2,234.0 393.2,260.0" fill="var(--paper)" stroke="var(--leaf)" stroke-width="2.5"/>
+<circle cx="348.2" cy="300.0" r="14" fill="var(--wheat)" stroke="var(--line)" stroke-width="1.2"/>
+<text x="348.2" y="305.0" text-anchor="middle" class="en" font-size="14" font-weight="700" fill="var(--wheat-ink)">9</text>
+<circle cx="340.4" cy="321.0" r="1.7" fill="var(--muted)"/>
+<circle cx="345.6" cy="321.0" r="1.7" fill="var(--muted)"/>
+<circle cx="350.8" cy="321.0" r="1.7" fill="var(--muted)"/>
+<circle cx="356.0" cy="321.0" r="1.7" fill="var(--muted)"/>
+<text x="348.2" y="274.0" text-anchor="middle" font-size="10" fill="var(--muted)">出やすい</text>
+<polygon points="483.3,312.0 438.3,338.0 393.2,312.0 393.2,260.0 438.3,234.0 483.3,260.0" fill="var(--paper)" stroke="var(--leaf)" stroke-width="2.5"/>
+<circle cx="438.3" cy="300.0" r="14" fill="var(--wheat)" stroke="var(--line)" stroke-width="1.2"/>
+<text x="438.3" y="305.0" text-anchor="middle" class="en" font-size="14" font-weight="700" fill="var(--wheat-ink)">10</text>
+<circle cx="433.1" cy="321.0" r="1.7" fill="var(--muted)"/>
+<circle cx="438.3" cy="321.0" r="1.7" fill="var(--muted)"/>
+<circle cx="443.5" cy="321.0" r="1.7" fill="var(--muted)"/>
+<text x="438.3" y="274.0" text-anchor="middle" font-size="10" fill="var(--muted)">出にくい</text>
+</svg>
+</section>
+
+<footer>WORD FARM 試遊版ルール v0.3 ／ 2026-10-19 ／ 数値はすべて試遊で調整する前提の仮置きです。</footer>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,10 @@
+# 動画・静止画の出力は上げない
+video/out/
+*.mp4
+*.mov
+# 依存パッケージ・キャッシュ
+node_modules/
+__pycache__/
+*.pyc
+# 表示確認の画像
+.playwright-mcp/
