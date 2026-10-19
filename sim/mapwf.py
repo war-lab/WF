@@ -2,6 +2,7 @@
 import os, math, random
 from collections import Counter
 from wf import Game, Player, RuleError, STRATS, PROB, ORDERS, DEVDECK, TILES
+import wf
 
 HARBORS = int(os.environ.get('HARBORS','0'))
 HSINGLE = os.environ.get('HSINGLE')=='1'
@@ -91,7 +92,9 @@ class MapGame(Game):
         s.harbor={}   # 交点→港の種類
         if HARBORS and FIXED:
             types=['any','any']+s.rng.sample(TILES,4); s.rng.shuffle(types)
-            for v,t in zip(FIXED['harbors'],types): s.harbor[v]=t
+            # 汎用港（3:1）は位置を固定（交点37と3）。専門港の種類だけ毎回変わる。乱数の使い方は以前と同じ
+            specs=[t for t in types if t!='any']
+            for v in FIXED['harbors']: s.harbor[v]='any' if v in (37,3) else specs.pop(0)
         elif HARBORS and HSINGLE:
             # 港は「タイル1枚だけに接する外側の角」1か所。その角のタイルは6・8にしない
             co=s.L['coords']; cx=sum(x for x,y in co.values())/len(co); cy=sum(y for x,y in co.values())/len(co)
@@ -119,6 +122,12 @@ class MapGame(Game):
             deck=ordergen.gen_deck(random.Random(seed*7919+1), int(os.environ.get('ORDERN','24')))
             _wf.ORDERS[:]=deck; _wf.OBYID.clear(); _wf.OBYID.update({o['id']:o for o in deck})
         s.deck=[o['id'] for o in ORDERS]; s.rng.shuffle(s.deck)
+        if os.environ.get('JOINT')=='1':
+            import ordergen as _og
+            s.jdeck=_og.unique_events(_og.gen_joint_deck(random.Random(seed*104729+3), 8)); s.jface=s.jdeck.pop(); s.jface['since']=1
+            for _ in range(wf.JOINTN-1):
+                if s.jdeck: j=s.jdeck.pop(); j['since']=1; s.jfaces.append(j)
+        else: s.jdeck=[]; s.jface=None
         s.face=[s.deck.pop() for _ in range(3)]
         order=list(range(n))+list(range(n))[::-1]
         for k,i in enumerate(order):

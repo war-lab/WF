@@ -1,12 +1,12 @@
 # 動画用の台本を模擬エンジンで実行し、出来事と状態を JSON に書き出す
 # 使い方: python scenario_run.py [最後に実行する手番の番号]
 import os, sys, json, copy
-os.environ.update(ORDERSET='3', ORD13='down', DEV='1', DEVOFF='1', LOWPRICE='1', COINBANK='1', COINPRICE='4',
-                  HARBORS='6', BANKBASE='4', HSINGLE='1', FIXED='1', COWMODE='delay', SEVEN='1', MAP_T4='8', MAP_T3='8', EGGW='1.8', MILKW='1.8')
+os.environ.update(ORDERSET='3', ORD13='down', DEV='1', DEVOFF='1', LOWPRICE='1', COINBANK='1', COINPRICE='5',
+                  HARBORS='6', BANKBASE='4', HSINGLE='1', FIXED='1', COWMODE='', SEVEN='1', MAP_T4='8', MAP_T3='8', EGGW='1.8', MILKW='1.8', JOINT='1', JQSMALL='1', JTIMEOUT='3', ACTIVE='1', PRODMULT='5', PRICES='carrot:2,potato:1,wheat:1,egg:1,milk:2', CARROTFEED='1', COWGROW='buy', HOUSECOST='5', ACTIONS='99', PRODPRICES='1:10,2:15', JOINTN='2', JSTART='line')
 from collections import Counter
 import mapwf, wf
 from wf import RuleError, OBYID
-from scenario import PLAYERS, PLACEMENT, ORDER_DECK, SETUP_STEPS, TURNS, OUTRO_STEPS, SCEN_ORDERS, FINALE_NOTES
+from scenario import PLAYERS, PLACEMENT, ORDER_DECK, SETUP_STEPS, TURNS, OUTRO_STEPS, SCEN_ORDERS, FINALE_NOTES, SCEN_JOINT
 import random, ordergen
 
 def build_deck():
@@ -45,7 +45,9 @@ def snapshot(g):
     return dict(players=[dict(pts=p.pts, coins=p.coins, hand={k:v for k,v in p.hand.items() if v}, handsize=p.handsize(), prod={k:v for k,v in p.prod.items() if v},
                               fields=[None if f is None else {k:v for k,v in f.items()} for f in p.fields],
                               bases=list(p.bases), tickets=p.tickets, debt=p.debt) for p in g.players],
-                face=list(g.face), deck=len(g.deck), cur=g.cur, round=g.round, actions=getattr(g,'actions',2))
+                face=list(g.face), deck=len(g.deck), cur=g.cur, round=g.round, actions=getattr(g,'actions',2),
+                joints=[dict(id=j['id'], text=j['text'], since=j.get('since'), started=j.get('started'),
+                       lines=[dict(item=l['item'], n=l['n'], pts=l['pts'], by=l.get('by')) for l in j['lines']]) for j in (g.__dict__.get('jfaces') or [])])
 
 def run_cmd(g, c):
     a=c.split(); p=g.players[g.cur]; op=a[0]
@@ -57,8 +59,8 @@ def run_cmd(g, c):
     elif op=='house': g.act_house(p,int(a[1]))
     elif op=='bank': g.bank(p,a[1],a[2])
     elif op=='coinbank':
-        if p.coins<4: raise RuleError('コイン不足')
-        p.coins-=4; p.hand[a[1]]+=1; g.emit(t='coinbank',p=p.id,card=a[1],coins=4)
+        if p.coins<wf.COINPRICE: raise RuleError('コイン不足')
+        p.coins-=wf.COINPRICE; p.hand[a[1]]+=1; g.emit(t='coinbank',p=p.id,card=a[1],coins=wf.COINPRICE)
     elif op=='flush': g.flush(p,int(a[1]))
     elif op=='misread':
         # 条件を満たさない届け出：sellカードを捨てて不成立
@@ -83,6 +85,8 @@ def run_cmd(g, c):
     elif op=='pay':
         q=g.players[int(a[1])]; n=int(a[2]); paid=min(n,q.coins); q.coins-=paid; q.debt+=n-paid
         g.emit(t='jp_pay',p=q.id,n=n,paid=paid,debt=n-paid,why=' '.join(a[3:]))
+    elif op=='joint': g.act_joint(p,a[1],int(a[2]) if len(a)>2 else None)
+    elif op=='prodbuy': g.buy_product(p,a[1])
     elif op=='paydebt':
         q=g.players[int(a[1])]; n=min(q.debt,q.coins); q.coins-=n; q.debt-=n; g.emit(t='paydebt',p=q.id,n=n)
     else: raise RuleError('不明なコマンド '+op)
@@ -99,6 +103,18 @@ def main(upto):
     ids={o['id'] for o in DECK}; head=[i for i in ORDER_DECK if i in ids]
     rest=[o['id'] for o in DECK if o['id'] not in head]
     g.face=head[:3]; g.deck=list(reversed(head[3:]+rest))
+    # 共同注文：台本の分を先頭に、残りは自動生成
+    jd=[dict(o, lines=[dict(l) for l in o['lines']]) for o in SCEN_JOINT]
+    for o in jd:
+        for l in o['lines']: l.setdefault('pts', ordergen.line_points(l['item'], l['n']))
+        o.setdefault('bonus',0.5)
+    rest=ordergen.unique_events(ordergen.gen_joint_deck(random.Random(99), 6), taken=[next(e for e in ordergen.EVENTS if o['text'].startswith(e)) for o in jd])
+    # 生成した共同注文の番号が台本の201・202と重ならないよう、台本の続きから振り直す
+    for k,o in enumerate(rest): o['id']=max(x['id'] for x in jd)+1+k
+    # 表に2枚（台本の201と202）。時間切れは最初の行が出たラウンドから数える
+    g.jfaces=[jd[0],jd[1]]
+    for j in g.jfaces: j['since']=1
+    g.jdeck=list(reversed(jd[2:]+rest))
     g.events=[]; timeline=[]
     timeline.append(dict(kind='setup', steps=SETUP_STEPS, state=snapshot(g),
                          board=dict(tcat=g.tcat, tnum=g.tnum, harbor={str(k):v for k,v in g.harbor.items()})))
@@ -133,8 +149,10 @@ def main(upto):
         finish(g); return
     auto=autoplay(g)
     timeline.extend(auto)
-    timeline.append(dict(kind='outro', steps=OUTRO_STEPS, state=snapshot(g)))
+    # 自動の手番は複製した盤面で進むので、終わりの盤面は最後の手番の状態を使う
+    timeline.append(dict(kind='outro', steps=OUTRO_STEPS, state=auto[-1]['state'] if auto else snapshot(g)))
     orders={str(o['id']):dict(text=o['text'], pts=o['pts'], level=o.get('level','中'), picture=o.get('picture',False), req=o.get('req',{})) for o in wf.ORDERS}
+    for o in jd+rest: orders[str(o['id'])]=dict(text=o['text'], pts=sum(l['pts'] for l in o['lines']), level='共同', picture=False, req={})
     json.dump(dict(players=PLAYERS, orders=orders, timeline=timeline, layout=export_layout(g)), open('../video/public/game.json','w',encoding='utf-8'), ensure_ascii=False, indent=1)
     print('書き出し: video/public/game.json')
 
@@ -158,7 +176,8 @@ def autoplay(g):
         if last['p']!=2: continue
         ben=gc.players[1].pts; others=max(q.pts for q in gc.players if q.id!=2)
         lows=sorted(q.pts for q in gc.players if q.id!=2)
-        score=(lows[0], lows[1], ben, -abs(len(turns)-14))
+        act=sum(1 for t in turns for e in t['events'] if e['t'] in ('trade','refuse','bank','coinbank','joint_line','joint_done','prodbuy'))
+        score=(lows[0]>=6.0, round(lows[0]*2)/2 + act/40, -abs(len(turns)-16))
         if best is None or score>best[0]: best=(score,seed,turns,gc)
     score,seed,turns,gc=best
     print(f'採用した種 {seed}：自動の手番{len(turns)}、最終 '+' '.join(f"{PLAYERS[q.id]['name']}{q.pts}" for q in gc.players))

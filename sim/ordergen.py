@@ -19,9 +19,15 @@ PLACES = [('The cafe','the cafe'),('The bakery','the bakery'),('The school','the
           ('The hotel','the hotel'),('The hospital','the hospital'),('Grandma','Grandma'),('The soup kitchen','the soup kitchen')]
 
 # 手間：産物1つあたりの重み＋届ける手間＋種類が増える手間。難しい英文は＋0.5
-W={'carrot':0.4,'potato':0.4,'wheat':0.4,'egg':0.45,'milk':0.4}
+# CROPW：作物1つあたりの点、MIXB：種類を1つ増やすごとの上乗せ（試験用。既定は確定仕様の値）
+_CW=float(__import__('os').environ.get('CROPW','0.4'))
+_MB=float(__import__('os').environ.get('MIXB','0.3'))
+W={'carrot':_CW,'potato':_CW,'wheat':_CW,'egg':float(__import__('os').environ.get('EGGPT','0.45')),'milk':float(__import__('os').environ.get('MILKPT','0.4'))}
+# ORDERW：品目ごとの点を個別に上書きする（例 carrot:0.4,potato:0.2）
+for _kv in filter(None,__import__('os').environ.get('ORDERW','').split(',')):
+    _k,_v=_kv.split(':'); W[_k]=float(_v)
 def points(req, hard=False):
-    e=0.3+sum(W[k]*v for k,v in req.items())+0.3*(len(req)-1)+(0.5 if hard else 0)
+    e=0.3+sum(W[k]*v for k,v in req.items())+_MB*(len(req)-1)+(0.5 if hard else 0)
     return max(0.5, min(3.0, round(e*2)/2))
 
 ITEMW=[('carrot',1.0),('potato',1.0),('wheat',1.0),('egg',float(__import__('os').environ.get('EGGW','1.0'))),('milk',float(__import__('os').environ.get('MILKW','1.0')))]
@@ -90,3 +96,39 @@ if __name__=='__main__':
     rng=random.Random(int(sys.argv[1]) if len(sys.argv)>1 else 1)
     for o in gen_deck(rng):
         print(f"#{o['id']:2} [{o['level']}] {o['pts']:>3}点  {o['text']}   条件={o['req'] if o['kind']!='animals' else ('動物'+str(o['n'])+'頭以上')}{' 合計'+str(o.get('total')) if o['kind']=='anyof' else ''}")
+
+# ---------- 共同注文 ----------
+# 3行（産物の種類ごと）。行ごとに点。全行がそろったら、出した人がそれぞれの行の点を受け取る
+EVENTS = ['The village festival','The school lunch','The wedding party','The harvest fair','The football club','The hospital kitchen','The summer camp','The town bakery contest']
+JQ = {'carrot':(2,4),'potato':(2,4),'wheat':(2,4),'egg':(2,4),'milk':(2,3)} if __import__('os').environ.get('JQSMALL')=='1' else {'carrot':(3,6),'potato':(3,6),'wheat':(3,6),'egg':(4,6),'milk':(3,4)}
+def line_points(item, n):
+    return points({item:n})   # 通常の注文と同じ計算式
+def gen_joint(rng, idx):
+    ev = rng.choice(EVENTS)
+    animals = rng.sample(['egg','milk'], rng.choice([1,2]))
+    crops = rng.sample(CROPS, 3-len(animals))
+    items = animals + crops; rng.shuffle(items)
+    lines = []
+    for it in items:
+        lo, hi = JQ[it]; n = rng.randint(lo, hi)
+        lines.append(dict(item=it, n=n, pts=line_points(it, n)))
+    parts = [noun(l['item'], l['n']) for l in lines]
+    text = f"{ev} needs {join(parts)}."
+    return dict(id=idx, kind='joint', lines=lines, text=text, bonus=0.5)
+def gen_joint_deck(rng, n=8):
+    deck=[]; seen=set()
+    while len(deck)<n:
+        o=gen_joint(rng, 201+len(deck))
+        if o['text'] in seen: continue
+        seen.add(o['text']); deck.append(o)
+    return deck
+def unique_events(deck, taken=()):
+    # 宛先の名前が重ならないように、重複を未使用の名前に付け替える（行の中身と乱数は変えない）
+    used=set(taken); out=[]
+    for o in deck:
+        ev=next(e for e in EVENTS if o['text'].startswith(e))
+        if ev in used:
+            ev=next(e for e in EVENTS if e not in used)
+            o=dict(o, text=ev+o['text'][o['text'].index(' needs'):])
+        used.add(ev); out.append(o)
+    return out

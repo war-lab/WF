@@ -1,6 +1,6 @@
 // WORD FARM 紹介動画の本体
 import React, { useMemo } from 'react';
-import { AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig, Easing } from 'remotion';
+import { AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig, Easing, Img, staticFile } from 'remotion';
 import { buildBeats, Beat, G, NAMES, FPS } from './timeline';
 import { DEFS } from './defs';
 
@@ -9,6 +9,46 @@ const C = {
   warn: '#9a3b1f', sea: '#cfe1e3', soil: '#8a6a48', table: '#e6ede3',
 };
 const PCOL = ['#2f6b3a', '#a2453a', '#c99a1c', '#3b6ea8'];
+
+// ---------- 表情（public/faces/<キャラ>_<表情>.png） ----------
+// 0 Aki 冷静なお姉さん／1 Ben 陽気なお兄さん／2 Chika 元気な女の子／3 Dan 英国紳士
+const FKEY = ['aki', 'ben', 'chika', 'dan'];
+type Mood = 'say' | 'think' | 'win' | 'no' | 'sad' | 'wow' | 'smug' | 'yes' | 'shy';
+const FACE: Record<Mood, string[]> = {
+  say: ['explain', 'talk', 'talk', 'explain'],
+  think: ['thinking', 'normal', 'smile', 'thinking'],
+  win: ['happy', 'laugh', 'laugh', 'smile'],
+  no: ['exasperated', 'pout', 'pout', 'serious'],
+  sad: ['thinking', 'troubled', 'troubled', 'wry'],
+  wow: ['surprised', 'panic', 'surprised', 'surprised'],
+  smug: ['happy', 'smug', 'smug', 'joke'],
+  yes: ['happy', 'talk', 'laugh', 'smile'],
+  shy: ['shy', 'shy', 'shy', 'shy'],
+};
+// 台詞の中身から表情を決める（上から順に判定）
+const RULES: [Mood, RegExp][] = [
+  ['win', /I won|I did it|勝った|やったー|Yes!!|Yay|Jolly good|お見事/],
+  ['wow', /Noooo|うそーん|！？|\?!|I say|えーっ|ちょっと！/],
+  ['sad', /断られ|ちぇっ|つらい|ひどい|遠い|困った|足りない|ない〜|ごめん|Sorry, Ben|…あと|間違え|ルールはルール/],
+  ['no', /^No[,. !]|ダメ|お断り|Not today|I need my|I'm afraid not|I’m afraid not|あいにく|Hey!/],
+  ['smug', /Ha!|Boom|どうだ|天才|Business|流させ|Bye-bye|Cheerio|油断ならない|甘い/],
+  ['shy', /日本語|Free ticket|えっと|あれ？/],
+  ['yes', /Deal|いいよ|Thanks|サンキュー|Certainly|With pleasure|よろしい|喜んで|妥当/],
+];
+export function faceFor(st: any): string | null {
+  if (!st || (st[0] !== 'say' && st[0] !== 'think')) return null;
+  const who = st[1] as number; const txt = `${st[2] || ''} ${st[3] || ''}`;
+  let mood: Mood = st[0] === 'say' ? 'say' : 'think';
+  for (const [m, re] of RULES) if (re.test(txt)) { mood = m; break; }
+  return `faces/${FKEY[who]}_${FACE[mood][who]}.png`;
+}
+// 話していないときの表情
+const REST = ['normal', 'normal', 'smile', 'normal'];
+const Avatar: React.FC<{ src: string; size: number; ring: string }> = ({ src, size, ring }) => (
+  <div style={{ width: size, height: size, borderRadius: size / 2, overflow: 'hidden', background: '#fff', border: `2px solid ${ring}`, flex: 'none', position: 'relative' }}>
+    <Img src={staticFile(src)} style={{ position: 'absolute', width: size * 1.6, left: -size * 0.3, top: -size * 0.12 }} />
+  </div>
+);
 const VARS: React.CSSProperties = {
   ['--bg' as any]: C.bg, ['--paper' as any]: C.paper, ['--ink' as any]: C.ink, ['--muted' as any]: C.muted, ['--rule' as any]: C.rule,
   ['--leaf' as any]: C.leaf, ['--wheat' as any]: C.wheat, ['--wheat-ink' as any]: C.wheatInk, ['--warn' as any]: C.warn,
@@ -112,19 +152,33 @@ const Dice: React.FC<{ beat: Beat; local: number }> = ({ beat, local }) => {
 const Orders: React.FC<{ beat: Beat }> = ({ beat }) => {
   const face: number[] = beat.state.face || [];
   const hl = beat.events?.find((e: any) => e.t === 'deliver')?.order;
-  return (<div style={{ position: 'absolute', left: 1070, top: 18, width: 830, height: 220, display: 'flex', gap: 14 }}>
+  // 共同注文は2枚（古いデータは joint 1枚）
+  const joints: any[] = beat.state.joints || (beat.state.joint ? [beat.state.joint] : []);
+  return (<div style={{ position: 'absolute', left: 1070, top: 18, width: 830, height: 220, display: 'flex', gap: 10 }}>
     {face.map(id => {
       const o = G.orders[String(id)] || {};
       return (<div key={id} style={{ flex: 1, background: C.paper, border: `2px solid ${hl === id ? '#e0a400' : C.ink}`, borderRadius: 12, overflow: 'hidden', fontFamily: ENF }}>
         <div style={{ background: C.leaf, color: '#fff', padding: '6px 12px', display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: 18 }}>
           <span>ORDER #{id}</span><span style={{ background: C.wheat, color: C.wheatInk, borderRadius: 14, padding: '0 10px' }}>{o.pts}点</span></div>
-        <div style={{ padding: '10px 12px', fontSize: 19, lineHeight: 1.3, color: C.ink, height: 118, overflow: 'hidden' }}>{o.text}</div>
+        <div style={{ padding: '8px 10px', fontSize: 16, lineHeight: 1.3, color: C.ink, height: 118, overflow: 'hidden' }}>{o.text}</div>
         <div style={{ padding: '0 12px', display: 'flex', gap: 4, alignItems: 'center', height: 30 }}>
           <span style={{ fontFamily: JPF, fontSize: 14, color: C.muted, border: `1px solid ${C.rule}`, borderRadius: 10, padding: '0 8px' }}>{o.level}</span>
           {o.picture && Object.entries(o.req || {}).flatMap(([k, v]: any) => Array.from({ length: v }).map((_, i) => <Icon key={k + i} id={PICON[k]} size={22} />))}
         </div>
       </div>);
     })}
+    {joints.length ? (<div style={{ flex: 1.35, display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {joints.map((j: any) => (<div key={j.id} style={{ flex: 1, background: '#fff8e6', border: `2px solid ${C.wheatInk}`, borderRadius: 10, overflow: 'hidden', fontFamily: ENF }}>
+        <div style={{ background: C.wheat, color: C.wheatInk, padding: '2px 8px', fontWeight: 800, fontSize: 13, fontFamily: JPF, display: 'flex', justifyContent: 'space-between' }}>
+          <span>共同注文 #{j.id}</span><span>{j.started ? `R${j.started}〜R${j.started + 2}` : '未着手'}</span></div>
+        <div style={{ padding: '2px 8px', fontSize: 11.5, lineHeight: 1.2, color: C.ink, height: 42, overflow: 'hidden' }}>{j.text}</div>
+        <div style={{ padding: '2px 6px', display: 'flex', gap: 4 }}>
+          {j.lines.map((l: any, k: number) => (<div key={k} style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 2, fontSize: 12, fontFamily: JPF, background: l.by != null ? PCOL[l.by] : 'transparent', color: l.by != null ? '#fff' : C.ink, border: `1px solid ${l.by != null ? PCOL[l.by] : C.rule}`, borderRadius: 6, padding: '0 3px' }}>
+            <Icon id={PICON[l.item]} size={16} /><span style={{ fontFamily: ENF }}>×{l.n}</span><span style={{ opacity: 0.85 }}>{l.pts}点</span>
+          </div>))}
+        </div>
+      </div>))}
+    </div>) : null}
   </div>);
 };
 
@@ -138,6 +192,7 @@ const Panel: React.FC<{ i: number; beat: Beat; prev: Beat | null }> = ({ i, beat
   return (<div style={{ position: 'absolute', left: 1070, top: 254 + i * 204, width: 830, height: 192, background: C.paper, borderRadius: 14,
     border: `${active ? 5 : 2}px solid ${active ? PCOL[i] : C.rule}`, boxShadow: active ? `0 0 0 4px ${PCOL[i]}33` : 'none', overflow: 'hidden', fontFamily: JPF }}>
     <div style={{ background: PCOL[i], color: '#fff', padding: '6px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
+      <Avatar src={(beat.step && beat.step[1] === i && faceFor(beat.step)) || `faces/${FKEY[i]}_${REST[i]}.png`} size={44} ring="#ffffffcc" />
       <span style={{ fontFamily: ENF, fontWeight: 800, fontSize: 24 }}>Claude {NAMES[i]}</span>
       <span style={{ fontSize: 15, background: '#ffffff33', borderRadius: 10, padding: '1px 10px' }}>英語{LEVELS[i]}</span>
       <span style={{ fontSize: 15, opacity: 0.9 }}>{G.players[i].style}</span>
@@ -175,12 +230,14 @@ const Caption: React.FC<{ beat: Beat; local: number }> = ({ beat, local }) => {
     <div style={{ fontFamily: ENF, fontWeight: 800, fontSize: 18, background: '#ffffff26', borderRadius: 8, padding: '4px 10px', height: 'fit-content' }}>RULE</div>
     <div style={{ fontFamily: JPF, fontSize: 32, lineHeight: 1.5 }}>{st[1]}</div></div></div>);
   const who = st[1] as number;
-  if (st[0] === 'think') return (<div style={box}><div style={{ background: '#fbfbf7', border: `3px dashed ${PCOL[who]}`, borderRadius: 40, padding: '20px 30px', height: 270, boxSizing: 'border-box' }}>
+  const face = faceFor(st);
+  const portrait = face ? <Img src={staticFile(face)} style={{ position: 'absolute', left: 4, bottom: 30, height: 300, zIndex: 2, filter: st[0] === 'think' ? 'saturate(0.85)' : 'none' }} /> : null;
+  if (st[0] === 'think') return (<div style={box}>{portrait}<div style={{ background: '#fbfbf7', border: `3px dashed ${PCOL[who]}`, borderRadius: 40, padding: '20px 30px 20px 290px', height: 270, boxSizing: 'border-box' }}>
     <div style={{ fontFamily: JPF, fontSize: 20, color: PCOL[who], fontWeight: 700 }}>Claude {NAMES[who]} の頭の中 <span style={{ color: C.muted, fontWeight: 400 }}>（英語{LEVELS[who]}）</span></div>
     <div style={{ fontFamily: JPF, fontSize: 32, lineHeight: 1.5, color: C.ink, fontStyle: 'italic', marginTop: 8 }}>{st[2]}</div></div></div>);
   if (st[0] === 'say') {
     const extra = st[4];
-    return (<div style={box}><div style={{ background: C.paper, border: `4px solid ${PCOL[who]}`, borderRadius: 18, padding: '18px 26px', height: 270, boxSizing: 'border-box', position: 'relative' }}>
+    return (<div style={box}>{portrait}<div style={{ background: C.paper, border: `4px solid ${PCOL[who]}`, borderRadius: 18, padding: '18px 26px 18px 290px', height: 270, boxSizing: 'border-box', position: 'relative' }}>
       <div style={{ fontFamily: ENF, fontSize: 20, color: PCOL[who], fontWeight: 800 }}>Claude {NAMES[who]}</div>
       <div style={{ fontFamily: ENF, fontSize: st[2].length > 90 ? 30 : 40, fontWeight: 700, color: C.ink, lineHeight: 1.25, marginTop: 6 }}>{st[2]}</div>
       <div style={{ fontFamily: JPF, fontSize: 24, color: C.muted, marginTop: 10 }}>{st[3]}</div>
@@ -203,6 +260,9 @@ const Income: React.FC<{ beat: Beat; local: number }> = ({ beat, local }) => {
   Object.entries(inc).forEach(([p, cs]) => lines.push(`${NAMES[+p]}：${cs.join('、')} カードをもらう`));
   ev.filter((e: any) => e.t === 'seven_discard').forEach((e: any) => lines.unshift(`${NAMES[e.p]}：手札が7枚以上なので ${e.n}枚 捨てる`));
   ev.filter((e: any) => e.t === 'relief').forEach((e: any) => lines.push(`${NAMES[e.p]}：何ももらえなかったので救済で ${e.card} カード`));
+  ev.filter((e: any) => e.t === 'joint_expire').forEach(() => lines.unshift('共同注文が時間切れ。出した人に半分の点、次のカードへ'));
+  ev.filter((e: any) => e.t === 'milk').forEach((e: any) => lines.push(`${NAMES[e.p]}：牛のミルク${e.n}本を受け取る`));
+  ev.filter((e: any) => e.t === 'harvest').forEach((e: any) => lines.push(`${NAMES[e.p]}：${e.crop} を${e.n}つ収穫`));
   const op = interpolate(local, [beat.fast ? 6 : 18, beat.fast ? 12 : 30], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
   return (<div style={{ position: 'absolute', left: 30, top: 760, width: 1000, height: 270, background: C.paper, borderRadius: 16, border: `3px solid ${PCOL[beat.turn!.p]}`, padding: '18px 26px', boxSizing: 'border-box', fontFamily: JPF }}>
     <div style={{ fontSize: 30, fontWeight: 800, color: C.ink }}>Claude {NAMES[beat.turn!.p]} の手番　出目 <span style={{ color: roll === 7 ? C.warn : C.leaf, fontFamily: ENF }}>{roll}</span>{roll === 7 ? '　Market day!' : ''}</div>

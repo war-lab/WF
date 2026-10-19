@@ -49,6 +49,8 @@ const goodsJp = (g: Record<string, number>) => Object.entries(g).map(([k, v]) =>
 const cardsJp = (c: any) => Object.entries(c.cards || {}).map(([k, v]) => `${k}カード${v}枚`).concat(Object.entries(c.prod || {}).map(([k, v]) => `${JP[k]}${v}`)).concat(c.coins ? [`${c.coins}コイン`] : []).join('と');
 
 // キャラクターの口調（0 Aki 冷静なお姉さん／1 Ben 陽気なお兄さん／2 Chika 元気な女の子／3 Dan 英国紳士）
+// ニンジンを植える宣言（feedカードも使う）
+const CARROT = [['I grow carrots and feed the soil.', 'ニンジンを植えて、土に肥料をやるわ'], ['I grow carrots and feed the soil! Easy!', 'ニンジン植えて肥料もまいちゃうぜ！'], ['I grow carrots and feed the soil!!', 'ニンジン植えて、肥料もあげるよー！'], ['I shall grow carrots and feed the soil.', 'ニンジンを植えて、土に肥料をやらせていただこう']];
 const V = {
   plant: [(x: string, j: string) => [`I grow ${x}.`, `${j}を植えるわ`], (x: string, j: string) => [`I grow ${x}! Easy!`, `${j}植えちゃうぜ！`], (x: string, j: string) => [`I grow ${x}!!`, `${j}植えるよー！`], (x: string, j: string) => [`I shall grow ${x}.`, `${j}を植えさせていただこう`]],
   buy: [(a: string, j: string) => [`I buy a ${a}.`, `${j}を買うわ`], (a: string, j: string) => [`I buy a ${a}! Party time!`, `${j}買っちゃう！`], (a: string, j: string) => [`I buy a ${a}!! Yay!!`, `${j}さん買う！ やったー！`], (a: string, j: string) => [`I shall buy a ${a}.`, `${j}を迎え入れよう`]],
@@ -58,6 +60,26 @@ const V = {
   flush: [(n: number) => [`I flush number ${n}.`, `${n}番を流すわ`], (n: number) => [`I'll flush number ${n}! Bye-bye!`, `${n}番、さよなら〜！`], (n: number) => [`I flush number ${n}!`, `${n}番、流しちゃう！`], (n: number) => [`I shall flush number ${n}.`, `${n}番を流させていただく`]],
   house: ['I build a farmhouse.', 'I build a farmhouse! New crib!', 'I build a farmhouse!!', 'I shall build a farmhouse.'],
 };
+const ASK = [
+  (x: string) => `Would anyone trade me ${x}? I can pay.`,
+  (x: string) => `Come on, guys! I just need ${x}!`,
+  (x: string) => `Please!! I need ${x}!!`,
+  (x: string) => `Might anyone spare ${x}?`,
+];
+const NO = [
+  'No. You are too close to winning.',
+  'Sorry, buddy. Not for the leader!',
+  'No, thank you!! You are winning!!',
+  'I am afraid not, old chap.',
+];
+const BRING = [
+  (x: string, ev: string) => `I bring ${x} to ${ev}.`,
+  (x: string, ev: string) => `I bring ${x} to ${ev}! Party time!`,
+  (x: string, ev: string) => `I bring ${x} to ${ev}!!`,
+  (x: string, ev: string) => `I shall bring ${x} to ${ev}.`,
+];
+const evName = (id: number) => { const t: string = G.orders[String(id)]?.text || 'the party'; const m = t.match(/^(The [^,]+?) needs/); return m ? m[1].replace(/^The/, 'the') : 'the party'; };
+const nameOf = (k: string) => (JP as any)[k] ? `${k}` : k;
 const TV = [
   (s: string) => `${s}。冷静にいきましょう`,
   (s: string) => `${s}！ イケるっしょ`,
@@ -70,9 +92,17 @@ function eventToStep(e: any, cur: number): any[] | null {
   const pi = e.p ?? cur;
   const n = NAMES[pi];
   switch (e.t) {
-    case 'plant': { const [en, jp] = V.plant[pi](pl(e.crop), JP[e.crop]); return ['say', e.p, en, jp]; }
-    case 'buy': { const [en, jp] = V.buy[pi](e.animal, JP[e.animal]); return ['say', e.p, en, jp]; }
-    case 'feed': { const [en, jp] = V.feed[pi](e.animal, JP[e.animal]); return ['say', e.p, en, jp + (e.animal === 'cow' ? '（ミルクは次の手番）' : `（卵${e.n}つ）`)]; }
+    case 'plant': {
+      // ニンジンはfeedカードも使うので、宣言に肥料の一文を付ける
+      if (e.crop === 'carrot') return ['say', e.p, CARROT[pi][0], `${CARROT[pi][1]}（feedカードも使う）`];
+      const [en, jp] = V.plant[pi](pl(e.crop), JP[e.crop]); return ['say', e.p, en, jp];
+    }
+    case 'buy': {
+      // 牛はgrowカードも使うので、宣言に牧草の一文を足す
+      const [en, jp] = V.buy[pi](e.animal, JP[e.animal]);
+      return e.animal === 'cow' ? ['say', e.p, en.replace(`a ${e.animal}`, `a ${e.animal} and grow grass`), jp + '（牧草にgrowカードも使う）'] : ['say', e.p, en, jp];
+    }
+    case 'feed': { const [en, jp] = V.feed[pi](e.animal, JP[e.animal]); return ['say', e.p, en, jp + (e.animal === 'cow' ? `（ミルク${e.n}本）` : `（卵${e.n}つ）`)]; }
     case 'market': { const [en, jp] = V.market[pi](nounEn(e.prod, e.n)); return ['say', e.p, en, `${jp}：${JP[e.prod]}${e.n}つで +${e.coins}コイン`]; }
     case 'deliver': {
       const o = G.orders[String(e.order)];
@@ -82,12 +112,18 @@ function eventToStep(e: any, cur: number): any[] | null {
     case 'refill': { const o = G.orders[String(e.order)]; return ['say', cur, `New order: "${o?.text}"`, `新しい注文（${o?.pts}点）`]; }
     case 'trade': return ['narr', `交換：${NAMES[e.p]}は${cardsJp(e.give) || 'なし'}を渡し、${NAMES[e.q]}から${cardsJp(e.get) || 'なし'}を受け取る`];
     case 'bank': return ['narr', `${n}：${e.k === 4 ? '銀行' : '港'}で ${e.give}カード${e.k}枚 → ${e.get}カード1枚`];
-    case 'coinbank': return ['narr', `${n}：銀行で4コインを払い、${e.card}カードを1枚買う`];
+    case 'coinbank': return ['narr', `${n}：銀行で${e.coins}コインを払い、${e.card}カードを1枚買う`];
+    case 'prodbuy': return ['narr', `${n}：銀行で${e.coins}コインを払い、${JP[e.item]}を1つ買う（1手番1つまで）`];
     case 'flush': { const [en, jp] = V.flush[pi](e.order); return ['say', e.p, en, `${jp}（1コイン）`]; }
     case 'house': return ['say', e.p, V.house[pi], '拠点を追加する'];
     case 'harvest': return ['narr', `${n}：${JP[e.crop]}を${e.n}つ収穫。区画が空く`];
-    case 'milk': return ['narr', `${n}：前の手番に餌をやった牛のミルク${e.n}本を受け取る`];
+    case 'milk': return ['narr', `${n}：牛のミルク${e.n}本を受け取る`];
     case 'win': return ['narr', `${n}が自分の手番中に勝利点8点に届いた。その場で${n}の勝ち！`];
+    case 'joint_line': { const en = BRING[pi](nounEn(e.item, e.n), evName(e.order)); return ['say', e.p, en, `共同注文に${JP[e.item]}${e.n}つを出す（完成したら+${e.pts}点）`]; }
+    case 'joint_done': { const g = Object.entries(e.gains || {}).map(([k, v]) => `${NAMES[+k]} +${v}点`).join('、'); return ['narr', `共同注文が完成！ ${g}（完成させた${n}は+0.5点込み）`]; }
+    case 'joint_refill': { const o = G.orders[String(e.order)]; return ['say', cur, `New joint order: "${o?.text}"`, '新しい共同注文']; }
+    case 'joint_expire': return ['narr', '共同注文が、最初の行が出てから3ラウンドで完成せず時間切れ。出した人に行の点の半分を払い、山から1枚を表にする'];
+    case 'refuse': return ['refuse', e.p, e.q, e.want];
     default: return null;
   }
 }
@@ -99,7 +135,10 @@ function autoThought(rec: any): string | null {
   const rest = Math.max(0, 8 - pts);
   const has = (t: string) => ev.some((e: any) => e.t === t);
   let base: string;
-  if (has('deliver')) { const d = ev.filter((e: any) => e.t === 'deliver'); base = `注文を${d.length}つ届けて${pts}点。あと${rest}点`; }
+  if (has('joint_done')) base = `共同注文が完成した！ ${pts}点、あと${rest}点`;
+  else if (has('deliver')) { const d = ev.filter((e: any) => e.t === 'deliver'); base = `注文を${d.length}つ届けて${pts}点。あと${rest}点`; }
+  else if (has('joint_line')) base = `共同注文に1行出した。誰か残りを出してくれ。あと${rest}点`;
+  else if (has('refuse')) base = `誰も売ってくれない。トップは警戒されている。あと${rest}点`;
   else if (has('bank')) base = `港と銀行でカードを替えて、次の注文に備える。あと${rest}点`;
   else if (has('coinbank')) base = `足りないカードは銀行でコインで買う。あと${rest}点`;
   else if (has('flush')) base = `狙われそうな注文は流しておく。あと${rest}点`;
@@ -154,12 +193,26 @@ export function buildBeats(): { beats: Beat[]; total: number } {
       for (const st of notes.before || []) push({ kind: 'step', step: st, dur: durFor(st, false), state: st0, turn, placed: [], inSetup: false });
       let refillN = 0;
       let won = false;
+      // ボットは同じ相手に同じ頼みを繰り返すので、断りは1手番に同じものを1回、合計3回まで見せる
+      const refused = new Set<string>();
       for (const x of rec.seq) {
         if (won) break;
         if (x.ev.t === 'win') won = true;
         if (['turn', 'income', 'market_day', 'relief', 'seven_discard'].includes(x.ev.t)) continue;
         const step = eventToStep(x.ev, rec.p);
         if (!step) continue;
+        if (step[0] === 'refuse') {
+          const [, a, b, want] = step as any[];
+          const key = `${a}-${b}-${want}`;
+          if (refused.has(key) || refused.size >= 3) continue;
+          refused.add(key);
+          const wantEn = ['carrot', 'potato', 'wheat', 'egg', 'milk'].includes(want) ? nounEn(want, 1).replace(/^an? /, 'some ').replace('some bag of', 'a bag of').replace('some bottle of', 'a bottle of') : `a ${want} card`;
+          const s1 = ['say', a, ASK[a](wantEn), `${want === 'egg' ? '卵' : want}がほしい！`];
+          const s2 = ['say', b, NO[b], 'トップに近い人には売らない'];
+          push({ kind: 'step', step: s1, events: [], dur: fast ? sec(1.0) : durFor(s1, false), state: x.state, turn, placed: [], inSetup: false, fast });
+          push({ kind: 'step', step: s2, events: [x.ev], dur: fast ? sec(1.0) : durFor(s2, false), state: x.state, turn, placed: [], inSetup: false, fast });
+          continue;
+        }
         const d = fast ? sec(0.7) : durFor(step, true);
         push({ kind: 'step', step, events: [x.ev], dur: d, state: x.state, turn, placed: [], inSetup: false, fast });
         if (x.ev.t === 'refill') {

@@ -1,0 +1,3 @@
+ラウンド10.8  1位と2位の差2.72  3R首位が勝つ43%  1局あたり: carrot_orders_face 0.00  prod_trade 3.58  prodbuy 1.65  prodbuy_coin 9.32  refused 5.76  coinbank 9.09  orders 8.49  joint_done 0.63  market 9.91  market_coin 43.52  coins_end 10.52  plant 16.67  trade 22.45  bank 1.06  house 0.00
+  勝率: crop 20%  chicken 23%  cow 26%  mixed 31%
+  拠点の追加（方針別、1人1局）: crop 0.00  chicken 0.00  cow 0.00  mixed 0.00

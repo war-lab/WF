@@ -10,7 +10,7 @@
 |---|---|---|
 | 遊ぶ人 | `word_farm_rules.html` | ルールブック（正本）。公開版：https://claude.ai/artifact/HoSAWvybiFEWnQJ7oJBBcE |
 | 遊ぶ人（オフライン） | `word_farm_rules_local.html` | ルールブックを単体で開ける形にしたもの。ブラウザで開いて印刷できる |
-| 作る人 | `WORD_FARM_DESIGN_v0.4.md` | 設計メモ。仕様の要約、判断の根拠、保留した案、試遊で確認する項目、模擬の数値 |
+| 作る人 | `WORD_FARM_DESIGN_v0.5.md` | 設計メモ。仕様の要約、判断の根拠、保留した案、試遊で確認する項目、模擬の数値 |
 | 絵や音を作る人 | `art/ASSET_SPEC.md` | アプリ版の素材仕様（Codexでの画像生成とフリー素材の効果音） |
 
 ルールを変えるときは、`word_farm_rules.html` を直してから `word_farm_rules_local.html` を書き出し直す。設計メモには、変えた理由を書く。
@@ -21,17 +21,22 @@
 
 - 3〜4人、60〜80分。勝利点8点（人数によらない）。自分の手番中に届いたら勝ち。
 - マップは六角タイル13枚（中央はMarket）。数字と港の位置は固定し、タイルと港の種類だけシャッフルする。
-- 拠点は交点に置く。距離ルールあり、道なし、最大3個。港は外側の角1か所。
+- 拠点は交点に置く。距離ルールあり、道なし、最大3個。ゲーム中の追加は5コイン。港は外側の角1か所。
 - 注文はゲームごとに36枚を自動で作る（0.5〜3点）。紙ではルールブックの印刷用36枚を使う。
+- 共同注文を別に2枚置く。3行を全員で出し合い、完成したら各自が自分の行の点を受け取る。同じ人は2枚を合わせて1手番に1行まで。最初の行が出たラウンドから3ラウンドで完成しなければ半分の点（0.5点刻みで切り捨て）。
+- 1手番の行動の回数に上限はない（カードがある限り行動できる）。
 - 交渉は英語。日本語はコインか無料券（全員2枚）で使う。文法は審査しない。
 - 7が出たら、手札7枚以上の人は半分を捨て、そのあと全員が好きな1枚をもらう。
+- 市場価格はニンジンとミルクが2コイン、ほかが1コイン。ニンジンを植えるにはfeedカードも要る（I grow carrots and feed the soil.）。
+- 牛は4コインとgrowカードも要る（I buy a cow and grow grass.）。餌をやるとミルク3つがすぐ出る。
+- 銀行では、5コインで好きな単語カードを1枚買える。産物は、ジャガイモ、小麦、卵が10コイン、ニンジンとミルクが15コインで1つ買える（1手番に1つまで）。
 
 ## フォルダ構成
 
 | 場所 | 内容 |
 |---|---|
 | `word_farm_rules.html`、`word_farm_rules_local.html` | ルールブック |
-| `WORD_FARM_DESIGN_v0.4.md` | 設計メモ |
+| `WORD_FARM_DESIGN_v0.5.md` | 設計メモ |
 | `art/` | 素材仕様 |
 | `sim/` | 模擬エンジンとボット、注文の生成、紹介動画の台本 |
 | `sim/results/` | 模擬対局の結果（設計メモの付録の元データ） |
@@ -47,12 +52,16 @@
 
 ```text
 cd sim
-export PYTHONIOENCODING=utf-8 ORDERSET=3 ORD13=down DEV=1 DEVOFF=1 LOWPRICE=1 COINBANK=1 COINPRICE=4 \
-  HARBORS=6 BANKBASE=4 HSINGLE=1 FIXED=1 COWMODE=delay SEVEN=1 \
-  ORDERGEN=1 ORDERN=36 EGGW=1.8 MILKW=1.8 MAP_T4=8 MAP_T3=8
+export PYTHONIOENCODING=utf-8 ORDERSET=3 ORD13=down DEV=1 DEVOFF=1 LOWPRICE=1 COINBANK=1 \
+  HARBORS=6 BANKBASE=4 HSINGLE=1 FIXED=1 COWMODE= SEVEN=1 \
+  ORDERGEN=1 ORDERN=36 EGGW=1.8 MILKW=1.8 MAP_T4=8 MAP_T3=8 JOINT=1 JQSMALL=1 JTIMEOUT=3 \
+  ACTIVE=1 PRODMULT=5 PRICES=carrot:2,potato:1,wheat:1,egg:1,milk:2 CARROTFEED=1 COWGROW=buy \
+  ACTIONS=99 COINPRICE=5 PRODPRICES=1:10,2:15 HOUSECOST=5 JOINTN=2 JSTART=line
 python probe_vp.py 300 4     # 4人戦300局の長さと展開
 python mapprobe.py hex454 300 3   # 3人戦300局の収入、港、方針別の勝率
 python ordergen.py 2026      # 注文36枚の生成例
+python probe_joint.py 300 4  # 共同注文の完成回数など
+python probe_buy.py 300 4    # 交換、産物の購入、市場の回数と方針別の勝率
 ```
 
 `cli.py` は旧6タイル版の対話式実行で、今の仕様には対応していない。
@@ -63,14 +72,14 @@ python ordergen.py 2026      # 注文36枚の生成例
 
 ```text
 cd sim
-AUTOSEED=20 python scenario_run.py      # video/public/game.json を作る
+AUTOSEED=1077 python scenario_run.py     # video/public/game.json を作る（台本用の設定は scenario_run.py が入れる）
 cd ../video
 npm install                             # 初回のみ
 npx remotion studio src/index.ts        # ブラウザで確認
 npx remotion render src/index.ts WordFarm out/word_farm.mp4
 ```
 
-台本の1〜5ラウンドは手書きで、その後は乱数の種20でボットが進める。種を変えると展開が変わるため、終盤の考えと台詞（`FINALE_NOTES`）も書き直す必要がある。
+紹介動画はルールブック v0.8 のルールで作っている。台本の1〜5ラウンドは手書きで、その後は乱数の種1077でボットが進める（`SEEDMAX=1500 python scenario_run.py` で、Chikaが勝つ種を探し直せる）。種を変えると展開が変わるため、終盤の考えと台詞（`FINALE_NOTES`）も書き直す必要がある。
 
 キャラクターは、Aki が冷静なお姉さん（英語上級）、Ben がおちゃらけた陽気なお兄さん（中上級）、Chika が元気いっぱいの女の子（初級）、Dan が英国紳士（中級）。
 

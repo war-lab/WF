@@ -1,5 +1,12 @@
 # WORD FARM ルール v0.1 のシミュレーションエンジン
-import random, json, sys, pickle, os
+import random, json, sys, pickle, os, math
+# 拠点を足す費用と、ボットが拠点を足す最後のラウンド（試験用。既定は確定仕様の値）
+FEEDALL=__import__('os').environ.get('FEEDALL')=='1'
+JSTART=__import__('os').environ.get('JSTART','show')  # 時間切れの数え始め：show=表に出たとき、line=最初の行が出たとき
+JOINTN=int(__import__('os').environ.get('JOINTN','1'))  # 表にする共同注文の枚数
+ACTIONS=int(__import__('os').environ.get('ACTIONS','2'))  # 1手番の行動の上限（99で実質なし）
+HFROUND=int(__import__('os').environ.get('HFROUND','8'))
+HOUSECOST=int(__import__('os').environ.get('HOUSECOST','3')); HOUSEROUND=int(__import__('os').environ.get('HOUSEROUND','5'))
 from collections import Counter, defaultdict
 
 CARDS = ['grow','buy','feed','sell','carrot','potato','wheat','cow','chicken','two','three','four','five']
@@ -9,6 +16,7 @@ CROPS = ['carrot','potato','wheat']
 PRODUCTS = ['carrot','potato','wheat','egg','milk']
 TILES = ['grow','buy','feed','sell','seed','animal']
 PRICE = {'carrot':1,'potato':1,'wheat':1,'egg':1,'milk':2} if os.environ.get('LOWPRICE')=='1' else {'carrot':1,'potato':1,'wheat':1,'egg':2,'milk':3}
+if os.environ.get('PRICES'): PRICE={k:int(v) for k,v in (x.split(':') for x in os.environ['PRICES'].split(','))}
 ANIMAL_COST = {'cow':4,'chicken':2}
 ANIMAL_OUT = {'cow':('milk',3),'chicken':('egg',int(os.environ.get('EGG','2')))}
 YIELD=int(os.environ.get('YIELD','3')); DELAY=int(os.environ.get('DELAY','1'))
@@ -20,7 +28,19 @@ DEVNOBUY = os.environ.get('DEVNOBUY')=='1'
 DEVOFF = os.environ.get('DEVOFF')=='1'
 COINBANK = os.environ.get('COINBANK')=='1'
 COWMODE = os.environ.get('COWMODE','')
-SEVEN = os.environ.get('SEVEN')=='1'   # 7で手札7枚以上は半分捨てる・手番終わりの上限なし
+SEVEN = os.environ.get('SEVEN')=='1'
+JOINT = os.environ.get('JOINT')=='1'
+ACTIVE = os.environ.get('ACTIVE')=='1'
+PRODBUY = int(os.environ.get('PRODBUY','0'))
+PRODMULT = int(os.environ.get('PRODMULT','0'))
+CARROTFEED = os.environ.get('CARROTFEED')=='1'
+COWGROW = os.environ.get('COWGROW','')   # 'buy'：牛を買うときgrowも要る／'feed'：餌のたびにgrowも要る   # ニンジンを植えるにはfeedカード（肥料）も要る   # 売値の何倍で買えるか（0なら PRODBUY の固定価格）
+# PRODPRICES：売値ごとの購入価格（例 1:10,2:15）。指定があれば倍率より優先する
+PRODPRICES={int(k):int(v) for k,v in (kv.split(':') for kv in filter(None,os.environ.get('PRODPRICES','').split(',')))}
+def prod_price(item):
+    if PRODPRICES: return PRODPRICES[PRICE[item]]
+    return PRODMULT*PRICE[item] if PRODMULT else PRODBUY   # 産物の交換・トップへの拒否・余剰の換金を行う積極的なボット
+JTIMEOUT = int(os.environ.get('JTIMEOUT','0'))   # 7で手札7枚以上は半分捨てる・手番終わりの上限なし
 COINPRICE = int(os.environ.get('COINPRICE','2'))
 DEVDECK = [] if DEVOFF else ['fox']*int(os.environ.get('FOX','8'))+['tractor']*4+['rain']*3+['lucky']*3+['bigorder']*2
 PROB = {n:(6-abs(7-n))/36 for n in range(2,13)}
@@ -75,6 +95,16 @@ class Player:
     def handsize(s): return sum(s.hand.values())
 
 class Game:
+    # 共同注文の表の札。JOINTN 枚まで並べる。jface は先頭の1枚（台本と1枚の時の互換用）
+    @property
+    def jface(s):
+        fs=s.__dict__.get('jfaces') or []
+        return fs[0] if fs else None
+    @jface.setter
+    def jface(s, v): s.__dict__['jfaces']=[v] if v else []
+    def joint_refill(s):
+        while len(s.jfaces)<JOINTN and s.jdeck:
+            j=s.jdeck.pop(); j['since']=s.round; s.jfaces.append(j); s.emit(t='joint_refill',order=j['id'])
     def __init__(s, n, strats, seed=0, target=None, log=False):
         s.rng=random.Random(seed); s.n=n; s.logon=log; s.logs=[]; s.devdeck=[]
         s.target = target or (8 if n==3 else 7)
@@ -177,17 +207,23 @@ class Game:
             m=s.missing(p,o,pipe)
             for k,v in m.items():
                 if k in CROPS: dem[k]+=v/ max(1,sum(m.values()))*o['pts']
+        if JOINT:
+            for jf in s.__dict__.get('jfaces',[]):
+                for l in jf['lines']:
+                    if l.get('by') is None and l['item'] in CROPS: dem[l['item']]+=l['pts']*0.5
         if not dem: return s.rng.choice(CROPS)
         return dem.most_common(1)[0][0]
     def desired(s, p):
         d=Counter()
         d['feed']=len(p.animals())
+        if COWGROW=='feed': d['grow']+=sum(1 for f in p.animals() if f['t']=='cow')
         d['sell']=2
         emp=len(p.empty())
         wa=s.want_animal(p)
         crop_fields = emp - (1 if wa else 0)
         if STRATS[p.strat]['crop'] and crop_fields>0:
-            d['grow']=min(2,crop_fields); d[s.best_crop(p)]+=min(2,crop_fields)
+            bc=s.best_crop(p); d['grow']=min(2,crop_fields); d[bc]+=min(2,crop_fields)
+            if CARROTFEED and bc=='carrot': d['feed']+=1
         if wa and emp>0:
             d['buy']=1; d[wa]+=1
         if DEV and not DEVNOBUY and s.devdeck and p.coins>=DEVCOST: d['buy']+=1
@@ -211,8 +247,23 @@ class Game:
     # ---- 手番開始（収入・収穫） ----
     def start_turn(s):
         p=s.players[s.cur]; s.turn_active=True
-        s.actions=2; s.flushed=False; s.tractor=False; s.trades=0; s.devplayed=False
+        s.actions=ACTIONS; s.flushed=False; s.tractor=False; s.trades=0; s.devplayed=False; s.jdone_turn=False; s.prodbought=False
         p.turns+=1
+        if JOINT and JTIMEOUT and s.__dict__.get('jfaces') and s.cur==0:
+            for j in list(s.jfaces):
+                j.setdefault('since', s.round)
+                # JSTART=line：最初の行が出たラウンドから数える。誰も出していなければ時間切れにならない
+                t0=j.get('started') if JSTART=='line' else j['since']
+                if t0 is not None and s.round-t0>=JTIMEOUT:
+                    for l in j['lines']:
+                        if l.get('by') is not None:
+                            half=math.floor(l['pts'])/2; q=s.players[l['by']]; q.pts+=half; q.st['joint_pts']+=half; q.st['joint_half']+=1
+                    s.emit(t='joint_expire',order=j['id'])
+                    s.jfaces.remove(j)
+                    if JOINTN==1:
+                        if s.jdeck: nj=s.jdeck.pop(); nj['since']=s.round; s.jfaces.append(nj)
+                    else: s.joint_refill()
+        if JOINT: s.check_win(p)
         for f in p.fields:
             if f and f['t'] in ('cow','chicken'): f['fed']=False
             if f and f.get('pending'): p.prod['milk']+=f['pending']; s.emit(t='milk',p=p.id,n=f['pending']); f['pending']=0
@@ -262,23 +313,27 @@ class Game:
     def act_plant(s, p, crop):
         s.need_act(); e=p.empty()
         if not e: raise RuleError('空き区画がない')
-        s.use(p,['grow',crop]); p.fields[e[0]]={'t':'crop','c':crop,'planted':p.turns}
+        s.use(p,['grow',crop]+(['feed'] if (CARROTFEED and crop=='carrot') else [])); p.fields[e[0]]={'t':'crop','c':crop,'planted':p.turns}
         s.actions-=1; p.st['plant']+=1; s.log(f"  I grow {crop}s."); s.emit(t='plant',p=p.id,crop=crop,field=e[0])
     def act_buy(s, p, a):
         s.need_act(); e=p.empty()
         if not e: raise RuleError('空き区画がない')
         if p.coins<ANIMAL_COST[a]: raise RuleError('コイン不足')
-        s.use(p,['buy',a]); p.coins-=ANIMAL_COST[a]; p.fields[e[0]]={'t':a,'fed':False}
+        s.use(p,['buy',a]+(['grow'] if (COWGROW=='buy' and a=='cow') else [])); p.coins-=ANIMAL_COST[a]; p.fields[e[0]]={'t':a,'fed':False}
         s.actions-=1; p.st['buy_'+a]+=1; s.log(f"  I buy a {a}."); s.emit(t='buy',p=p.id,animal=a,field=e[0])
     def act_feed(s, p, idx):
-        s.need_act(); f=p.fields[idx]
+        # FEEDALL：同じ手番の2頭目以降の餌やりは行動を使わない（I feed my animals.）
+        free = FEEDALL and getattr(s,'feed_mark',None)==(p.id,p.turns)
+        if not free: s.need_act()
+        f=p.fields[idx]
         if not f or f['t'] not in ('cow','chicken'): raise RuleError('動物がいない')
         if f['fed']: raise RuleError('この手番は給餌済み')
         if not s.can_feed(p,f): raise RuleError('この牛は今回は餌をやれない')
-        s.use(p,['feed']); f['fed']=True; f['last']=p.turns; k,v=ANIMAL_OUT[f['t']]
+        s.use(p,['feed']+(['grow'] if (COWGROW=='feed' and f['t']=='cow') else [])); f['fed']=True; f['last']=p.turns; k,v=ANIMAL_OUT[f['t']]
         if f['t']=='cow' and COWMODE=='delay': f['pending']=f.get('pending',0)+v
         else: p.prod[k]+=v
-        s.actions-=1; p.st['feed']+=1; s.log(f"  I feed the {f['t']}. (+{k}×{v})"); s.emit(t='feed',p=p.id,animal=f['t'],out=k,n=v,field=idx)
+        if not free: s.actions-=1
+        s.feed_mark=(p.id,p.turns); p.st['feed']+=1; s.log(f"  I feed the {f['t']}. (+{k}×{v})"); s.emit(t='feed',p=p.id,animal=f['t'],out=k,n=v,field=idx)
     def can_feed(s, p, f):
         if f['t']=='cow' and COWMODE=='cool' and p.turns-f.get('last',-9)<2: return False
         return True
@@ -328,11 +383,39 @@ class Game:
         if s.deck: s.face.append(s.deck.pop()); s.log(f"  補充: #{s.face[-1]}"); s.emit(t='refill',order=s.face[-1])
         if not s.face and not s.deck: s.exhaust=True
         s.check_win(p)
+    def act_joint(s, p, item, jid=None):
+        s.need_act()
+        fs=s.__dict__.get('jfaces') or []
+        if not fs: raise RuleError('共同注文がない')
+        # 札の指定がなければ、その産物の行が空いている最初の札
+        cand=[j for j in fs if (jid is None or j['id']==jid) and any(l['item']==item and l.get('by') is None for l in j['lines'])]
+        j=cand[0] if cand else fs[0]
+        line=next((l for l in j['lines'] if l['item']==item), None)
+        if line is None: raise RuleError('その産物の行はない')
+        if line.get('by') is not None: raise RuleError('その行はもう出されている')
+        if getattr(s,'jdone_turn',False): raise RuleError('共同注文は1手番に1行まで')
+        if p.prod[item]<line['n']: raise RuleError('産物が足りない')
+        s.use(p,['sell']); p.prod[item]-=line['n']; p.prod+=Counter(); s.actions-=1
+        line['by']=p.id; p.st['joint_line']+=1; s.jdone_turn=True
+        if j.get('started') is None: j['started']=s.round
+        s.emit(t='joint_line',p=p.id,order=j['id'],item=item,n=line['n'],pts=line['pts'])
+        if all(l.get('by') is not None for l in j['lines']):
+            gains=Counter()
+            for l in j['lines']: gains[l['by']]+=l['pts']
+            gains[p.id]+=j['bonus']
+            for pid,g in gains.items(): s.players[pid].pts+=g; s.players[pid].st['joint_pts']+=g
+            p.st['joint_done']+=1
+            s.emit(t='joint_done',p=p.id,order=j['id'],gains={str(k):v for k,v in gains.items()})
+            s.jfaces.remove(j)
+            if JOINTN==1:
+                if s.jdeck: nj=s.jdeck.pop(); nj['since']=s.round; s.jfaces.append(nj); s.emit(t='joint_refill',order=nj['id'])
+            else: s.joint_refill()
+            s.check_win(p)
     def act_house(s, p, t):
         s.need_act()
         if len(p.bases)>=s.maxbase(): raise RuleError('拠点の上限')
-        if p.coins<3: raise RuleError('コイン不足')
-        s.place_base(p,t); p.coins-=3; s.actions-=1; p.st['house']+=1
+        if p.coins<HOUSECOST: raise RuleError('コイン不足')
+        s.place_base(p,t); p.coins-=HOUSECOST; s.actions-=1; p.st['house']+=1
         s.log(f"  I build a farm house. ({t})"); s.emit(t='house',p=p.id,v=t)
     def act_tractor(s, p):
         s.need_act()
@@ -428,14 +511,21 @@ class Game:
             s.round+=1
 
     # ---- ボット ----
+    def wants_house(s, p):
+        # 拠点優先の方針（p.hf）：期限までに3個目の拠点を建てたい
+        return getattr(p,'hf',False) and len(p.bases)<s.maxbase() and s.round<=HFROUND and s.can_house(p)
+    def house_reserve(s, p): return HOUSECOST if s.wants_house(p) else 0
     def bot_turn(s):
         p=s.players[s.cur]
         s.start_turn()
         s.bot_free(p)
         if DEV and not s.ended: s.bot_dev(p)
+        a0=s.actions
         while s.actions>0 and not s.ended:
             if not s.bot_action(p): break
             s.bot_free(p)
+        p.st['acts']+=a0-s.actions; p.st['turns_played']+=1
+        if a0-s.actions>p.st.get('maxacts',0): p.st['maxacts']=a0-s.actions
         s.end_turn()
 
     def bot_dev(s, p):
@@ -451,6 +541,53 @@ class Game:
             q=max([q for q in s.players if q is not p],key=lambda q:(q.pts+q.handsize()))
             s.play_dev(p,'fox',q); return
 
+    def prod_need(s, q):
+        # q が自分の注文のために取っておきたい産物の量
+        need=Counter()
+        for oid in s.face:
+            o=OBYID[oid]
+            if o['kind'] in ('fixed','same') and s.order_feasible(q,o):
+                for k,v in o['req'].items(): need[k]=max(need[k],v)
+        return need
+    def bot_prod_trade(s, p):
+        done=0
+        targets=[]
+        for oid in s.face:
+            o=OBYID[oid]
+            if o['kind']!='fixed': continue
+            miss={k:v-p.prod[k] for k,v in o['req'].items() if p.prod[k]<v}
+            if miss and sum(miss.values())<=3 and len(miss)==1: targets.append((o['pts'],miss))
+        if JOINT and not s.jdone_turn:
+            for jf in s.__dict__.get('jfaces',[]):
+                for l in jf['lines']:
+                    if l.get('by') is None and 0<l['n']-p.prod[l['item']]<=2: targets.append((l['pts'],{l['item']:l['n']-p.prod[l['item']]}))
+        targets.sort(key=lambda x:-x[0])
+        for pts,miss in targets:
+            if done>=2: break
+            item,k=next(iter(miss.items()))
+            bought=False
+            for q in s.players:
+                if q is p: continue
+                spare=q.prod[item]-s.prod_need(q)[item]
+                if spare<k: continue
+                if p.pts>=s.target-1.5:
+                    s.emit(t='refuse',p=p.id,q=q.id,want=item); p.st['refused']+=1; continue
+                if p.coins>=k+s.house_reserve(p): give={'coins':k}
+                else:
+                    d=s.desired(p); sur=[g for g in CARDS if p.hand[g]>d[g]]
+                    if not sur: continue
+                    give={'cards':{sur[0]:1}}
+                s.trade(p,q,give,{'prod':{item:k}}); p.st['prod_trade']+=1; done+=1; bought=True
+                break
+            if not bought and (PRODBUY or PRODMULT) and k==1 and not s.prodbought and p.coins>=prod_price(item)+s.house_reserve(p):
+                s.buy_product(p,item)
+    def buy_product(s, p, item):
+        if not s.turn_active: raise RuleError('手番外')
+        if s.prodbought: raise RuleError('産物の購入は1手番1つまで')
+        c=prod_price(item)
+        if p.coins<c: raise RuleError('コイン不足')
+        p.coins-=c; p.prod[item]+=1; s.prodbought=True; p.st['prodbuy']+=1; p.st['prodbuy_coin']+=c
+        s.emit(t='prodbuy',p=p.id,item=item,coins=c)
     def bot_free(s, p):
         # 交換（最大3件/手番）
         others=[q for q in s.players if q is not p]
@@ -461,6 +598,8 @@ class Game:
             for q in others:
                 dq=s.desired(q)
                 if q.hand[c]<=dq[c]: continue
+                if ACTIVE and p.pts>=s.target-1.5:
+                    s.emit(t='refuse',p=p.id,q=q.id,want=c); p.st['refused']+=1; continue
                 surplus=[g for g in CARDS if p.hand[g]>d[g] and g!=c]
                 good=[g for g in surplus if q.hand[g]<dq[g]]
                 if good:
@@ -470,9 +609,10 @@ class Game:
                     for g in surplus:
                         while p.hand[g]-d[g]-pk[g]>0 and sum(pk.values())<2: pk[g]+=1
                     s.trade(p,q,{'cards':dict(pk)},{'cards':{c:1}}); s.trades+=1; break
-                if p.coins>=1 and (p.coins-1)>= (ANIMAL_COST.get(s.want_animal(p),0) if s.want_animal(p) else 0):
+                if p.coins>=1 and (p.coins-1)>= (ANIMAL_COST.get(s.want_animal(p),0) if s.want_animal(p) else 0)+s.house_reserve(p):
                     s.trade(p,q,{'coins':1},{'cards':{c:1}}); s.trades+=1; break
             d=s.desired(p)
+        if ACTIVE: s.bot_prod_trade(p)
         # 銀行
         for _ in range(4):
             d=s.desired(p)
@@ -484,7 +624,7 @@ class Game:
         if COINBANK:
             for _ in range(2):
                 d=s.desired(p); need=[c for c in CARDS if p.hand[c]<d[c]]
-                wa=s.want_animal(p); reserve=ANIMAL_COST[wa] if wa else 0
+                wa=s.want_animal(p); reserve=(ANIMAL_COST[wa] if wa else 0)+s.house_reserve(p)
                 if not need or p.coins<COINPRICE+reserve: break
                 c=max(need,key=lambda c:WEIGHT[c]); p.coins-=COINPRICE; p.hand[c]+=1; p.st['coinbank']+=1
                 s.log(f"  銀行: {COINPRICE}コイン → {c}"); s.emit(t='coinbank',p=p.id,card=c,coins=COINPRICE)
@@ -516,24 +656,33 @@ class Game:
             if not best or sc>best[0]: best=(sc,oid,num,None)
         if best:
             s.act_deliver(p,best[1],best[2],best[3]); return True
+        # A2 拠点優先の方針なら、建てられるときに建てる
+        if s.wants_house(p) and p.coins>=HOUSECOST:
+            s.act_house(p,s.choose_tile(p)); return True
+        # J 共同注文の1行
+        if JOINT and p.hand['sell']>=1 and not s.jdone_turn:
+            for jf in s.__dict__.get('jfaces',[]):
+                for l in jf['lines']:
+                    if l.get('by') is None and p.prod[l['item']]>=l['n']:
+                        s.act_joint(p,l['item'],jf['id']); return True
         # B 給餌
         for i,f in enumerate(p.fields):
-            if f and f['t'] in ('cow','chicken') and not f['fed'] and p.hand['feed']>0 and s.can_feed(p,f):
+            if f and f['t'] in ('cow','chicken') and not f['fed'] and p.hand['feed']>0 and s.can_feed(p,f) and not (COWGROW=='feed' and f['t']=='cow' and p.hand['grow']<1):
                 s.act_feed(p,i); return True
         # C 動物購入
         wa=s.want_animal(p)
-        if wa and p.empty() and p.hand['buy'] and p.hand[wa] and p.coins>=ANIMAL_COST[wa]:
+        if wa and p.empty() and p.hand['buy'] and p.hand[wa] and p.coins>=ANIMAL_COST[wa]+s.house_reserve(p) and not (COWGROW=='buy' and wa=='cow' and p.hand['grow']<1):
             s.act_buy(p,wa); return True
         # D 植え付け
         emp=len(p.empty())
         reserve = 1 if (wa and p.coins>=ANIMAL_COST[wa]-2) else 0
         if STRATS[p.strat]['crop'] and emp>reserve and p.hand['grow']:
-            crops=[c for c in CROPS if p.hand[c]>0]
+            crops=[c for c in CROPS if p.hand[c]>0 and (c!='carrot' or not CARROTFEED or p.hand['feed']>0)]
             if crops:
                 bc=s.best_crop(p); c=bc if bc in crops else crops[0]
                 s.act_plant(p,c); return True
         # G 拠点（序盤）
-        if len(p.bases)<s.maxbase() and p.coins>=3 and s.round<=5 and (HOUSE_ALL or not wa):
+        if len(p.bases)<s.maxbase() and p.coins>=HOUSECOST and s.round<=HOUSEROUND and (HOUSE_ALL or not wa):
             if s.can_house(p):
                 s.act_house(p,s.choose_tile(p)); return True
         # H 発展カード
@@ -543,7 +692,7 @@ class Game:
         if not DEV and not s.tractor and p.coins>=5 and not (wa and p.coins<ANIMAL_COST[wa]+5):
             s.act_tractor(p); return True
         # E 市場（不要な産物）
-        if p.hand['sell']>=2 or (p.hand['sell']>=1 and wa and p.coins<ANIMAL_COST[wa]):
+        if p.hand['sell']>=2 or (p.hand['sell']>=1 and wa and p.coins<ANIMAL_COST[wa]) or (ACTIVE and p.hand['sell']>=1 and max(p.prod.values() or [0])>6):
             need=Counter()
             for oid in s.face:
                 o=OBYID[oid]

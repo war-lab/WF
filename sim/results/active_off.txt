@@ -1,0 +1,1 @@
+4人戦 200局 ラウンド11.3  1局あたり: trade 19.59  prod_trade 0.00  refused 0.00  bank 1.51  coinbank 8.86  market 8.00  joint_line 7.30  joint_done 0.73  bank2 0.72  bank3 0.18

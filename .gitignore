@@ -8,3 +8,5 @@ __pycache__/
 *.pyc
 # 表示確認の画像
 .playwright-mcp/
+# 元のスプライトシート（切り出した顔は video/public/faces）
+video/asset/
