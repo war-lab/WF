@@ -1,26 +1,56 @@
 // ルール説明動画（Aki が Chika に説明する）
 import React, { useMemo } from 'react';
-import { AbsoluteFill, interpolate, spring, useCurrentFrame, Img, staticFile } from 'remotion';
+import { AbsoluteFill, Audio, Sequence, interpolate, spring, useCurrentFrame, Img, staticFile } from 'remotion';
 import { G, FPS } from './timeline';
 import { DEFS } from './defs';
 import { C, PCOL, VARS, JPF, ENF, ICON, PICON, Icon, Board, Die } from './Main';
 import { GUIDE, CHAPTERS, GLine } from './guideScript';
 
 // ---------- 時間割り ----------
-// 台詞の長さで尺を決める（日本語は1文字0.11秒、英文の例があれば少し足す）
-export function buildGuide() {
+// 音声（public/voice/manifest.json、npm run tts で作る）があればその長さで尺を決める
+// ない行は台詞の長さで推定する（日本語は1文字0.11秒、英文の例があれば少し足す）
+// en は英文を英語の声で読んだもの。enFirst なら英語を先に鳴らす。file が null の行は英語だけ
+type Clip = { file: string; sec: number };
+export type Voice = (Clip & { file: string | null; en?: Clip; enFirst?: boolean })[] | null;
+const VOICE_LEAD = 4; // 場面が出てから話し始めるまで（フレーム）
+const VOICE_TAIL = 0.35; // 話し終えてから次の台詞までの間（秒）
+const VOICE_GAP = 0.25; // 日本語と英語のあいだの間（秒）
+
+export function buildGuide(voice: Voice = null) {
+  const ok = voice && voice.length === GUIDE.length ? voice : null;
   let t = 0;
   const beats = GUIDE.map((l, i) => {
-    const dur = Math.round(FPS * (1.3 + l.t.length * 0.11 + (l.en ? 0.8 : 0)));
-    const b = { ...l, i, start: t, dur };
+    const v = ok ? ok[i] : null;
+    // 鳴らす順に並べた音声と、台詞の中での開始フレーム
+    const clips: { file: string; at: number; len: number }[] = [];
+    if (v) {
+      const order = [v.enFirst ? v.en : null, v.file ? v : null, v.enFirst ? null : v.en].filter(Boolean) as Clip[];
+      let at = VOICE_LEAD;
+      for (const c of order) { const len = Math.round(FPS * c.sec); clips.push({ file: c.file, at, len }); at += len + Math.round(FPS * VOICE_GAP); }
+    }
+    const dur = v
+      ? clips[clips.length - 1].at + clips[clips.length - 1].len + Math.round(FPS * (VOICE_TAIL + (l.en ? 0.3 : 0)))
+      : Math.round(FPS * (1.3 + l.t.length * 0.11 + (l.en ? 0.8 : 0)));
+    const b = { ...l, i, start: t, dur, clips };
     t += dur;
     return b;
   });
   return { beats, total: t };
 }
-type GBeat = GLine & { i: number; start: number; dur: number };
 
-const AKI = PCOL[0], CHIKA = PCOL[2];
+// 音声の一覧を読む（なければ null で、推定の尺のまま動く）
+export async function loadVoice(): Promise<Voice> {
+  try {
+    const r = await fetch(staticFile('voice/manifest.json'));
+    return r.ok ? await r.json() : null;
+  } catch {
+    return null;
+  }
+}
+type GBeat = GLine & { i: number; start: number; dur: number; clips: { file: string; at: number; len: number }[] };
+
+// プレイ動画と同じ席の色（Aki は1番目、Chika は4番目）
+const AKI = PCOL[0], CHIKA = PCOL[3], BONUS = '#7a5aa6';
 const face = (l: GLine, who: 'a' | 'c') => who === l.w ? `faces/${who === 'a' ? 'aki' : 'chika'}_${l.f}.png` : (who === 'a' ? 'faces/aki_normal.png' : 'faces/chika_smile.png');
 
 // ---------- 小さな部品 ----------
@@ -77,7 +107,7 @@ const Scene: React.FC<{ b: GBeat; local: number }> = ({ b, local }) => {
         <Card on={h === 'tiles'} title="六角タイル13枚">まん中はMarket。ほかは6種類×2枚<div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>{Object.keys(ICON).map(k => <Word key={k} w={k} icon={ICON[k]} />)}</div></Card>
         <Card on={h === 'harbors'} title="数字と港の位置は固定">3:1の港が2つ（位置も固定）。2:1の港4つは、種類だけ毎回シャッフル</Card>
         <Card on={h === 'bases'} title="拠点はタイルの角に">隣の角には置けない。道はない。1人2個（順に置いて、逆順にもう1個）</Card>
-        <Card on={h === 'start'} title="最初の持ち物"><Coin n={3} />　<Word w="grow" icon="i-grow" /> <Word w="sell" icon="i-sell" />　無料券2枚<br />注文3枚と共同注文2枚を表に</Card>
+        <Card on={h === 'start' || h === 'hidden'} title="最初の持ち物"><Word w="grow" icon="i-grow" /> <Word w="sell" icon="i-sell" />　無料券2枚　コインは席順に<Coin n="3・3・4・5" /><br />共同注文2枚を表に。<b style={{ color: h === 'hidden' ? C.warn : C.muted }}>注文は伏せて、ラウンド3で表に</b></Card>
       </Right></>);
     }
     case 'flow': return (<Area><div style={{ display: 'flex', gap: 30, alignItems: 'center', height: '100%' }}>
@@ -104,11 +134,12 @@ const Scene: React.FC<{ b: GBeat; local: number }> = ({ b, local }) => {
       </div></div></Area>);
     case 'cards': return (<Area><div style={{ display: 'flex', flexDirection: 'column', gap: 26, paddingTop: 30 }}>
       <Card title="行動のカード"><div style={{ display: 'flex', gap: 12, marginTop: 6 }}>{['grow', 'buy', 'feed', 'sell'].map(k => <Word key={k} w={k} icon={ICON[k]} />)}</div></Card>
-      <Card title="作物と動物のカード"><div style={{ display: 'flex', gap: 12, marginTop: 6 }}>{['carrot', 'potato', 'wheat'].map(k => <Word key={k} w={k} icon={PICON[k]} />)}<Word w="cow" icon="i-animal" /><Word w="chicken" icon="i-animal" /></div></Card>
+      <Card title="作物と動物のカード"><div style={{ display: 'flex', gap: 12, marginTop: 6 }}>{['carrot', 'potato', 'wheat'].map(k => <Word key={k} w={k} icon={PICON[k]} />)}<Word w="cow" icon="a-cow" /><Word w="chicken" icon="a-chicken" /></div></Card>
       <div style={{ display: 'flex', gap: 30 }}>
-        <Card on title="カード：a carrot card" style={{ flex: 1 }}>手札に持つ単語カード。手札の中身は秘密、枚数は公開</Card>
-        <Card on color={C.warn} title="産物：a carrot" style={{ flex: 1 }}><span style={{ display: 'inline-flex', gap: 4 }}><Icon id="p-carrot" size={40} /><Icon id="p-carrot" size={40} /><Icon id="p-carrot" size={40} /></span>　収穫したもの。公開</Card>
-      </div></div></Area>);
+        <Card on={h !== 'pile'} title="カード：a carrot card" style={{ flex: 1 }}>手札に持つ単語カード。手札の中身は秘密、枚数は公開</Card>
+        <Card on={h !== 'pile'} color={C.warn} title="産物：a carrot" style={{ flex: 1 }}><span style={{ display: 'inline-flex', gap: 4 }}><Icon id="p-carrot" size={40} /><Icon id="p-carrot" size={40} /><Icon id="p-carrot" size={40} /></span>　収穫したもの。公開</Card>
+      </div>
+      <Card on={h === 'pile'} title="カードは種類ごとの山（銀行）">使ったカードは、その種類の山に戻す</Card></div></Area>);
     case 'actions': {
       const rows: [string, string, string, string][] = [
         ['grow', 'I grow potatoes.', 'grow＋作物カード', '植える。次の自分の手番に3つ収穫'],
@@ -116,6 +147,7 @@ const Scene: React.FC<{ b: GBeat; local: number }> = ({ b, local }) => {
         ['buy', 'I buy a chicken.', 'buy＋chicken＋2コイン', 'ニワトリを置く'],
         ['feed', 'I feed the cow.', 'feed', '餌。1頭につき1手番1回'],
         ['sell', 'I sell four eggs.', 'sell', '市場で同じ種類をまとめて売る'],
+        ['asell', 'I sell the cow.', 'sell', '動物を手放す（買値の半分）'],
         ['deliver', 'I sell three carrots to the cafe.', 'sell', '注文を届ける'],
         ['joint', 'I bring three eggs to the festival.', 'sell', '共同注文の1行を出す'],
         ['house', 'I build a farmhouse.', '5コイン', '拠点を足す（3個まで）'],
@@ -128,7 +160,7 @@ const Scene: React.FC<{ b: GBeat; local: number }> = ({ b, local }) => {
             <span style={{ fontFamily: JPF, fontSize: 22, width: 330, color: C.leaf, fontWeight: 700 }}>{need}</span>
             <span style={{ fontFamily: JPF, fontSize: 22, color: C.muted }}>{eff}</span></div>);
         })}
-        <div style={{ fontFamily: JPF, fontSize: 22, color: C.muted, padding: '10px 24px' }}>回数の上限なし（例外：餌は1頭1回、共同注文は1行、産物の購入は1つ、注文を流すのは1回まで）</div>
+        <div style={{ fontFamily: JPF, fontSize: 22, color: C.muted, padding: '10px 24px' }}>回数の上限なし（例外：餌は1区画1回、共同注文は1行、産物の購入は1つまで）</div>
       </div></Area>);
     }
     case 'farm': return (<Area><div style={{ display: 'flex', gap: 24, height: 470 }}>
@@ -154,7 +186,7 @@ const Scene: React.FC<{ b: GBeat; local: number }> = ({ b, local }) => {
         <Card title="拠点を足す：5コイン">全部で3個まで。距離ルールを守れば、どの角にも置ける（道は要らない）</Card>
       </div></div></Area>);
     case 'orders': {
-      const back = ['trap', 'deliver', 'reward', 'miss'].includes(h);
+      const back = ['trap', 'check', 'reward', 'miss'].includes(h);
       return (<><div style={{ position: 'absolute', left: 60, top: 110, width: 620, height: 600, background: C.paper, borderRadius: 24, border: `4px solid ${C.ink}`, overflow: 'hidden', fontFamily: ENF }}>
         <div style={{ background: C.leaf, color: '#fff', padding: '16px 24px', display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: 34 }}><span>ORDER</span><span style={{ background: C.wheat, color: C.wheatInk, borderRadius: 18, padding: '0 16px' }}>2.5点</span></div>
         <div style={{ padding: '30px 30px', fontSize: 44, lineHeight: 1.35, color: C.ink }}>Please don’t send milk. We need two eggs and two carrots.</div>
@@ -162,13 +194,24 @@ const Scene: React.FC<{ b: GBeat; local: number }> = ({ b, local }) => {
         <div style={{ position: 'absolute', bottom: 20, right: 30, fontSize: 22, color: C.muted }}>+2 coins</div>
       </div>
       <Right>
-        <Card on={back} title="裏：条件"><div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><Icon id="p-egg" size={56} />×2<Icon id="p-carrot" size={56} />×2<span style={{ marginLeft: 12, color: C.warn, fontWeight: 800 }}>ミルクは送らない</span></div></Card>
-        <Card on={h === 'deliver'} title="届け方">sellカードを使って宣言。書かれた数ちょうど（at least の注文だけ多くてよい）</Card>
+        <Card on={back} title="折り返しの下：条件"><div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><Icon id="p-egg" size={56} />×2<Icon id="p-carrot" size={56} />×2<span style={{ marginLeft: 12, color: C.warn, fontWeight: 800 }}>ミルクは送らない</span></div></Card>
+        <Card on={h === 'deliver' || h === 'check'} title="届け方">注文を指さし、sellカードで宣言。英文と出した物が合っていたら折り返しを開く。数はちょうど（at least だけ多くてよい）</Card>
         <Card on={h === 'reward'} title="報酬：書かれた点＋2コイン">点は0.5〜3点。絵が付くのは「易」の注文だけ</Card>
         <Card on={h === 'miss'} color={C.warn} title="読み違えたら不成立">sellカードは捨てる。その手番のうちは同じ注文に再挑戦できない</Card>
-        <Card on={h === 'flush'} title="補充と、注文を流す">届いたらすぐ山から補充して読み上げる。1コインで1枚流せる（1手番1回）</Card>
+        <Card on={h === 'refill' || h === 'expire'} title="補充と時間切れ">届いたらすぐ補充。表にした人の手番が3回終わると流れる（4人なら12手番）</Card>
       </Right></>);
     }
+    case 'bonus': return (<><div style={{ position: 'absolute', left: 60, top: 110, width: 620, height: 600, background: '#f4eefa', borderRadius: 24, border: `4px solid ${BONUS}`, overflow: 'hidden', fontFamily: ENF }}>
+        <div style={{ background: BONUS, color: '#fff', padding: '16px 24px', display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: 34 }}><span>BONUS ORDER</span><span style={{ fontFamily: JPF, fontSize: 26 }}>山に2枚</span></div>
+        <div style={{ padding: '30px 30px', fontSize: 40, lineHeight: 1.35, color: C.ink }}>The farmers' market has enough <span style={{ textDecoration: h === 'kinds' ? `line-through 4px ${C.warn}` : 'none' }}>eggs and milk</span>. Bring <span style={{ background: h === 'kinds' ? '#fff3c4' : 'transparent' }}>carrots, potatoes or wheat</span>, as many as you can!</div>
+        <div style={{ position: 'absolute', bottom: 24, left: 30, right: 30, fontFamily: JPF, fontSize: 26, color: C.muted }}>1つにつき 1コイン ＋ 0.2点（卵は0.25点）</div>
+      </div>
+      <Right>
+        <Card on={h === 'card'} color={BONUS} title="表の色だけが違う">裏は普通の注文と同じ。山のどこにあるかは分からない</Card>
+        <Card on={h === 'kinds'} color={BONUS} title="受け付けるのは2〜3種類">has enough（もう足りている）の産物は出せない。1種類を選んで、好きな数だけ出す</Card>
+        <Card on={h === 'reward'} color={BONUS} title="報酬：数×1コイン＋数×0.2点">卵は×0.25点。0.5点刻みで切り捨て、上限なし</Card>
+        <Card on={h === 'risk'} color={C.warn} title="出るかどうかは分からない">貯めている間は、その産物をほかの注文に使えない</Card>
+      </Right></>);
     case 'joint': {
       const lines: [string, number, number][] = [['egg', 3, 1.5], ['wheat', 2, 1], ['carrot', 3, 1.5]];
       const filled = h === 'line' ? [true, false, false] : h === 'done' ? [true, true, true] : h === 'timeout' ? [true, false, false] : [false, false, false];
@@ -182,13 +225,13 @@ const Scene: React.FC<{ b: GBeat; local: number }> = ({ b, local }) => {
               <Icon id={PICON[it]} size={34} /><span style={{ fontFamily: ENF }}>×{n}</span><span>{p}点</span></div>))}</div>
         </div>);
       return (<><div style={{ position: 'absolute', left: 30, top: 110, width: 1000, display: 'flex', flexDirection: 'column', gap: 24 }}>
-        <JC title="The summer camp needs three eggs, two bags of wheat and three carrots." f={filled} tag={h === 'timeout' ? 'R5〜R7' : h === 'line' ? 'R5〜R7' : '未着手'} />
+        <JC title="The summer camp needs three eggs, two bags of wheat and three carrots." f={filled} tag={h === 'timeout' ? 'おはじき 0個' : h === 'line' ? 'おはじき ●●●' : '未着手'} />
         <JC title="The village festival needs four carrots, two eggs and three bottles of milk." f={[false, false, false]} tag="未着手" />
       </div><Right>
         <Card on={h === 'cards'} title="2枚を表に。3行を全員で出し合う">1行はsellカード1枚で、1人で出す</Card>
         <Card on={h === 'line'} title="1人1手番に1行まで">2枚を合わせて1行。手番をまたげば1人で全部出してもよい</Card>
         <Card on={h === 'done'} title="完成：各自が自分の行の点">完成させた人は＋0.5点。コインはもらえない</Card>
-        <Card on={h === 'timeout'} color={C.warn} title="最初の行から3ラウンドで時間切れ">出した人は行の点の半分（0.5点刻みで切り捨て）。誰も出していない札は時間切れにならない</Card>
+        <Card on={h === 'timeout'} color={C.warn} title="最初の行を出した人の手番が3回終わると時間切れ">出した人は行の点の半分（0.5点刻みで切り捨て）。誰も出していない札は時間切れにならない</Card>
       </Right></>);
     }
     case 'trade': return (<Area><div style={{ display: 'flex', gap: 40, alignItems: 'center', height: '100%' }}>
@@ -199,12 +242,12 @@ const Scene: React.FC<{ b: GBeat; local: number }> = ({ b, local }) => {
       </div>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 20 }}>
         <Card on={h === 'who'} title="手番の人と、ほかの1人の間だけ">手番でない人どうしは交換できない</Card>
-        <Card on={h === 'what'} title="カード・産物・コイン、何でも">お互いに1つ以上を出す。回数に上限はない</Card>
+        <Card on={h === 'what'} title="カード・産物・コイン、何でも">お互いに1つ以上を出す。その場で渡せるものだけで、あとで払う約束はしない</Card>
         <Card title="交渉は英語で">"Does anyone have a sell card?"</Card>
       </div></div></Area>);
     case 'bank': return (<Area><div style={{ display: 'flex', flexDirection: 'column', gap: 18, paddingTop: 10 }}>
       <Card on={h === 'bank'} title="銀行：同じカード4枚 → 好きなカード1枚">自分の手番中なら何回でも</Card>
-      <Card on={h === 'harbor'} title="港：3:1 は同じカード3枚、2:1 はその種類のカード2枚 → 好きな1枚">港につながった外側の角に拠点がある人だけ使える</Card>
+      <Card on={h === 'harbor'} title="港：3:1 は同じカード3枚、2:1 はその種類の同じカード2枚 → 好きな1枚">桟橋の先の角に拠点がある人だけ使える</Card>
       <Card on={h === 'coin'} title="5コイン → 好きなカード1枚">何回でも</Card>
       <Card on={h === 'prod'} color={C.warn} title="産物を買う：ジャガイモ・小麦・卵は10コイン、ニンジンとミルクは15コイン">1手番に1つまで。最後の手段</Card>
     </div></Area>);
@@ -259,9 +302,9 @@ const Speakers: React.FC<{ b: GBeat; local: number }> = ({ b, local }) => {
   </>);
 };
 
-export const Guide: React.FC = () => {
+export const Guide: React.FC<{ voice: Voice }> = ({ voice }) => {
   const frame = useCurrentFrame();
-  const { beats } = useMemo(() => buildGuide(), []);
+  const { beats } = useMemo(() => buildGuide(voice), [voice]);
   let bi = beats.findIndex(b => frame >= b.start && frame < b.start + b.dur);
   if (bi < 0) bi = beats.length - 1;
   const b = beats[bi] as GBeat; const local = frame - b.start;
@@ -280,5 +323,6 @@ export const Guide: React.FC = () => {
     </div>
     <div style={{ opacity: fade }}><Scene b={b} local={frame - sceneStart.start} /></div>
     <Speakers b={b} local={local} />
+    {beats.flatMap(x => x.clips.map((c, k) => <Sequence key={`${x.i}-${k}`} from={x.start + c.at} durationInFrames={c.len + 2} layout="none"><Audio src={staticFile(c.file)} /></Sequence>))}
   </AbsoluteFill>);
 };

@@ -4,9 +4,15 @@ video/out/
 *.mov
 # 依存パッケージ・キャッシュ
 node_modules/
+.venv/
 __pycache__/
 *.pyc
 # 表示確認の画像
 .playwright-mcp/
 # 元のスプライトシート（切り出した顔は video/public/faces）
 video/asset/
+# 音の素材は配布サイトの規約で再配布が禁止なので上げない（出典と取得先は art/sound_licenses.md）
+video/public/audio/
+# 読み上げ音声は npm run tts / tts:play で作り直せるので上げない
+video/public/voice/
+video/public/voice_play/

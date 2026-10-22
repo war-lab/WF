@@ -3,7 +3,11 @@
   "private": true,
   "scripts": {
     "studio": "remotion studio src/index.ts",
-    "render": "remotion render src/index.ts WordFarm out/word_farm.mp4"
+    "render": "remotion render src/index.ts WordFarm out/word_farm.mp4",
+    "tts": "node scripts/tts.mjs",
+    "tts:play": "node scripts/tts_play.mjs",
+    "render:parts": "node scripts/render_parts.mjs",
+    "render:guide": "remotion render src/index.ts WordFarmGuide out/word_farm_guide.mp4"
   },
   "dependencies": {
     "@remotion/cli": "4.0.536",
