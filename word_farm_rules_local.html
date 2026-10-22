@@ -108,6 +108,13 @@ th{font-size:12px;letter-spacing:.06em;color:var(--muted);font-weight:700;backgr
 tr:last-child td{border-bottom:0}
 td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 .note{font-size:13px;color:var(--muted)}
+.qa{margin:0;display:grid;gap:10px}
+.chips{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px}
+.chips li{display:inline-flex;align-items:center;gap:4px;padding:2px 10px 2px 4px;border:1px solid var(--rule);border-radius:16px;background:var(--paper);font-family:var(--f-en);font-size:13px}
+.qa dt{font-weight:700}
+.qa dt::before{content:"Q. ";color:var(--leaf)}
+.qa dd{margin:2px 0 0 1.4em}
+.qa dd::before{content:"A. ";font-weight:700}
 .warn{color:var(--warn);font-weight:700}
 .lvl{font-size:12px;border:1px solid var(--rule);border-radius:10px;padding:0 8px;white-space:nowrap}
 footer{font-size:12px;color:var(--muted);border-top:1px solid var(--rule);padding-top:12px}
@@ -128,7 +135,7 @@ a:focus-visible{outline:2px solid var(--leaf);outline-offset:2px}
     <symbol id="i-feed" viewBox="0 0 48 48"><path d="M12 8c0 0 2-4 12-4s12 4 12 4" fill="none" stroke="var(--line)" stroke-width="2.5"/><path d="M9 16h30l-4 26H13z" fill="var(--soil)" stroke="var(--line)" stroke-width="2"/><g fill="var(--grain)"><circle cx="18" cy="14" r="3"/><circle cx="24" cy="12" r="3"/><circle cx="30" cy="14" r="3"/><circle cx="21" cy="10" r="2.5"/><circle cx="27" cy="10" r="2.5"/></g></symbol>
     <symbol id="i-sell" viewBox="0 0 48 48"><rect x="6" y="16" width="36" height="24" rx="2" fill="var(--potato)" stroke="var(--line)" stroke-width="2"/><path d="M6 24h36M6 32h36" stroke="var(--line)" stroke-width="2"/><circle cx="16" cy="12" r="5" fill="var(--carrot)"/><circle cx="27" cy="11" r="5" fill="var(--egg)" stroke="var(--line)" stroke-width="1.5"/><circle cx="36" cy="13" r="4" fill="var(--grain)"/></symbol>
     <symbol id="i-seed" viewBox="0 0 48 48"><path d="M10 6h28v36H10z" fill="var(--paper)" stroke="var(--line)" stroke-width="2"/><path d="M10 14h28" stroke="var(--line)" stroke-width="2"/><g fill="var(--soil)"><ellipse cx="18" cy="24" rx="2.5" ry="3.5"/><ellipse cx="29" cy="22" rx="2.5" ry="3.5"/><ellipse cx="23" cy="31" rx="2.5" ry="3.5"/><ellipse cx="31" cy="34" rx="2.5" ry="3.5"/><ellipse cx="16" cy="36" rx="2.5" ry="3.5"/></g></symbol>
-    <symbol id="i-animal" viewBox="0 0 48 48"><path d="M12 12c-4-2-6-6-6-8 4 0 8 2 10 5M36 12c4-2 6-6 6-8-4 0-8 2-10 5" fill="none" stroke="var(--line)" stroke-width="2.5" stroke-linecap="round"/><rect x="11" y="9" width="26" height="30" rx="12" fill="var(--paper)" stroke="var(--line)" stroke-width="2"/><path d="M14 17c4-4 8-3 9 2-3 3-7 3-9-2z" fill="var(--line)"/><circle cx="18" cy="20" r="1.8" fill="var(--paper)"/><circle cx="30" cy="20" r="1.8" fill="var(--line)"/><ellipse cx="24" cy="32" rx="10" ry="6.5" fill="var(--barn)" opacity=".35"/><circle cx="20" cy="32" r="1.6" fill="var(--line)"/><circle cx="28" cy="32" r="1.6" fill="var(--line)"/></symbol>
+    <symbol id="a-cow" viewBox="0 0 48 48"><path d="M12 12c-4-2-6-6-6-8 4 0 8 2 10 5M36 12c4-2 6-6 6-8-4 0-8 2-10 5" fill="none" stroke="var(--line)" stroke-width="2.5" stroke-linecap="round"/><rect x="11" y="9" width="26" height="30" rx="12" fill="var(--paper)" stroke="var(--line)" stroke-width="2"/><path d="M14 17c4-4 8-3 9 2-3 3-7 3-9-2z" fill="var(--line)"/><circle cx="18" cy="20" r="1.8" fill="var(--paper)"/><circle cx="30" cy="20" r="1.8" fill="var(--line)"/><ellipse cx="24" cy="32" rx="10" ry="6.5" fill="var(--barn)" opacity=".35"/><circle cx="20" cy="32" r="1.6" fill="var(--line)"/><circle cx="28" cy="32" r="1.6" fill="var(--line)"/></symbol><symbol id="a-chicken" viewBox="0 0 48 48"><path d="M10 26c-5-2-6-8-4-12 3 2 5 5 6 9" fill="var(--paper)" stroke="var(--line)" stroke-width="2" stroke-linejoin="round"/><ellipse cx="22" cy="29" rx="13" ry="11" fill="var(--paper)" stroke="var(--line)" stroke-width="2"/><path d="M17 28c3 4 8 4 11 1" fill="none" stroke="var(--line)" stroke-width="1.8" stroke-linecap="round"/><circle cx="31" cy="15" r="7.5" fill="var(--paper)" stroke="var(--line)" stroke-width="2"/><path d="M26 9c0-3 2-5 4-4 1-2 4-2 5 0 2-1 4 1 3 3" fill="#d9483b" stroke="var(--line)" stroke-width="1.5" stroke-linejoin="round"/><path d="M38 14l6 2.5-6 2.5z" fill="#e8a33d" stroke="var(--line)" stroke-width="1.3" stroke-linejoin="round"/><path d="M36 20c1 3 0 5-2 5-1-2-1-4 0-5z" fill="#d9483b"/><circle cx="33" cy="14" r="1.6" fill="var(--line)"/><path d="M19 40v5M25 40v5M17 45h4M23 45h4" stroke="#e8a33d" stroke-width="2" stroke-linecap="round"/></symbol><symbol id="i-animal" viewBox="0 0 48 48"><use href="#a-cow" x="-2" y="2" width="30" height="30"/><use href="#a-chicken" x="18" y="16" width="30" height="30"/></symbol>
     <!-- 産物アイコン（32×32） -->
     <symbol id="p-carrot" viewBox="0 0 32 32"><path d="M10 10l12 3-12 17z" fill="var(--carrot)" stroke="var(--line)" stroke-width="1.5" stroke-linejoin="round"/><path d="M15 11c-2-4-1-8 1-9M17 12c1-4 4-7 7-7M14 11c-4-1-6-4-6-6" stroke="var(--leaf)" stroke-width="2.2" fill="none" stroke-linecap="round"/></symbol>
     <symbol id="p-potato" viewBox="0 0 32 32"><path d="M6 17c0-7 6-10 12-10s9 4 8 10-6 9-12 9-8-4-8-9z" fill="var(--potato)" stroke="var(--line)" stroke-width="1.5"/><g fill="var(--soil)"><circle cx="12" cy="15" r="1.2"/><circle cx="19" cy="13" r="1.2"/><circle cx="17" cy="20" r="1.2"/></g></symbol>
@@ -184,7 +191,7 @@ a:focus-visible{outline:2px solid var(--leaf);outline-offset:2px}
     <use href="#p-milk" x="398" y="166" width="38" height="38"/>
   </svg>
   <div class="kicker">
-試遊版ルール　v0.8</div>
+試遊版ルール　v0.9</div>
   <h1>WORD FARM</h1>
   <p class="lead">英語で交渉し、英文の注文を読み、農場の産物を届けて点を稼ぐボードゲーム。文法は審査しません。通じればOKです。</p>
   <ul class="facts">
@@ -207,7 +214,11 @@ a:focus-visible{outline:2px solid var(--leaf);outline-offset:2px}
     <span class="goal">点＋2コイン</span>
   </div>
 
-  <h3>1ターンの流れ</h3>
+  <h3>単語カード</h3>
+  <p>単語カードは9種類。行動の grow・buy・feed・sell、作物の carrot・potato・wheat、動物の cow・chicken。カードは種類ごとに表向きの山に分けて置き（銀行）、使ったカードはその種類の山に戻す。タイルの seed からは作物のカードを、animal からは動物のカードを、種類を選んで1枚もらう。</p>
+  <ul class="chips" aria-label="単語カード9種類"><li><svg width="26" height="26" aria-hidden="true"><use href="#i-grow"/></svg>grow</li><li><svg width="26" height="26" aria-hidden="true"><use href="#i-buy"/></svg>buy</li><li><svg width="26" height="26" aria-hidden="true"><use href="#i-feed"/></svg>feed</li><li><svg width="26" height="26" aria-hidden="true"><use href="#i-sell"/></svg>sell</li><li><svg width="26" height="26" aria-hidden="true"><use href="#p-carrot"/></svg>carrot</li><li><svg width="26" height="26" aria-hidden="true"><use href="#p-potato"/></svg>potato</li><li><svg width="26" height="26" aria-hidden="true"><use href="#p-wheat"/></svg>wheat</li><li><svg width="26" height="26" aria-hidden="true"><use href="#a-cow"/></svg>cow</li><li><svg width="26" height="26" aria-hidden="true"><use href="#a-chicken"/></svg>chicken</li></ul>
+
+  <h3>1手番の流れ</h3>
   <ol class="steps">
     <li class="step">
       <svg viewBox="0 0 48 48" aria-hidden="true"><g transform="rotate(-10 18 26)"><rect x="4" y="12" width="26" height="26" rx="5" fill="var(--paper)" stroke="var(--line)" stroke-width="2"/><circle cx="11" cy="19" r="2.4" fill="var(--line)"/><circle cx="23" cy="31" r="2.4" fill="var(--line)"/><circle cx="17" cy="25" r="2.4" fill="var(--line)"/></g><rect x="24" y="6" width="20" height="20" rx="4" fill="var(--paper)" stroke="var(--line)" stroke-width="2" transform="rotate(12 34 16)"/><circle cx="34" cy="16" r="2.2" fill="var(--line)"/></svg>
@@ -217,20 +228,21 @@ a:focus-visible{outline:2px solid var(--leaf);outline-offset:2px}
     <li class="step">
       <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M6 22h36l-5 20H11z" fill="var(--potato)" stroke="var(--line)" stroke-width="2"/><path d="M14 22c0-8 4-12 10-12s10 4 10 12" fill="none" stroke="var(--line)" stroke-width="2.5"/><use href="#p-carrot" x="10" y="8" width="18" height="18"/><use href="#p-potato" x="22" y="12" width="16" height="16"/></svg>
       <b><span class="n">2</span>収穫</b>
-      <p>前の自分のターンまでに植えた作物が実る。1区画につき産物3つを手元に取り、<b>その区画は空く</b>。</p>
+      <p>前の自分の手番までに植えた作物が実る。1区画につき産物3つを手元に取り、<b>その区画は空く</b>。</p>
     </li>
     <li class="step">
       <svg viewBox="0 0 48 48" aria-hidden="true"><rect x="3" y="6" width="30" height="20" rx="6" fill="var(--paper)" stroke="var(--line)" stroke-width="2"/><path d="M10 26l-3 7 9-7" fill="var(--paper)" stroke="var(--line)" stroke-width="2" stroke-linejoin="round"/><text x="18" y="20" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10" fill="var(--ink)">Hi!</text><rect x="20" y="24" width="24" height="18" rx="5" fill="var(--wheat)" stroke="var(--line)" stroke-width="2"/><path d="M36 42l3 5-8-5" fill="var(--wheat)" stroke="var(--line)" stroke-width="2" stroke-linejoin="round"/></svg>
       <b><span class="n">3</span>交渉と行動</b>
-      <p>英語で交換を持ちかけ、英文を宣言して行動する。<b>行動の回数に上限はない</b>（カードがある限り何度でも。例外は05）。交渉も何度でも、順番は自由。</p>
+      <p>収入と収穫が終わったら、英語で交換を持ちかけ、英文を宣言して行動する。<b>行動の回数に上限はない</b>（カードがある限り何度でも。例外は05）。交渉も何度でも、順番は自由。</p>
     </li>
     <li class="step">
       <svg viewBox="0 0 48 48" aria-hidden="true"><g stroke="var(--line)" stroke-width="2"><rect x="8" y="12" width="16" height="24" rx="3" fill="var(--paper)" transform="rotate(-14 16 24)"/><rect x="16" y="10" width="16" height="24" rx="3" fill="var(--paper)"/><rect x="24" y="12" width="16" height="24" rx="3" fill="var(--paper)" transform="rotate(14 32 24)"/></g><text x="24" y="44" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10" font-weight="700" fill="var(--leaf)">next</text></svg>
       <b><span class="n">4</span>終了</b>
-      <p>左隣の人の番へ。手札の上限はない。7が出たときだけ、手札の多い人は捨てる（03）。</p>
+      <p>左隣の人の番へ。手札の上限はない。ただし7が出たとき、単語カードを7枚以上持っている人は半分を捨てる（03）。</p>
     </li>
   </ol>
   <p class="loop">↻ これを勝利点に届く人が出るまで繰り返す</p>
+  <p class="note">全員の手番が1回ずつ終わると1ラウンド。ラウンド3の初め（開始プレイヤーがサイコロを振る前）に、伏せてある注文を3枚表にする。注文と共同注文の時間切れは、ラウンドではなく手番で数える（06）。</p>
 
   <h3>産地マップ（例）</h3>
   <svg class="map" viewBox="0 0 606 416" role="img" aria-label="六角タイル13枚の産地マップ。中央にMarket、海岸線に港6つ、4人の初期拠点が交点に置かれている">
@@ -358,10 +370,10 @@ a:focus-visible{outline:2px solid var(--leaf);outline-offset:2px}
 <g transform="translate(438.3 234.0)"><path d="M-9 4 L-9 -4 L0 -11 L9 -4 L9 4 Z" fill="var(--p4)" stroke="var(--line)" stroke-width="1.6"/></g>
 </svg>
   <ul class="legend">
-    <li><svg class="ico sm" viewBox="-12 -14 24 22" aria-hidden="true"><path d="M-9 4 L-9 -4 L0 -11 L9 -4 L9 4 Z" fill="var(--p1)" stroke="var(--line)" stroke-width="1.6"/></svg>拠点：タイルの角（交点）に置く。色はプレイヤーごと</li>
+    <li><svg class="ico sm" viewBox="-12 -14 24 22" aria-hidden="true"><path d="M-9 4 L-9 -4 L0 -11 L9 -4 L9 4 Z" fill="var(--p1)" stroke="var(--line)" stroke-width="1.6"/></svg>拠点（英語では farmhouse）：タイルの角（交点）に置く。色はプレイヤーごと</li>
     <li><span class="tok">8</span>数字：この数字が出たら、このタイルの角にある拠点1個につき1枚もらう。赤字の6と8が最も出やすい。下の点の数が出やすさ。<b>数字と港の位置は毎回同じ</b>で、タイルの種類と港の種類だけが毎回変わる</li>
-    <li><span class="tok">3:1</span>汎用港：同じカード3枚 → 好きな1枚。絵の付いた <span class="tok">2:1</span> は専門港で、その種類の同じカード2枚 → 好きな1枚。どちらも、桟橋がつながった角1か所に拠点を置いた人だけが使える</li>
-    <li><span class="tok mk">Market</span>中央のタイル。数字も特典もない（カタンの砂漠と同じ）。7が出たら、置き場所に関係なく全員が好きな1枚</li>
+    <li><span class="tok">3:1</span>汎用港：同じカード3枚 → 好きな1枚。絵の付いた <span class="tok">2:1</span> は専門港で、その種類の同じカード2枚 → 好きな1枚。どちらも、桟橋の先の角1か所に拠点を置いた人だけが使える</li>
+    <li><span class="tok mk">Market</span>中央のタイル。数字も特典もなく、ここからカードはもらえない。市場で産物を売ること（05）や、7の Market day（03）とは関係ない</li>
   </ul>
 
   <h3>テーブルの手前</h3>
@@ -385,14 +397,14 @@ a:focus-visible{outline:2px solid var(--leaf);outline-offset:2px}
       <rect x="88" y="96" width="72" height="56" rx="6" fill="none" stroke="var(--rule)" stroke-dasharray="4 3"/><text x="124" y="128" text-anchor="middle" font-size="11" fill="var(--muted)">空き</text>
       <text x="12" y="160" font-size="11" fill="var(--ink)">手元：carrot 3</text><text x="12" y="174" font-size="11" fill="var(--muted)">手札5枚・3コイン・2点</text></g>
     <g transform="translate(205 166)"><rect width="170" height="180" rx="10" fill="var(--paper)" stroke="var(--line)" stroke-width="1.5"/><rect width="170" height="26" rx="10" fill="var(--p2)"/><rect y="16" width="170" height="10" fill="var(--p2)"/><text x="12" y="18" font-size="13" font-weight="700" fill="var(--paper)">プレイヤー2</text>
-      <rect x="10" y="34" width="72" height="56" rx="6" fill="var(--hill)" opacity=".5"/><use href="#i-animal" x="26" y="36" width="40" height="40"/><text x="46" y="86" text-anchor="middle" font-size="10" fill="var(--ink)">牛</text>
+      <rect x="10" y="34" width="72" height="56" rx="6" fill="var(--hill)" opacity=".5"/><use href="#a-cow" x="26" y="36" width="40" height="40"/><text x="46" y="86" text-anchor="middle" font-size="10" fill="var(--ink)">牛</text>
       <rect x="88" y="34" width="72" height="56" rx="6" fill="var(--soil)" opacity=".35"/><use href="#i-grow" x="106" y="36" width="36" height="36"/><text x="124" y="84" text-anchor="middle" font-size="10" fill="var(--ink)">potato</text>
       <rect x="10" y="96" width="72" height="56" rx="6" fill="none" stroke="var(--rule)" stroke-dasharray="4 3"/><text x="46" y="128" text-anchor="middle" font-size="11" fill="var(--muted)">空き</text>
       <rect x="88" y="96" width="72" height="56" rx="6" fill="none" stroke="var(--rule)" stroke-dasharray="4 3"/><text x="124" y="128" text-anchor="middle" font-size="11" fill="var(--muted)">空き</text>
       <text x="12" y="170" font-size="11" fill="var(--muted)">手札3枚・1コイン・0点</text></g>
     <g transform="translate(390 166)"><rect width="170" height="180" rx="10" fill="var(--paper)" stroke="var(--line)" stroke-width="1.5"/><rect width="170" height="26" rx="10" fill="var(--p3)"/><rect y="16" width="170" height="10" fill="var(--p3)"/><text x="12" y="18" font-size="13" font-weight="700" fill="var(--line)">プレイヤー3</text>
-      <rect x="10" y="34" width="72" height="56" rx="6" fill="var(--hill)" opacity=".5"/><text x="46" y="66" text-anchor="middle" font-size="12" fill="var(--ink)">ニワトリ</text>
-      <rect x="88" y="34" width="72" height="56" rx="6" fill="var(--hill)" opacity=".5"/><text x="124" y="66" text-anchor="middle" font-size="12" fill="var(--ink)">ニワトリ</text>
+      <rect x="10" y="34" width="72" height="56" rx="6" fill="var(--hill)" opacity=".5"/><use href="#a-chicken" x="26" y="36" width="40" height="40"/><text x="46" y="86" text-anchor="middle" font-size="10" fill="var(--ink)">ニワトリ</text>
+      <rect x="88" y="34" width="72" height="56" rx="6" fill="var(--hill)" opacity=".5"/><use href="#a-chicken" x="104" y="36" width="40" height="40"/><text x="124" y="86" text-anchor="middle" font-size="10" fill="var(--ink)">ニワトリ</text>
       <rect x="10" y="96" width="72" height="56" rx="6" fill="var(--soil)" opacity=".35"/><use href="#i-grow" x="28" y="98" width="36" height="36"/><text x="46" y="146" text-anchor="middle" font-size="10" fill="var(--ink)">carrot</text>
       <rect x="88" y="96" width="72" height="56" rx="6" fill="none" stroke="var(--rule)" stroke-dasharray="4 3"/><text x="124" y="128" text-anchor="middle" font-size="11" fill="var(--muted)">空き</text>
       <text x="12" y="160" font-size="11" fill="var(--ink)">手元：egg 4</text><text x="12" y="174" font-size="11" fill="var(--muted)">手札4枚・2コイン・3点</text></g>
@@ -403,21 +415,23 @@ a:focus-visible{outline:2px solid var(--leaf);outline-offset:2px}
       <rect x="88" y="96" width="72" height="56" rx="6" fill="none" stroke="var(--rule)" stroke-dasharray="4 3"/><text x="124" y="128" text-anchor="middle" font-size="11" fill="var(--muted)">空き</text>
       <text x="12" y="170" font-size="11" fill="var(--muted)">手札6枚・3コイン・0点</text></g>
   </svg>
-  <p class="note">産地マップ・注文・銀行は全員で共有する。農場・産物・コイン・点は公開、手札は枚数だけ公開。絵は途中経過の一例。収穫した産物は区画ではなく、農場シートの外（手元）に置く。</p>
+  <p class="note">農場シートは1人1枚で、区画が4つある。産地マップ・注文・銀行は全員で共有する。農場・産物・コイン・点は公開、手札は枚数だけ公開。絵は途中経過の一例。収穫した産物は区画ではなく、農場シートの外（手元）に置く。</p>
 </section>
 
 <section>
   <h2><span class="no">01</span>勝ち方と終わり方</h2>
   <ul>
     <li><b>自分の手番中に勝利点8点に届いたら、その場で勝ち。</b></li>
-    <li>共同注文の完成や時間切れで、手番でない人が8点以上になることがある。その人は、自分の手番が来た時点で8点以上なら勝ち（カタンと同じ）。</li>    <li>表向きの注文も山も0枚になったら、そのラウンドの最後の人まで遊んで終了。点が一番多い人の勝ち。同点ならコインの多い人、それでも同じなら同順位。</li>
+    <li>共同注文の完成や時間切れで、手番でない人が8点以上になることがある。その人は、自分の手番が来た時点で8点以上なら勝ち（カタンと同じ）。</li>    <li>表向きの注文も山も0枚になったら、そのラウンドの最後の人まで遊んで終了する。</li>
+    <li><b>時間で終える</b>：遊び始めてから70分たったら、そのラウンドの最後の人まで遊んで終了する（70分は試遊の目安で、調整する）。</li>
+    <li>注文切れか時間で終わったときは、未完成の共同注文の行について、出した人に行の点の半分を払ってから（06の時間切れと同じ計算）、点が一番多い人の勝ち。同点ならコインの多い人、それでも同じなら同順位。</li>
   </ul>
 </section>
 
 <section>
   <h2><span class="no">02</span>準備</h2>
   <ol>
-    <li><b>数字トークンと港は、図の位置に固定して置く</b>（カタンと同じ）。数字は12枚（2・3・4・5・6・6・8・8・9・10・11・12）、港は6つ。この配置は、6と8が隣り合わず、港の角のタイルに6・8が来ないように決めてある。</li>
+    <li><b>盤面を置く</b>：数字と港の位置は毎回同じで、09の印刷用の盤面に書いてある。印刷用の盤面を使わないときは、数字トークンと港を図の位置に置く（カタンと同じ）。数字は12枚（2・3・4・5・6・6・8・8・9・10・11・12）、港は6つ。この配置は、6と8が隣り合わず、港の角のタイルに6・8が来ないように決めてある。</li>
     <li><b>タイルを並べる</b>：六角タイル13枚を4枚・5枚・4枚の3段に並べる。中央は<b>Market</b>（数字なし）。残り12枚は6種類（grow / buy / feed / sell / seed / animal）×2枚を、次の条件を満たすように置く。
       <ul>
         <li>各種類の2枚は、出やすい数字（5・6・8・9）のマスに1枚、出にくい数字（2・3・4・10・11・12）のマスに1枚。</li>
@@ -433,16 +447,17 @@ a:focus-visible{outline:2px solid var(--leaf);outline-offset:2px}
         </ol>
       </div>
     </li>
-    <li><b>港の種類を決める</b>：汎用港 2つ（<span class="tok">3:1</span>：同じカード3枚 → 好きな1枚）は位置が決まっている（盤面の「3:1」の港）。残りの専門港 4つ（<span class="tok">2:1</span>：その種類の同じカード2枚 → 好きな1枚）には、港の種類札6枚を裏向きにシャッフルして4枚引き、1枚ずつ割り当てる。seedの港は同じ作物カード2枚（例：carrot 2枚）、animalの港は同じ動物カード2枚に使える。種類を混ぜて出すことはできない。港を使えるのは、桟橋がつながった外側の角に拠点を置いた人だけ。</li>
-    <li>各自、<b>3コイン</b>、単語カード<b>2枚（grow, sell）</b>、<b>無料券2枚</b>（07）を持つ。</li>
-    <li><b>拠点を置く</b>：拠点は<b>タイルの角（交点）</b>に置く。開始プレイヤーをランダムに決め、席順に1個ずつ、逆順にもう1個置く（1人2個）。
+    <li><b>港の種類を決める</b>：汎用港 2つ（<span class="tok">3:1</span>：同じカード3枚 → 好きな1枚）は位置が決まっている（盤面の「3:1」の港）。残りの専門港 4つ（<span class="tok">2:1</span>：その種類の同じカード2枚 → 好きな1枚）には、港の種類札6枚を裏向きにシャッフルして4枚引き、1枚ずつ割り当てる。seedの港は同じ作物カード2枚（例：carrot 2枚）、animalの港は同じ動物カード2枚に使える。種類を混ぜて出すことはできない。港を使えるのは、桟橋の先の角1か所に拠点を置いた人だけ。</li>
+    <li>各自、単語カード<b>2枚（grow, sell）</b>と<b>無料券2枚</b>（07）を持つ。コインは手順5で開始プレイヤーを決めてから配る。</li>
+    <li><b>拠点を置く</b>：拠点は<b>タイルの角（交点）</b>に置く。開始プレイヤーをランダムに決め、席順に1個ずつ、逆順にもう1個置く（1人2個。最後の人は続けて2個置く）。
       <ul>
-        <li><b>距離ルール</b>：隣の交点（辺1本でつながる交点）に誰かの拠点がある場所には置けない。道は使わない。</li>
+        <li><b>距離ルール</b>：隣の交点（辺1本でつながる交点）に誰かの拠点がある場所には置けない。</li>
         <li><b>2個目に置いた拠点</b>に接するタイル1枚につき、そのタイルの単語カードを1枚もらう（Marketは除く）。seedなら作物、animalなら動物の種類を選ぶ。</li>
         <li>3人戦では、さらに好きな単語カードを1枚ずつ取る。</li>
+        <li><b>コイン</b>：開始プレイヤーから時計回りに、4人戦は<b>3・3・4・5コイン</b>、3人戦は<b>3・3・4コイン</b>を配る。後の席ほど手番が遅く不利なので、コインで補う。</li>
       </ul>
     </li>
-    <li>注文カードをシャッフルし、3枚を表向きに並べる。共同注文カードも別にシャッフルし、2枚を表向きに置く。開始プレイヤーが全部を声に出して読む。最初の手番は開始プレイヤーから。</li>
+    <li>注文カードをシャッフルし、裏向きの山にする。<b>最初は表にしない</b>（ラウンド3の初めに3枚を表にする。06）。共同注文カードも別にシャッフルし、2枚を表向きに置く。開始プレイヤーが共同注文を声に出して読む。最初の手番は開始プレイヤーから。</li>
   </ol>
   <p class="note">公開情報：手札の中身は非公開、手札の枚数は公開。産物・コイン・点・農場・拠点は公開。</p>
 </section>
@@ -457,14 +472,14 @@ a:focus-visible{outline:2px solid var(--leaf);outline-offset:2px}
       <tr><td class="num">7</td><td><b>Market day</b>：まず、単語カードを<b>7枚以上</b>持っている人は、<b>半分（端数切り捨て）</b>を自分で選んで捨てる（例：7枚なら3枚、9枚なら4枚）。そのあと全員が好きな単語カードを1枚もらう。手番の人から時計回りに行う</td></tr>
     </tbody>
   </table></div>
-  <p class="note">手番の人が何ももらえなかったときは、好きな単語カードを1枚もらう。</p>
+  <p class="note">手番の人が何ももらえなかったときは、好きな単語カードを1枚もらう。山にその種類のカードがないときはもらえない（このときも、何ももらえなければ救済の1枚がある）。何人かが同じ種類をもらうときは、手番の人から時計回りに取る。</p>
 </section>
 
 <section>
   <h2><span class="no">04</span>交渉（英語のみ）</h2>
   <ul>
     <li>交換は<b>手番の人と、他の誰か1人の間だけ</b>。手番でない人同士は交換できない。手番でない人から手番の人へ持ちかけるのは自由。</li>
-    <li>単語カード・産物・コインのどれでも交換できる。1手番の交換回数に上限はない。<b>双方が1つ以上を出す</b>（一方的に渡すことはできない）。</li>
+    <li>単語カード・産物・コインのどれでも交換できる。1手番の交換回数に上限はない。<b>双方が1つ以上を出す</b>（一方的に渡すことはできない）。交換するのはその場で渡せるものだけで、あとで払う約束はしない。</li>
     <li>単語カードは <span class="en">carrot card</span>、産物は <span class="en">carrot</span> と呼び分ける。</li>
   </ul>
   <div class="say">
@@ -476,8 +491,8 @@ a:focus-visible{outline:2px solid var(--leaf);outline-offset:2px}
   <h3>銀行（自分の手番中のみ）</h3>
   <ul>
     <li>同じ単語カード4枚 → 好きな単語カード1枚</li>
-    <li>汎用港の角に拠点がある：同じカード3枚 → 好きな1枚</li>
-    <li>専門港の角に拠点がある：その種類のカード2枚 → 好きな1枚</li>
+    <li>汎用港（桟橋の先の角）に拠点がある：同じカード3枚 → 好きな1枚</li>
+    <li>専門港（桟橋の先の角）に拠点がある：その種類の同じカード2枚 → 好きな1枚</li>
     <li>5コイン → 好きな単語カード1枚</li>
     <li>銀行と港の交換、コインでのカード購入は、手番中に何回でもできる</li>
     <li>コイン → 産物1つ（ジャガイモ・小麦・卵は10コイン、ニンジン・ミルクは15コイン）。<b>1手番に1つまで</b></li>
@@ -487,7 +502,13 @@ a:focus-visible{outline:2px solid var(--leaf);outline-offset:2px}
 
 <section>
   <h2><span class="no">05</span>行動</h2>
-  <p>必要なカードを英文の順に並べ、<b>声に出して言う</b>。使ったカードは捨てる。行動の回数に上限はない。ただし、1頭の動物に餌をやれるのは1手番に1回、共同注文は1手番に1行まで、銀行での産物の購入は1手番に1つまで、注文を流すのは1手番に1回。</p>
+  <p>必要なカードを英文の順に並べ、<b>声に出して言う</b>。使ったカードは、その種類の山に戻す。言った英文と並べたカードが食い違ったときは、何も起きない（カードは手札に戻す）。注文と共同注文を届ける宣言は、06の手順で確かめる。</p>
+  <p>行動の回数に上限はない。例外は次の3つ。</p>
+  <ul>
+    <li>餌をやれるのは、1区画につき1手番に1回</li>
+    <li>共同注文に出せるのは、2枚を合わせて1手番に1行</li>
+    <li>銀行で産物を買えるのは、1手番に1つ</li>
+  </ul>
   <div class="tbl"><table class="act">
     <thead class="act-h"><tr><th>宣言する英文</th><th>必要なもの</th><th>効果</th></tr></thead>
     <tbody>
@@ -495,9 +516,10 @@ a:focus-visible{outline:2px solid var(--leaf);outline-offset:2px}
       <tr><td><span class="en">I grow carrots and feed the soil.</span></td><td>grow＋carrot＋feed、空き区画</td><td>ニンジンを植える。ニンジンは高く売れる分、肥料（feed）も要る。収穫は他の作物と同じ</td></tr>
       <tr><td><span class="en">I buy a chicken.</span></td><td>buy＋chicken＋2コイン、空き区画</td><td>ニワトリを置く。買った手番から餌をやれる</td></tr>
       <tr><td><span class="en">I buy a cow and grow grass.</span></td><td>buy＋cow＋grow＋4コイン、空き区画</td><td>牛を置く（牧草のためにgrowも要る）。買った手番から餌をやれる</td></tr>
-      <tr><td><span class="en">I feed the chicken.</span></td><td>feed</td><td>卵2つ。1羽につき1手番1回</td></tr>
-      <tr><td><span class="en">I feed the cow.</span></td><td>feed</td><td>ミルク3つ。1頭につき1手番1回</td></tr>
-      <tr><td><span class="en">I sell four eggs.</span><br><span class="en">I sell two bottles of milk.</span></td><td>sell</td><td>同じ種類の産物を、好きな数だけまとめて市場に売る</td></tr>
+      <tr><td><span class="en">I feed the chicken.</span></td><td>feed</td><td>卵2つ。1区画につき1手番1回</td></tr>
+      <tr><td><span class="en">I feed the cow.</span></td><td>feed</td><td>ミルク3つ。1区画につき1手番1回</td></tr>
+      <tr><td><span class="en">I sell four eggs.</span><br><span class="en">I sell two bottles of milk.</span></td><td>sell</td><td>同じ種類の産物を、好きな数だけまとめて市場に売る（どこからでも売れる。Market タイルとは関係ない）</td></tr>
+      <tr><td><span class="en">I sell the chicken.</span><br><span class="en">I sell the cow.</span></td><td>sell</td><td>動物1頭を手放し、買値の半分のコインを得る（ニワトリ1コイン、牛2コイン）。区画は空く</td></tr>
       <tr><td><span class="en">I sell three carrots to the cafe.</span></td><td>sell</td><td>注文を達成する（06）</td></tr>
       <tr><td><span class="en">I bring three eggs to the festival.</span></td><td>sell、その行の産物</td><td>共同注文の1行を出す（06）。<b>1手番に1行まで</b></td></tr>
       <tr><td><span class="en">I have three animals.</span></td><td>なし（sellカード不要）</td><td>動物の頭数の注文（<span class="en">at least … animals</span>）を達成する。実際の頭数を言えばよい（<span class="en">I have four animals.</span>）。動物は手放さない</td></tr>
@@ -511,12 +533,12 @@ a:focus-visible{outline:2px solid var(--leaf);outline-offset:2px}
       <tr><td><span class="prodcell"><svg class="ico sm"><use href="#p-carrot"/></svg>carrot <svg class="ico sm"><use href="#p-milk"/></svg>milk</span></td><td class="num">2コイン</td></tr>
     </tbody>
   </table></div>
-  <p class="note">区画は1人4つ。1区画に作物1ロットか動物1頭を置く。動物は置いたら移動しない。収穫した産物と受け取ったミルク・卵は区画に置かず、手元に置く。数え方：<span class="en">a bag of wheat</span> ＝小麦1つ、<span class="en">a bottle of milk</span> ＝ミルク1つ。小麦とミルクは複数形にしない（<span class="en">wheat</span>、<span class="en">milk</span>）。</p>
+  <p class="note">区画は1人4つ。1区画に、1回植えた作物か、動物1頭を置く。動物は置いたら移動しない（手放すときは sell カードで売る）。収穫した産物と受け取ったミルク・卵は区画に置かず、手元に置く。数え方：<span class="en">a bag of wheat</span> ＝小麦1つ、<span class="en">a bottle of milk</span> ＝ミルク1つ。小麦とミルクは複数形にしない（<span class="en">wheat</span>、<span class="en">milk</span>）。</p>
 </section>
 
 <section>
   <h2><span class="no">06</span>注文</h2>
-  <div class="cards" role="img" aria-label="単語カード sell と、注文カード #1 の見本">
+  <div class="cards" role="img" aria-label="単語カード sell と、注文カードの見本">
     <svg class="card-svg" viewBox="0 0 150 210">
       <rect x="2" y="2" width="146" height="206" rx="12" fill="var(--paper)" stroke="var(--line)" stroke-width="2"/>
       <rect x="10" y="10" width="130" height="190" rx="8" fill="none" stroke="var(--leaf)" stroke-width="1.5" stroke-dasharray="4 4"/>
@@ -539,27 +561,30 @@ a:focus-visible{outline:2px solid var(--leaf);outline-offset:2px}
       <text x="282" y="192" text-anchor="end" font-family="IBM Plex Mono,monospace" font-size="11" fill="var(--muted)">+2 coins</text>
     </svg>
   </div>
-  <p class="note">絵が付くのは「易」の注文だけ。「中」「難」の注文は英文だけで、条件はカードの裏に書いてある。届けると宣言してから裏返して確かめる。</p>
+  <p class="note">絵が付くのは「易」の注文だけ。「中」「難」の注文は英文だけ。条件はカードの表の下端に書き、その部分を裏側へ折り返して隠してある。届けると宣言してから、折り返しを開いて確かめる。</p>
   <ul>
+    <li><b>注文はラウンド3から</b>：ラウンド1と2は、注文を伏せたままにする。ラウンド3の初め（開始プレイヤーがサイコロを振る前）に山から3枚を表にし、開始プレイヤーが読み上げる。どんな注文が出るか分からないまま農場を育てるのも、駆け引きのうち。通常の注文の説明は、このときに読めばよい。</li>
     <li>表向きの注文は、山がある限り3枚。達成されたらすぐに山から補充し、手番の人が読み上げる。補充された注文も、その手番のうちに届けてよい。</li>
-    <li><b>達成の仕方</b>：条件どおりの産物を出し、sellカード1枚を使って宣言する（動物の頭数の注文はsellカード不要）。宛先は注文の英文にある言葉を使う（<span class="en">to the cafe</span> など）。宛先が書かれていない注文は自由でよく、言えなくても不成立にはしない。</li>
-    <li><b>報酬</b>：注文に書かれた点＋<b>2コイン</b>。</li>
-    <li><b>出す数</b>：書かれた数ちょうどを出す。<span class="en">at least</span> とある注文だけは、多くてもよい。</li>
-    <li><b>読み違えたら</b>：条件を満たしていなかったら不成立。出したsellカードは捨てる（産物は戻す）。裏返した注文は表に戻す。<b>不成立になった注文には、その手番のうちは再挑戦できない</b>。</li>
+    <li><b>達成の仕方</b>：条件どおりの産物を出し、sellカード1枚を使って宣言する（動物の頭数の注文はsellカード不要）。届ける注文カードを指で示してから宣言する。宛先が書かれた注文では、その言葉を使う（<span class="en">to the cafe</span> など）。宛先が書かれていない注文では、宛先は言わなくてよい。動詞は sell でも bring でもよい。</li>
+    <li><b>報酬</b>：注文に書かれた点＋<b>2コイン</b>（ボーナス注文は下記）。</li>
+    <li><b>出す数</b>：書かれた数ちょうどを出す。<span class="en">at least</span> とある注文だけは、多くてもよい。多く出した分も注文に渡し、戻らない（点もコインも増えない）。</li>
+    <li><b>確かめる順番</b>：まず、言った英文と、出した産物・カードが一致しているかを全員で確かめる。一致していなければ何も起きない（カードも産物も戻す。05）。一致していれば折り返しを開いて条件を確かめる。</li>
+    <li><b>読み違えたら</b>：条件を満たしていなかったら不成立。出したsellカードは捨てる（産物は戻す）。開いた折り返しは元に戻す。<b>不成立になった注文には、その手番のうちは再挑戦できない</b>（動物の頭数の注文も同じ）。</li>
     <li>達成した注文カードは自分の前に表向きに置く。点は得点表に書く（注文カードの点、共同注文の点、時間切れの半分の点。0.5点刻み）。</li>
     <li><b>注文は毎回ちがう</b>：アプリでは、ゲームごとに注文36枚を自動で作る。紙で遊ぶときは、08の印刷用の36枚を使う。</li>
-    <li><b>注文を流す</b>：手番に1回、1コイン払って表向きの注文1枚を捨て、山から補充できる。補充した注文は手番の人が読み上げる。山が0枚のときは流せない。</li>
+    <li><b>注文の時間切れ</b>：注文を表にしたら、表にした人の色のおはじきを3個載せる。その人の手番が終わるたびに1個取る（表にした手番の終わりは取らない）。最後の1個を取っても達成されていなければ、その注文を捨てて山から補充し、補充した注文に同じ人の色のおはじきを3個載せて読み上げる（点もコインも入らない）。つまり、表にした人の手番が3回終わる（3人戦で9手番、4人戦で12手番）と流れる。ラウンド3の初めに表にした3枚は、開始プレイヤーが表にしたものとして数える。</li>
+    <li><b>ボーナス注文</b>：注文の山に2枚まざっている。表の色だけが違い、裏は普通の注文と同じ。英文には5種類の産物がすべて出てくるが、<b>受け付けるのは2〜3種類だけ</b>（条件は折り返しの下に書いてある）。届けるときは、そのうち<b>1種類を選んで、好きな数だけ</b>まとめて出す（<span class="en">I sell seven eggs to the farmers' market.</span>）。報酬は、<b>出した数×1コイン</b>と、「出した数×0.2（卵は×0.25）」を0.5点刻みで切り捨てた点。点に上限はない。1つから出せる。sellカード1枚を使うこと、読み違えたら不成立になること、達成したら補充すること、時間切れで流れることは、普通の注文と同じ。</li>
   </ul>
   <h3>共同注文</h3>
   <p>通常の注文とは別に、共同注文を2枚表にしておく。産物の種類ごとに3行あり、行ごとに点が付いている。全員で少しずつ出し合って完成させる注文。</p>
   <div class="say"><span>"The village festival needs three eggs, two bags of wheat and four carrots."</span><span>three eggs … 1.5点 ／ two bags of wheat … 1点 ／ four carrots … 2点</span></div>
   <ul>
-    <li><b>出し方</b>：自分の手番に、sellカード1枚で、<b>1行分</b>の産物をカードの上に置く（<span class="en">I bring three eggs to the festival.</span>）。宛先はカードの英文にある名前を使い、2枚のどちらに出すかを示す。1行は1人で出す（2人で分けて出せない）。</li>
+    <li><b>出し方</b>：自分の手番に、sellカード1枚で、<b>1行分</b>の産物をカードの上に置く（<span class="en">I bring three eggs to the festival.</span>）。宛先はカードの英文にある名前を使い（2枚のどちらか分かれば、名前の一部でよい）、出すカードを指で示す。1行は1人で出す（2人で分けて出せない）。行と合わない数や産物を出したときは受け付けない（カードも産物も戻す）。</li>
     <li><b>1手番に1行まで</b>：同じ人が1手番に出せるのは、2枚を合わせて1行だけ。手番をまたげば、1人で全行を出して完成させてもよい。</li>
-    <li><b>完成したら</b>：3行そろった時点で、出した人がそれぞれ自分の行の点を受け取る。完成させた（最後の行を出した）人は、さらに＋0.5点。共同注文ではコインはもらえない。完成したカードは捨て、山から1枚を表にして読み上げる。</li>
-    <li><b>時間切れ</b>：誰かが最初の行を出したラウンドから3ラウンドたっても完成しなければ、出した人に行の点の半分（0.5点刻みで切り捨て。1.5点の行なら0.5点）を払い、そのカードを捨てて山から1枚を表にする。最初の行が出たら、カードにそのラウンド数のおはじきを載せる。判定はラウンドの初め（開始プレイヤーがサイコロを振る前）に行う。例：ラウンド5に最初の行が出たら、ラウンド8の初めにまだ未完成なら時間切れ。まだ誰も出していない共同注文は時間切れにならない。</li>
+    <li><b>完成したら</b>：3行そろった時点で、出した人がそれぞれ自分の行の点を受け取る。完成させた（最後の行を出した）人は、さらに＋0.5点。共同注文ではコインはもらえない。完成したカードは捨て、山から1枚を表にし、手番の人が読み上げる。</li>
+    <li><b>時間切れ</b>：最初の行が出たら、出した人の色のおはじきを3個載せる。その人の手番が終わるたびに1個取る（出した手番の終わりは取らない）。最後の1個を取っても完成していなければ時間切れ。出した人に行の点の半分（0.5点刻みで切り捨て。1.5点の行なら0.5点）を払い、そのカードを捨てて山から1枚を表にし、次の手番の人が読み上げる。まだ誰も出していない共同注文は時間切れにならない。</li>
     <li>共同注文の山が尽きたら補充しない（表が1枚や0枚になってよい）。ゲームの終わり（01）は、通常の注文だけで判定する。</li>
-    <li>共同注文は流せない。出した産物は取り戻せない。</li>
+    <li>行として受け付けた産物は取り戻せない。</li>
     <li>行の点は通常の注文と同じ計算で、1行2〜4つ。</li>
   </ul>
   <p class="note">「あと1行で完成」は、交渉の材料になる。完成させればみんなに点が入るが、トップの人に点が入るなら完成させたくない、という駆け引きも生まれる。</p>
@@ -578,7 +603,7 @@ a:focus-visible{outline:2px solid var(--leaf);outline-offset:2px}
   </table></div>
   <ul>
     <li><b>無料券</b>：全員が2枚ずつ持つ。1枚で、日本語の単語1つか、交渉1件分の日本語を無料にできる。</li>
-    <li>宣言して使う分は、コインか無料券が足りなければ使えない。宣言せずに話した分でコインが足りないときは、足りない分を借りにし、次にコインを得たときに払う。</li>
+    <li>宣言して使う分は、コインか無料券が足りなければ使えない。宣言せずに話した分でコインが足りないときは、持っている分だけ払う（足りない分は払わなくてよい）。</li>
     <li><b>聞くのはタダ</b>：<span class="en">How do you say 人参?</span>（日本語の単語を1つ挟むのは可）、<span class="en">What does 'brewery' mean?</span></li>
     <li><b>文法は裁かない</b>：英文は通じれば成立。言い直しを手伝うのは歓迎。</li>
     <li>上級者は、合意すれば支払いを2倍にする。</li>
@@ -596,12 +621,13 @@ a:focus-visible{outline:2px solid var(--leaf);outline-offset:2px}
       <tr><td><span class="lvl">中</span></td><td>Grandma would like two eggs and a bottle of milk. ／ The bakery is looking for eggs and potatoes, two of each.</td><td>2種類の組み合わせ。of each（〜ずつ）</td></tr>
       <tr><td><span class="lvl">中</span></td><td>Please don’t send carrots. We need two eggs and a bottle of milk.</td><td>否定の罠。送ってはいけない産物が先に出てくる</td></tr>
       <tr><td><span class="lvl">中</span></td><td>A school class wants to visit a farm with at least three animals.</td><td>動物の頭数。at least（以上）</td></tr>
+      <tr><td><span class="lvl">ボーナス</span></td><td>The farmers' market has enough eggs and milk. Bring carrots, potatoes or wheat, as many as you can!</td><td>5種類すべてが出てくるが、受け付けるのは2〜3種類。have enough（もう足りている）。as many as you can（できるだけ多く）。山に2枚</td></tr>
       <tr><td><span class="lvl">難</span></td><td>Half a dozen eggs, please. ／ We need five crops in total. Anything but carrots! ／ We want the same number of carrots and potatoes, at least two of each.</td><td>言い換え（半ダース＝6）、合計、同数</td></tr>
     </tbody>
   </table></div>
-  <p class="note">点は0.5〜3点。計算式：0.3＋（産物1つあたりの重み×数の合計）＋0.3×（種類の数−1）＋「難」なら0.5。これを0.5点刻みに丸める。重みはニンジン・ジャガイモ・小麦・ミルクが0.4、卵が0.45。動物の頭数の注文は固定（2頭以上1.5点、3頭以上2.5点）。目安：ニンジン3つ＝1.5点、卵2つとミルク1本＝2点、卵を半ダース＝3点。</p>
+  <p class="note">点は0.5〜3点。計算式：0.3＋（産物1つあたりの重み×数の合計）＋0.3×（種類の数−1）＋「難」なら0.5。これを0.5点刻みに丸める（ちょうど半分のときは切り上げ）。3点を超えたら3点にする（ボーナス注文を除く）。重みはニンジン・ジャガイモ・小麦・ミルクが0.4、卵が0.45。動物の頭数の注文は固定（2頭以上1.5点、3頭以上2.5点）。目安：ニンジン3つ＝1.5点、卵2つとミルク1本＝2点、卵を半ダース＝3点。ボーナス注文だけは別の計算で、出した数×0.2（卵は×0.25）を0.5点刻みで切り捨て、出した数と同じだけのコインをもらう（例：ミルク5本＝1点と5コイン、卵6つ＝1.5点と6コイン、小麦13袋＝2.5点と13コイン）。</p>
   <h3>紙で遊ぶときの注文36枚（印刷用）</h3>
-  <p class="note">カードを作るときと答え合わせ用。<b>遊んでいる間は、この一覧を見ない。</b>表に英文、裏に「条件」を書く。絵を付けるのは「易」の注文だけ。どの注文も達成すると2コインもらえる。</p>
+  <p class="note">カードを作るときと答え合わせ用。<b>遊んでいる間は、この一覧を見ない。</b>表の上に英文、下端に「条件」を書き、条件の部分を裏側へ折り返して隠す。絵を付けるのは「易」の注文だけ。ボーナス注文（#35、#36）は表の色を変え、裏はほかと同じにする。達成するともらえるコインは、ボーナス注文が出した数×1コイン、それ以外が2コイン。</p>
   <details><summary>一覧を開く（答えが書いてある）</summary>
   <div class="tbl"><table>
     <thead><tr><th class="num">#</th><th>英文</th><th>条件</th><th class="num">点</th><th>難易度</th></tr></thead>
@@ -640,8 +666,8 @@ a:focus-visible{outline:2px solid var(--leaf);outline-offset:2px}
       <tr><td class="num">32</td><td>Please don’t send potatoes. We need an egg and a bag of wheat.</td><td>egg×1, wheat×1</td><td class="num">1.5</td><td><span class="lvl">中</span></td></tr>
       <tr><td class="num">33</td><td>Can you bring me three bottles of milk?</td><td>milk×3</td><td class="num">1.5</td><td><span class="lvl">易</span></td></tr>
       <tr><td class="num">34</td><td>Please don’t send eggs. We need three bottles of milk and a potato.</td><td>milk×3, potato×1</td><td class="num">2</td><td><span class="lvl">中</span></td></tr>
-      <tr><td class="num">35</td><td>Two eggs, please.</td><td>egg×2</td><td class="num">1</td><td><span class="lvl">易</span></td></tr>
-      <tr><td class="num">36</td><td>The hotel needs two eggs.</td><td>egg×2</td><td class="num">1</td><td><span class="lvl">易</span></td></tr>
+      <tr><td class="num">35</td><td>The farmers' market has enough carrots, potatoes and wheat. Bring eggs or milk, as many as you can!</td><td>egg か milk のどちらか1種類を好きな数</td><td class="num">数×0.2（卵は×0.25）</td><td><span class="lvl">ボーナス</span></td></tr>
+      <tr><td class="num">36</td><td>The farmers' market has enough potatoes, wheat and eggs. Bring carrots or milk, as many as you can!</td><td>carrot か milk のどちらか1種類を好きな数</td><td class="num">数×0.2</td><td><span class="lvl">ボーナス</span></td></tr>
     </tbody>
   </table></div>
   </details>
@@ -674,18 +700,18 @@ a:focus-visible{outline:2px solid var(--leaf);outline-offset:2px}
       <tr><td>港マーカー（3:1が2つ、2:1が4つ）</td><td>6個</td></tr>
       <tr><td>港の種類札（grow / buy / feed / sell / seed / animal）</td><td>6枚。裏向きで4枚引いて専門港（2:1）に当てる</td></tr>
       <tr><td>無料券</td><td>1人2枚</td></tr>
-      <tr><td>単語カード（grow 14 / buy 8 / feed 14 / sell 18 / carrot・potato・wheat 各8 / cow・chicken 各6）</td><td>90枚</td></tr>
-      <tr><td>注文カード（表に英文、裏に条件。絵は「易」の注文だけ）</td><td>36枚（08の一覧）</td></tr>
+      <tr><td>単語カード（grow 14 / buy 8 / feed 14 / sell 18 / carrot・potato・wheat 各8 / cow・chicken 各6。種類ごとに山に分ける）</td><td>90枚</td></tr>
+      <tr><td>注文カード（表に英文、下端に条件を書いて折り返す。絵は「易」の注文だけ）</td><td>36枚（08の一覧。うちボーナス注文2枚は表の色を変え、裏はすべて同じにする）</td></tr>
       <tr><td>共同注文カード</td><td>8枚（08の一覧）</td></tr>
       <tr><td>6面ダイス</td><td>2個</td></tr>
       <tr><td>得点表（0.5点刻み）とラウンドマーカー、開始プレイヤーマーカー</td><td>各1つ</td></tr>
-      <tr><td>共同注文に載せるラウンドのおはじき</td><td>2個</td></tr>
+      <tr><td>時間切れを数えるおはじき（プレイヤーの色ごと）</td><td>1色15個（注文3枚と共同注文2枚に3個ずつ載ることがあるため）</td></tr>
       <tr><td>拠点コマ（色違い）</td><td>1人3個</td></tr>
-      <tr><td>産物トークン・コイン</td><td>適量（おはじき・付箋・ポーカーチップで代用可）</td></tr>
+      <tr><td>産物トークン・コイン</td><td>適量（数に上限はない。おはじき・付箋・ポーカーチップで代用可）</td></tr>
       <tr><td>農場シート（4区画）</td><td>1人1枚</td></tr>
     </tbody>
   </table></div>
-  <p class="note">最初の1局は、トランプに付箋を貼る程度で十分。カードの山が尽きた種類は、捨て札から戻す。それでもなければ、そのカードはもらえない。</p>
+  <p class="note">最初の1局は、トランプに付箋を貼る程度で十分。使ったカードはその種類の山に戻るので、ふつうは尽きない。その種類がなければ、そのカードはもらえない（03）。</p>
   <h3>印刷用の盤面</h3>
   <p class="note">数字と港の位置だけを書き込んだ盤面。タイルの種類の札をこの上に並べる（02の手順）。港の種類は、港の種類札で決める。</p>
   <svg class="map" viewBox="0 0 606 416" role="img" aria-label="六角タイル13枚の産地マップ。中央にMarket、海岸線に港6つ、4人の初期拠点が交点に置かれている">
@@ -802,7 +828,60 @@ a:focus-visible{outline:2px solid var(--leaf);outline-offset:2px}
 </svg>
 </section>
 
-<footer>WORD FARM 試遊版ルール v0.8 ／ 2026-10-19 ／ 数値はすべて試遊で調整する前提の仮置きです。</footer>
+<section>
+  <h2><span class="no">10</span>よくある質問</h2>
+  <p class="note">01〜09 の内容を、問いの形にまとめた。</p>
+  <h3>手番の流れ</h3>
+  <dl class="qa">
+    <dt>自分の手番に植えた作物は、いつ収穫できる？</dt><dd>次の自分の手番の「2 収穫」で、産物3つを手元に取る。収穫した区画は空く。植えたその手番には収穫できない。</dd>
+    <dt>手番の人以外が、銀行や港を使ったり、行動したりできる？</dt><dd>できない。銀行・港・コインでの購入・行動は、自分の手番中だけ。手番でない人ができるのは、手番の人との交換だけ（04）。</dd>
+    <dt>7が出たとき、手札の枚数に無料券は数える？</dt><dd>数えない。数えるのは単語カードだけ（03）。</dd>
+    <dt>サイコロを振る前に、交換や行動をしていい？</dt><dd>できない。交渉・銀行・行動は、収入と収穫が終わってから（はじめに）。</dd>
+    <dt>後の席ほどコインが多いのはなぜ？</dt><dd>先に手番が来る人ほど有利なため。模擬対局では、この補正で席ごとの勝率がほぼそろった（02）。</dd>
+    <dt>7で半分を捨てたあと、全員がもらう1枚で7枚以上に戻ったら、また捨てる？</dt><dd>捨てない。捨てるのは、1枚をもらう前の1回だけ（03）。</dd>
+    <dt>7が出たときも、手番の人の救済の1枚はある？</dt><dd>ない。7では全員が好きな1枚をもらうので、「何ももらえなかった」場合に当たらない。</dd>
+    <dt>単語カードの山がなくなることはある？</dt><dd>ふつうはない。使ったカードはその種類の山に戻す（05）。山にその種類がないときはもらえない。何人かが同じ種類をもらうときは、手番の人から時計回りに取る（03）。</dd>
+  </dl>
+  <h3>農場と行動</h3>
+  <dl class="qa">
+    <dt>ニワトリや牛を買ったその手番に、餌をやれる？</dt><dd>やれる（05）。ただし、1頭に餌をやれるのは1手番に1回。</dd>
+    <dt>牛は区画をいくつ使う？</dt><dd>1区画。<span class="en">grow grass</span> の grow カードは費用で、牧草のための区画は要らない（05）。</dd>
+    <dt>区画が動物で埋まって、作物を植えられない。</dt><dd>sellカード1枚で動物1頭を手放せる（<span class="en">I sell the cow.</span>）。買値の半分（ニワトリ1コイン、牛2コイン）をもらい、区画が空く（05）。</dd>
+    <dt>1手番に、作物をいくつも植えたり、注文をいくつも届けたりできる？</dt><dd>できる。行動の回数に上限はないので、カードと空き区画がある限り何度でも行動できる（05）。届けたあとに補充された注文も、その手番のうちに届けてよい（06）。</dd>
+    <dt>sellカード1枚で、市場に売りながら注文も届けられる？</dt><dd>できない。sellカード1枚で行うのは、次のどれか1つ：市場に1種類を売る、動物を1頭手放す、注文1枚を届ける、共同注文の1行を出す（05、06）。</dd>
+    <dt>言った英文と並べたカードが食い違っていたら？</dt><dd>何も起きない。カードは手札に戻す（05）。注文と共同注文では、先に英文と出した物が一致しているかを確かめる。一致していなければ何も起きず、一致していれば条件を確かめ、満たしていなければ不成立（06）。文法の誤りは問わない（07）。</dd>
+    <dt>5コインで拠点を足して港の角に置いたら、その手番から港を使える？</dt><dd>使える。置いたときにカードはもらえない（05）。</dd>
+    <dt>産物やコインに上限はある？</dt><dd>ない。トークンが足りなくなったら、代わりの物で数える（09）。</dd>
+  </dl>
+  <h3>注文</h3>
+  <dl class="qa">
+    <dt>「Anything but carrots!」の注文に、卵やミルクを混ぜていい？</dt><dd>だめ。<span class="en">crops</span>（作物）は carrot・potato・wheat の3種類で、卵とミルクは作物ではない。条件は「potato と wheat を合わせて4（ちょうど）」のように、折り返しの下に書いてある（08）。</dd>
+    <dt>「in total」の注文は、多く出してもいい？</dt><dd>だめ。書かれた数ちょうどを出す。多くてよいのは <span class="en">at least</span> とある注文だけ（06）。</dd>
+    <dt><span class="en">at least</span> の注文で多く出した分は？</dt><dd>注文に渡したまま戻らない。点もコインも増えないので、多く出す得はない（06）。</dd>
+    <dt>動物の頭数の注文は、ニワトリと牛を合わせて数える？</dt><dd>合わせて数える。sellカードは要らず、動物は手放さない（05、06）。</dd>
+    <dt>読み違えて不成立になったら、別の注文には挑戦できる？</dt><dd>できる。その手番のうちに再挑戦できないのは、不成立になった注文だけ。出した産物は戻る。sellカードは捨てる（06）。</dd>
+    <dt>誰も届けられない注文がずっと残ったら？</dt><dd>表にした人の手番が3回終わると流れて、山から補充される（06）。山が尽きるか、70分たてば、ゲームは終わる（01）。</dd>
+    <dt>ラウンド1と2は、注文なしで何をすればいい？</dt><dd>作物を植え、動物を飼い、カードを集めて、注文に備える。どんな注文が出るかは分からないので、何を育てるかが駆け引きになる。共同注文は最初から表なので、ラウンド1から出せる（02、06）。</dd>
+    <dt>ボーナス注文に、少しだけ出してもいい？</dt><dd>1つから出せる。出した数だけコインが入る。点は0.5点に届く数から（卵は2つ、ほかは3つ）入り、多く出すほど増える（06）。</dd>
+    <dt>ボーナス注文で、2種類をまとめて出せる？</dt><dd>出せない。受け付ける種類のうち1種類を選んで出す。どの種類を受け付けるかは英文を読んで判断する。<span class="en">has enough</span>（もう足りている）と書かれた産物は受け付けない（06、08）。</dd>
+    <dt>注文を届けて8点に届いたら、残りの注文がなくなっていても勝ち？</dt><dd>勝ち。自分の手番中に8点に届いた時点で勝つ（01）。</dd>
+  </dl>
+  <h3>共同注文</h3>
+  <dl class="qa">
+    <dt>共同注文の1行は、書かれた数より多く出してもいい？</dt><dd>だめ。1行分（書かれた数）を出す。</dd>
+    <dt>1人で同じ共同注文の行をいくつも出せる？</dt><dd>出せる。ただし、2枚を合わせて1手番に1行まで。手番をまたげば、1人で全行を出して完成させてもよい（06）。</dd>
+    <dt>共同注文の時間切れの半分の点で、8点以上になったら？</dt><dd>時間切れは、最初の行を出した人の手番の終わりに起きる。点をもらった人は、次に自分の手番が来た時点で8点以上なら勝つ（01）。</dd>
+    <dt>共同注文の完成や時間切れで、2人以上が同時に8点以上になったら？</dt><dd>先に自分の手番が来た人の勝ち（01）。</dd>
+  </dl>
+  <h3>交渉と英語</h3>
+  <dl class="qa">
+    <dt>交換に出せるものは？</dt><dd>単語カード・産物・コインだけ（04）。動物・植えた作物・拠点・無料券・点は交換に出せない。</dd>
+    <dt>「次の手番に払うから」と約束して交換できる？</dt><dd>できない。交換するのは、その場で渡せるものだけ（04）。</dd>
+    <dt>注文を読み上げるのは英語？ 日本語を使ったら支払いが要る？</dt><dd>読み上げは英文のまま行う。日本語の支払いの対象は交渉の発言だけで、ルールの確認や説明は日本語でよい（07）。</dd>
+  </dl>
+</section>
+
+<footer>WORD FARM 試遊版ルール v0.9 ／ 2026-10-21 ／ 数値はすべて試遊で調整する前提の仮置きです。</footer>
 </div>
 
 </body>

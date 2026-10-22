@@ -128,7 +128,8 @@ class MapGame(Game):
             for _ in range(wf.JOINTN-1):
                 if s.jdeck: j=s.jdeck.pop(); j['since']=1; s.jfaces.append(j)
         else: s.jdeck=[]; s.jface=None
-        s.face=[s.deck.pop() for _ in range(3)]
+        if wf.ORDREVEAL>1: s.face=[]; s.fshown={}   # 注文は伏せておき、ORDREVEAL ラウンド目の初めに表にする
+        else: s.face=[s.deck.pop() for _ in range(3)]; s.fshown={o:1 for o in s.face}
         order=list(range(n))+list(range(n))[::-1]
         for k,i in enumerate(order):
             p=s.players[i]; v=s.choose_tile(p); s.place_base(p,v)
@@ -139,9 +140,18 @@ class MapGame(Game):
         s.start_ev=[sum(PROB[s.tnum[t]] for b in p.bases for t in s.L['VT'][b] if s.tcat[t]) for p in s.players]
         if n==3:
             for p in s.players: p.hand[s.best_any(p)]+=1
+        # SEATCOIN：席ごとの最初のコイン（例 3,3,4,5）。auto なら確定仕様（4人戦 3,3,4,5、3人戦 3,3,4）
+        _sc=os.environ.get('SEATCOIN','')
+        if _sc=='auto': _sc='3,3,4,5' if n==4 else '3,3,4'
+        for i,c in enumerate(map(int,filter(None,_sc.split(',')))):
+            if i<n: s.players[i].coins=c
+        # SEATBONUS：席ごとに最初に足す好きな単語カードの枚数（例 0,0,1,1）。後ろの席の補正を試す
+        for i,k in enumerate(map(int,filter(None,os.environ.get('SEATBONUS','').split(',')))):
+            if i<n:
+                for _ in range(k): s.players[i].hand[s.best_any(s.players[i])]+=1
         s.devdeck=list(DEVDECK); s.rng.shuffle(s.devdeck); s.guard=None
         for p in s.players: p.dev=[]; p.vp=0; p.fox=0
-        s.round=1; s.cur=0; s.winner=None; s.ended=False; s.end_reason=None; s.exhaust=False
+        s.round=1; s.cur=0; s.winner=None; s.winners=[]; s.ended=False; s.end_reason=None; s.exhaust=False
         s.turn_active=False; s.tilenum={}
 
     def layout_tiles(s):

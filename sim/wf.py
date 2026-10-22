@@ -7,6 +7,21 @@ JOINTN=int(__import__('os').environ.get('JOINTN','1'))  # 表にする共同注�
 ACTIONS=int(__import__('os').environ.get('ACTIONS','2'))  # 1手番の行動の上限（99で実質なし）
 HFROUND=int(__import__('os').environ.get('HFROUND','8'))
 HOUSECOST=int(__import__('os').environ.get('HOUSECOST','3')); HOUSEROUND=int(__import__('os').environ.get('HOUSEROUND','5'))
+# 通常の注文の時間切れ：ORDSTART ラウンド目の初めから数え始め、ORDEXP ラウンドで流れる（0なら時間切れなし）
+ORDEXP=int(__import__('os').environ.get('ORDEXP','0')); ORDSTART=int(__import__('os').environ.get('ORDSTART','1'))
+# 注文を伏せておき、ORDREVEAL ラウンド目の初めに3枚を表にする（1なら最初から表）
+ORDREVEAL=int(__import__('os').environ.get('ORDREVEAL','1'))
+import ordergen as _og
+BONUSMIN=float(__import__('os').environ.get('BONUSMIN','1'))   # ボットがボーナス注文を出す最低の点
+NOFLUSH=__import__('os').environ.get('NOFLUSH')=='1'   # 注文を流すルールをなくす
+REFILLEND=__import__('os').environ.get('REFILLEND')=='1'
+# 時間切れを手番単位で数える：表になった手番から ORDEXP×人数＋EXPOFF 手番たった手番の初めに流す（ラウンドの初めにまとめて流さない）
+EXPTURN=__import__('os').environ.get('EXPTURN')=='1'; EXPOFF=int(__import__('os').environ.get('EXPOFF','0'))
+JEXPTURN=__import__('os').environ.get('JEXPTURN')=='1'   # 共同注文の時間切れも手番単位で数える   # 達成した注文の補充を、すぐではなくラウンドの終わり（次のラウンドの初め）に行う
+# 共同注文の時間切れの数え始めを、少なくとも JDELAY ラウンド目からにする（0なら従来どおり）
+JDELAY=int(__import__('os').environ.get('JDELAY','0'))
+# sellカード1枚で動物1頭を手放し、買値の半分のコインを得る
+ANIMALSELL=__import__('os').environ.get('ANIMALSELL')=='1'
 from collections import Counter, defaultdict
 
 CARDS = ['grow','buy','feed','sell','carrot','potato','wheat','cow','chicken','two','three','four','five']
@@ -181,8 +196,12 @@ class Game:
         if o['kind']=='anyof': return set(o.get('allowed',['potato','wheat']))
         return set(o['req'].keys())
     def order_feasible(s, p, o):
-        if o['kind']=='animals': return len(STRATS[p.strat]['animals'])>=3 or len(p.animals())>=3
+        if o['kind']=='animals':
+            want=STRATS[p.strat]['animals']
+            if o.get('incl') and o['incl'] not in want and o['incl'] not in [f['t'] for f in p.animals()]: return False
+            return len(want)>=3 or len(p.animals())>=3
         if o['kind']=='anyof': return bool(set(o.get('allowed',['potato','wheat'])) & s.producible(p))
+        if o['kind']=='bonus': return bool(set(o['items']) & s.producible(p))
         return s.order_types(o) <= s.producible(p)
     def missing(s, p, o, extra=None):
         prod=Counter(p.prod)
@@ -249,12 +268,18 @@ class Game:
         p=s.players[s.cur]; s.turn_active=True
         s.actions=ACTIONS; s.flushed=False; s.tractor=False; s.trades=0; s.devplayed=False; s.jdone_turn=False; s.prodbought=False
         p.turns+=1
-        if JOINT and JTIMEOUT and s.__dict__.get('jfaces') and s.cur==0:
+        s.tix=s.__dict__.get('tix',0)+1   # 通算の手番の番号（手番単位の時間切れ用）
+        if JOINT and JTIMEOUT and s.__dict__.get('jfaces') and (s.cur==0 or JEXPTURN):
             for j in list(s.jfaces):
                 j.setdefault('since', s.round)
                 # JSTART=line：最初の行が出たラウンドから数える。誰も出していなければ時間切れにならない
                 t0=j.get('started') if JSTART=='line' else j['since']
-                if t0 is not None and s.round-t0>=JTIMEOUT:
+                if t0 is not None and JDELAY: t0=max(t0,JDELAY)
+                if JEXPTURN:
+                    # 最初の行を出した人の手番が JTIMEOUT 回終わったら時間切れ
+                    st=j.get('started_t'); expired = st is not None and s.tix-st>=JTIMEOUT*s.n+1
+                else: expired = t0 is not None and s.round-t0>=JTIMEOUT
+                if expired:
                     for l in j['lines']:
                         if l.get('by') is not None:
                             half=math.floor(l['pts'])/2; q=s.players[l['by']]; q.pts+=half; q.st['joint_pts']+=half; q.st['joint_half']+=1
@@ -263,6 +288,16 @@ class Game:
                     if JOINTN==1:
                         if s.jdeck: nj=s.jdeck.pop(); nj['since']=s.round; s.jfaces.append(nj)
                     else: s.joint_refill()
+        if ORDREVEAL>1 and s.cur==0 and s.round==ORDREVEAL and not s.face:
+            for _ in range(3):
+                if s.deck: o=s.deck.pop(); s.face.append(o); s.show_order(o); s.emit(t='refill',order=o)
+        if ORDEXP and EXPTURN: s.expire_orders_turn()
+        elif ORDEXP and s.cur==0: s.expire_orders()
+        if REFILLEND and s.cur==0 and (ORDREVEAL<=1 or s.round>ORDREVEAL):
+            # ラウンドの終わり（時間切れの判定のあと、次のラウンドの開始プレイヤーの手番の前）に、達成された分を補充する
+            while len(s.face)<3 and s.deck:
+                o=s.deck.pop(); s.face.append(o); s.show_order(o); s.emit(t='refill',order=o)
+            if JOINT: s.joint_refill()
         if JOINT: s.check_win(p)
         for f in p.fields:
             if f and f['t'] in ('cow','chicken'): f['fed']=False
@@ -276,8 +311,13 @@ class Game:
                     if q.handsize()>=7:
                         k=q.handsize()//2; q.st['seven_discard']+=k; s.emit(t='seven_discard',p=q.id,n=k)
                         for _ in range(k):
-                            d=s.desired(q)
-                            c=min([c for c in CARDS if q.hand[c]>0], key=lambda c:(s.value(q,c,d), -q.hand[c]))
+                            # 台本で捨てるカードを決めてあれば、それを捨てる
+                            pk=getattr(s,'seven_pick',{}).get(q.id)
+                            if pk: c=pk.pop(0)
+                            else:
+                                d=s.desired(q)
+                                c=min([c for c in CARDS if q.hand[c]>0], key=lambda c:(s.value(q,c,d), -q.hand[c]))
+                            if q.hand[c]<1: raise RuleError(f'P{q.id}は{c}を持っていない')
                             q.hand[c]-=1; q.hand+=Counter()
             for q in s.players:
                 c=s.best_any(q); q.hand[c]+=1; q.st['income']+=1; s.emit(t='market_day',p=q.id,card=c)
@@ -297,6 +337,32 @@ class Game:
             if f and f['t']=='crop' and f['planted']+DELAY<=p.turns:
                 p.prod[f['c']]+=YIELD; p.fields[i]=None; s.log(f"  収穫: {f['c']}×{YIELD}"); s.emit(t='harvest',p=p.id,crop=f['c'],n=YIELD,field=i)
 
+    def show_order(s, oid):
+        # 表になったラウンドを記録する（通常の注文の時間切れ用）
+        s.__dict__.setdefault('fshown',{})[oid]=s.round
+        s.__dict__.setdefault('fshown_t',{})[oid]=s.__dict__.get('tix',0)
+    def expire_orders(s):
+        # ラウンドの初めに、数え始めから ORDEXP ラウンドたった表の注文を流して補充する。点もコインも入らない
+        fs=s.__dict__.setdefault('fshown',{})
+        for oid in list(s.face):
+            t0=max(ORDSTART, fs.setdefault(oid, s.round))
+            if s.round-t0>=ORDEXP:
+                s.face.remove(oid); s.ordexp=getattr(s,'ordexp',0)+1
+                s.emit(t='order_expire',order=oid); s.log(f"  注文#{oid}が時間切れ")
+                if s.deck: n=s.deck.pop(); s.face.append(n); s.show_order(n); s.emit(t='refill',order=n)
+        if not s.face and not s.deck: s.exhaust=True
+    def expire_orders_turn(s):
+        # 手番の初めに、表になってから ORDEXP ラウンド分（＋EXPOFF）の手番がたった注文を流して補充する
+        ft=s.__dict__.setdefault('fshown_t',{})
+        for oid in list(s.face):
+            if s.tix-ft.setdefault(oid, s.tix) >= ORDEXP*s.n+EXPOFF:
+                s.face.remove(oid); s.ordexp=getattr(s,'ordexp',0)+1
+                s.emit(t='order_expire',order=oid)
+                if s.deck:
+                    n=s.deck.pop(); s.face.append(n); s.show_order(n); s.emit(t='refill',order=n)
+                    # 紙では前の人の手番の終わりに流して補充するので、補充した札は前の人が表にしたものとして数える
+                    s.fshown_t[n]=s.tix-1
+        if not s.face and not s.deck: s.exhaust=True
     def need_act(s):
         if not s.turn_active or s.ended: raise RuleError('手番外')
         if s.actions<=0: raise RuleError('行動が残っていない')
@@ -307,7 +373,7 @@ class Game:
         p.hand.subtract(c); p.hand+=Counter()
     def check_win(s, p):
         if p.pts+getattr(p,'vp',0)>=s.target and not s.ended:
-            s.winner=p.id; s.ended=True; s.end_reason='target'; s.log(f"*** P{p.id} 勝利 ({p.pts}点)"); s.emit(t='win',p=p.id)
+            s.winner=p.id; s.winners=[p.id]; s.ended=True; s.end_reason='target'; s.log(f"*** P{p.id} 勝利 ({p.pts}点)"); s.emit(t='win',p=p.id)
 
     # ---- 行動 ----
     def act_plant(s, p, crop):
@@ -334,6 +400,12 @@ class Game:
         else: p.prod[k]+=v
         if not free: s.actions-=1
         s.feed_mark=(p.id,p.turns); p.st['feed']+=1; s.log(f"  I feed the {f['t']}. (+{k}×{v})"); s.emit(t='feed',p=p.id,animal=f['t'],out=k,n=v,field=idx)
+    def act_sell_animal(s, p, idx):
+        if not ANIMALSELL: raise RuleError('動物は手放せない')
+        s.need_act(); f=p.fields[idx]
+        if not f or f['t'] not in ('cow','chicken'): raise RuleError('動物がいない')
+        s.use(p,['sell']); c=ANIMAL_COST[f['t']]//2; p.coins+=c; p.fields[idx]=None
+        s.actions-=1; p.st['animal_sell']+=1; s.log(f"  I sell the {f['t']}. (+{c}コイン)"); s.emit(t='animal_sell',p=p.id,animal=f['t'],coins=c,field=idx)
     def can_feed(s, p, f):
         if f['t']=='cow' and COWMODE=='cool' and p.turns-f.get('last',-9)<2: return False
         return True
@@ -348,7 +420,21 @@ class Game:
         s.log(f"  I sell {num or 'a'} {prod}. (+{PRICE[prod]*q}コイン)"); s.emit(t='market',p=p.id,prod=prod,n=q,coins=PRICE[prod]*q)
     def deliverable(s, p, oid, n13=None):
         o=OBYID[oid]
-        if o['kind']=='animals': return {} if len(p.animals())>=o['n'] else None
+        if o['kind']=='animals':
+            # 「including a chicken」などの指定があれば、その動物も1頭以上要る
+            if o.get('incl') and not any(f['t']==o['incl'] for f in p.animals()): return None
+            return {} if len(p.animals())>=o['n'] else None
+        if o['kind']=='bonus':
+            # 台本で産物と数を決めてあれば、それを出す
+            bp=getattr(s,'bonus_pick',None)
+            if bp:
+                x,n=bp
+                if x not in o['items']: raise RuleError('その産物は受け付けない')
+                return {x:n} if 0<n<=p.prod[x] else None
+            # 受け付ける種類のうち、点（同点ならコイン）が最も多くなる1種類を、持っている分すべて出す
+            c=[x for x in o['items'] if p.prod[x]>0]
+            if not c: return None
+            x=max(c,key=lambda x:(_og.bonus_points(x,p.prod[x]),p.prod[x])); return {x:p.prod[x]}
         if o['kind']=='anyof':
             al=o.get('allowed',['potato','wheat']); tot=o.get('total',5)
             if sum(p.prod[x] for x in al)<tot: return None
@@ -376,11 +462,14 @@ class Game:
         cards=([] if o['kind']=='animals' else ['sell'])+([num] if num else [])
         s.use(p,cards)
         p.prod.subtract(Counter(dl)); p.prod+=Counter()
-        p.pts+=o['pts']+bonus; p.coins+=2; s.actions-=1
-        p.st['orders']+=1; p.st['order_pts']+=o['pts']; p.st['bonus']+=bonus
-        s.log(f"  注文#{oid}達成 +{o['pts']+bonus}点 +2コイン → {p.pts}点"); s.emit(t='deliver',p=p.id,order=oid,pts=o['pts']+bonus,goods=dict(dl))
+        bx=next(iter(dl)) if o['kind']=='bonus' else None
+        pts=_og.bonus_points(bx,dl[bx]) if bx else o['pts']
+        if o['kind']=='bonus': p.st['bonus_orders']+=1; p.st['bonus_pts']+=pts
+        p.pts+=pts+bonus; p.coins+=(dl[bx] if bx else 2); s.actions-=1
+        p.st['orders']+=1; p.st['order_pts']+=pts; p.st['bonus']+=bonus
+        s.log(f"  注文#{oid}達成 +{pts+bonus}点 +{dl[bx] if bx else 2}コイン → {p.pts}点"); s.emit(t='deliver',p=p.id,order=oid,pts=pts+bonus,goods=dict(dl))
         s.face.remove(oid)
-        if s.deck: s.face.append(s.deck.pop()); s.log(f"  補充: #{s.face[-1]}"); s.emit(t='refill',order=s.face[-1])
+        if s.deck and not REFILLEND: s.face.append(s.deck.pop()); s.show_order(s.face[-1]); s.log(f"  補充: #{s.face[-1]}"); s.emit(t='refill',order=s.face[-1])
         if not s.face and not s.deck: s.exhaust=True
         s.check_win(p)
     def act_joint(s, p, item, jid=None):
@@ -397,7 +486,7 @@ class Game:
         if p.prod[item]<line['n']: raise RuleError('産物が足りない')
         s.use(p,['sell']); p.prod[item]-=line['n']; p.prod+=Counter(); s.actions-=1
         line['by']=p.id; p.st['joint_line']+=1; s.jdone_turn=True
-        if j.get('started') is None: j['started']=s.round
+        if j.get('started') is None: j['started']=s.round; j['started_t']=s.tix
         s.emit(t='joint_line',p=p.id,order=j['id'],item=item,n=line['n'],pts=line['pts'])
         if all(l.get('by') is not None for l in j['lines']):
             gains=Counter()
@@ -409,7 +498,7 @@ class Game:
             s.jfaces.remove(j)
             if JOINTN==1:
                 if s.jdeck: nj=s.jdeck.pop(); nj['since']=s.round; s.jfaces.append(nj); s.emit(t='joint_refill',order=nj['id'])
-            else: s.joint_refill()
+            elif not REFILLEND: s.joint_refill()
             s.check_win(p)
     def act_house(s, p, t):
         s.need_act()
@@ -468,11 +557,12 @@ class Game:
         k=s.ratio(p,give); s.use(p,[give]*k); p.hand[get]+=1; p.st['bank']+=1; p.st['bank%d'%k]+=1
         s.log(f"  銀行: {give}×{k} → {get}"); s.emit(t='bank',p=p.id,give=give,k=k,get=get)
     def flush(s, p, oid):
+        if NOFLUSH: raise RuleError('注文は流せない')
         if s.flushed: raise RuleError('流すのは1手番1回')
         if p.coins<1 or oid not in s.face: raise RuleError('流せない')
+        if not s.deck: raise RuleError('山が0枚のときは流せない')
         p.coins-=1; s.face.remove(oid); s.flushed=True; p.st['flush']+=1
-        if s.deck: s.face.append(s.deck.pop())
-        if not s.face and not s.deck: s.exhaust=True
+        s.face.append(s.deck.pop()); s.show_order(s.face[-1])
         s.log(f"  注文#{oid}を流す → 補充 {s.face}"); s.emit(t='flush',p=p.id,order=oid,face=list(s.face))
     def trade(s, p, q, give, get):
         # give/get: {'cards':{}, 'prod':{}, 'coins':n}
@@ -505,7 +595,10 @@ class Game:
             s.cur=0
             if s.exhaust:
                 s.ended=True; s.end_reason='exhaust'
-                best=max(s.players,key=lambda q:(q.pts+q.vp,q.coins)); s.winner=best.id
+                # 点もコインも同じなら同順位。勝者を1人に決めず、winners に同点の全員を入れる
+                key=lambda q:(q.pts+q.vp,q.coins); top=key(max(s.players,key=key))
+                s.winners=[q.id for q in s.players if key(q)==top]
+                s.winner=s.winners[0] if len(s.winners)==1 else None
                 s.log("*** 注文切れで終了")
                 return
             s.round+=1
@@ -629,7 +722,7 @@ class Game:
                 c=max(need,key=lambda c:WEIGHT[c]); p.coins-=COINPRICE; p.hand[c]+=1; p.st['coinbank']+=1
                 s.log(f"  銀行: {COINPRICE}コイン → {c}"); s.emit(t='coinbank',p=p.id,card=c,coins=COINPRICE)
         # 注文を流す
-        if not s.flushed and p.coins>=2 and s.face:
+        if not NOFLUSH and not s.flushed and p.coins>=2 and s.face and s.deck:
             if not any(s.order_feasible(p,OBYID[o]) for o in s.face):
                 s.flush(p, s.face[0])
 
@@ -649,6 +742,11 @@ class Game:
                         break
                 continue
             if s.deliverable(p,oid) is None: continue
+            if o['kind']=='bonus':
+                # ボーナス注文は1点以上になるまで貯めてから出す
+                x=next(iter(s.deliverable(p,oid))); sc=_og.bonus_points(x,p.prod[x])
+                if sc>=BONUSMIN and (not best or sc>best[0]): best=(sc,oid,None,None)
+                continue
             num=None
             for x in (o['nums'] if not DEV else []):
                 if x in NUMNAME and p.hand[NUMNAME[x]]>0: num=NUMNAME[x]
@@ -681,6 +779,14 @@ class Game:
             if crops:
                 bc=s.best_crop(p); c=bc if bc in crops else crops[0]
                 s.act_plant(p,c); return True
+        # D2 動物を手放して植える：区画が埋まり、植えられるカードがあるのに、餌のfeedがなく、sellに余りがあるとき。
+        # 動物の頭数の注文に要る頭数は残し、産物の価値（出る数×売値）が低い動物から手放す
+        if ANIMALSELL and STRATS[p.strat]['crop'] and not p.empty() and p.hand['grow'] and p.hand['feed']==0 and p.hand['sell']>=2:
+            crops=[c for c in CROPS if p.hand[c]>0 and c!='carrot']
+            keep=max([OBYID[o]['n'] for o in s.face if OBYID[o]['kind']=='animals'] or [0])
+            an=[(ANIMAL_OUT[f['t']][1]*PRICE[ANIMAL_OUT[f['t']][0]], i) for i,f in enumerate(p.fields) if f and f['t'] in ('cow','chicken')]
+            if crops and an and len(an)>keep:
+                s.act_sell_animal(p, min(an)[1]); return True
         # G 拠点（序盤）
         if len(p.bases)<s.maxbase() and p.coins>=HOUSECOST and s.round<=HOUSEROUND and (HOUSE_ALL or not wa):
             if s.can_house(p):
