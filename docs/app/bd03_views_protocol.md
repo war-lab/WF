@@ -1,6 +1,6 @@
 # 基本設計 BD03 表示用の状態と通信
 
-更新日：2026-10-26
+更新日：2026-10-27
 
 位置づけ：サーバーが端末に送る表示用の状態（`viewFor` の結果）、出来事（`GameEvent`）、端末とサーバーの間のメッセージを定める。
 
@@ -76,8 +76,7 @@
 ```ts
 interface BoardView {
   kind: "board";
-  bootId: string;                    // サーバーの起動ごとの乱数（3.3）
-  rev: number;                       // 方式設計7.3。同じ bootId の中でだけ比べる
+  rev: number;                       // 方式設計7.3
   rulesVersion: string;
   config: RuleConfig;
   n: 3 | 4;
@@ -105,7 +104,7 @@ interface BoardView {
 
 interface PublicPlayer {
   seat: Seat;
-  name: string;                      // サーバーが seats.json から付ける。エンジンの状態は名前を持たない（BD05 5.3）
+  name: string;                      // サーバーが参加者の表（BD05 2.6）から付ける。エンジンの状態は名前を持たない（BD05 5.3）
   color: Color;
   connected: boolean;                // サーバーが付ける。エンジンの状態ではない
   handCount: number;
@@ -294,14 +293,13 @@ type GameEvent = GameEventBase & EventBody;
 
 ```ts
 type ClientMsg =
-  | { t: "hello"; v: number; roomCode: string; role: "player" | "board"; token?: string; claim?: string }   // claim は席の再発行の合言葉（3.6）
+  | { t: "hello"; v: number; roomId: string; role: "player" | "board"; token?: string; claim?: string; hostKey?: string }   // claim は席の再発行の合言葉（3.6）。hostKey はホストの鍵（BD05 1.2）
   | { t: "join"; name: string }                         // ロビーで参加する
   | { t: "rename"; name: string }                       // ロビーで名前を直す
   | { t: "leave" }                                      // ロビーで抜ける
   | { t: "cmd"; id: string; cmd: Command; meta?: { sentenceShown?: boolean } }   // ゲームのコマンド。meta はエンジンに渡さず記録だけに残す（BD04 の「英文を見る」）
-  | { t: "admin"; id: string; op: AdminOp }             // localhost の大画面からだけ
-  | { t: "pong"; n: number }
-  | { t: "ping"; n: number }                            // 画面の復帰時の確かめ（3.5）
+  | { t: "admin"; id: string; op: AdminOp }             // ホストの鍵を示した大画面からだけ
+  | { t: "ping"; n: number }                            // 生存確認（3.7）と、画面の復帰時の確かめ（3.5）
   | { t: "pointer"; vertex: VertexId | null };          // 確定前に選んでいる交点（下記）
 
 type AdminOp =
@@ -317,9 +315,7 @@ type AdminOp =
   | { k: "endTurnFor"; turnSerial: TurnSerial }        // 一致しなければ拒否（古い表示で別の人の手番を終えないため）
   | { k: "reissueSeat"; seat: Seat }
   | { k: "approveClaim"; seat: Seat; approve: boolean } // 再発行の合言葉で入った端末を承認する（3.6）
-  | { k: "exportRecord" }                               // 記録を書き出す（BD05 5章）
-  | { k: "abortGame" }
-  | { k: "selectAddress"; address: string };            // QRコードに入れるアドレス
+  | { k: "abortGame" };
 ```
 
 `pointer` は、拠点を置く人がスマホで選んでいる途中の交点を、大画面で光らせるための一時的な通知である（方式設計9.2）。ゲームの状態を変えないため、エンジンに渡さず、記録にも残さない。サーバーは、送った人が今拠点を置く番（準備の配置、または `buildHouse` を選んでいる手番の人）であるときだけ、大画面の接続にそのまま転送する。
@@ -338,7 +334,6 @@ type ServerMsg =
   | { t: "ack"; id: string; rev: number }
   | { t: "reject"; id: string; code: RejectCode; detail?: string }
   | { t: "error"; code: ProtocolErrorCode; message: string }
-  | { t: "ping"; n: number }
   | { t: "pong"; n: number }                            // 端末からの ping への返事
   | { t: "claimPending"; seat: Seat; seatName: string } // 再発行の合言葉で入った端末に、どの席かを知らせる（3.6）
   | { t: "replaced" }                                   // 同じ席に新しい接続が来たので切る
@@ -346,18 +341,19 @@ type ServerMsg =
 
 type ProtocolErrorCode =
   | "BAD_MESSAGE" | "TOO_LARGE" | "VERSION" | "ROOM" | "TOKEN"
-  | "NOT_ADMIN" | "LOBBY_FULL" | "NAME_TAKEN" | "GAME_STARTED";
+  | "NOT_ADMIN" | "LOBBY_FULL" | "NAME_TAKEN" | "GAME_STARTED" | "ENGINE_CHANGED";
 ```
 
 `ack` の `rev` は、そのコマンドを適用したあとの版である。端末は、`ack` の `rev` 以上の `view` を受け取るまで、押したボタンを「処理中」で止めておく。
 
-`rev` の比較は、同じ `bootId` の中でだけ行う。サーバーは起動のたびに `bootId` を作り直す。端末は次の規則で `view` を受け入れる。
+端末は次の規則で `view` を受け入れる。
 
 - `welcome` の直後に届いた最初の `view` は、`rev` によらず受け入れる。
-- それ以降は、`bootId` が同じで、`rev` が手元の値以上なら受け入れる。
-- `bootId` が変わった `view` は、受け入れたうえで手元の `rev` を置き換える。
+- それ以降は、`rev` が手元の値以上なら受け入れる。
 
-ロビーの変更は記録（BD05 2.3）に残らないため、再起動をまたぐと `rev` が戻ることがある。`bootId` で比べ直せば、新しい表示を古いと見なして捨てることがない。
+`rev` はロビーの変更も含めて保存され、Durable Object の作り直しや休止をまたいでも戻らない（BD05 2.8）。旧設計の `bootId`（起動ごとの乱数で、`rev` の戻りを見分ける値）は要らない。
+
+`ENGINE_CHANGED` は、記録を作ったエンジンと今のエンジンの版が違い、部屋を止めたときに返す（BD05 2.10）。端末は再接続を試みず、「ホストに知らせてください」と出す。
 
 `rev` は、ゲームかロビーの状態が変わったときだけ上げる。接続の状態（`connected`）が変わったときは上げない。取り消しの `undoCommit` の照合（BD05 2.9）を、誰かの再接続で崩さないためである。
 
@@ -367,8 +363,7 @@ type ProtocolErrorCode =
 
 ```ts
 interface LobbyView {
-  roomCode: string;
-  addresses: { address: string; selected: boolean }[];  // 大画面にだけ値を入れる
+  roomId: string;
   participants: {
     id: string;
     name: string;
@@ -405,7 +400,7 @@ interface LobbyView {
 
 画面が見えるようになったとき（`visibilitychange`）は、接続が生きているように見えても、状態を確かめる。消灯から戻ったスマホは、接続が切れたことにまだ気づいていない場合があるためである。
 
-具体的には、端末から `ping` を送り、2〜3秒のうちに `pong` が返らなければ、接続を切ってつなぎ直す。最後に受け取った時刻だけで判断しないのは、サーバーの `ping` の間隔（10秒）と同じ長さの閾値では、生きている接続でも、画面を戻すたびに半分ほどの確率で切ってしまうためである。
+具体的には、端末から `ping` を送り、2〜3秒のうちに `pong` が返らなければ、接続を切ってつなぎ直す。10秒おきの生存確認（3.7）の返事を待たないのは、画面を戻した直後に、切れた接続に気づくまで最大で20秒かかるためである。
 
 ### 3.6 席の再発行
 
@@ -419,10 +414,14 @@ interface LobbyView {
 
 ### 3.7 生存確認
 
-サーバーは、各接続に10秒おきに `ping`（通し番号 n）を送る。端末は同じ n で `pong` を返す。
+端末は、10秒おきに `ping`（通し番号 n）を送る。サーバーは同じ n で `pong` を返す。
 
-- サーバーは、30秒 `pong` が来ない接続を切り、その参加者を `connected: false` にする。
-- 端末は、25秒どのメッセージも来なければ、接続が切れたと見て再接続する。
+- サーバーは、接続ごとに最後に受け取った時刻を持つ。メッセージを処理するたびに、30秒何も受け取っていない接続を切り、その参加者を `connected: false` にする。
+- 端末は、`ping` を送ってから10秒 `pong` が来なければ、接続が切れたと見て再接続する。
+
+サーバーから `ping` を送らないのは、サーバー（Durable Object）を休止させるためである。サーバーが10秒おきに送るには、Durable Object が起き続けている必要があり、無料の枠の時間を減らす（BD05 1.1）。端末からの `ping` は、届くたびに Durable Object を短い間だけ起こす。
+
+接続を切る判断を、ほかのメッセージの処理のついでに行うため、全員が黙っている間は `connected` が古いままのことがある。全員が黙っていれば誰も表示を見ていないため、影響はない。
 
 WebSocket のプロトコルの ping のフレームを使わず、アプリのメッセージで行うのは、ブラウザの JavaScript から ping のフレームを送ったり受けた時刻を知ったりできないためである。
 
@@ -444,7 +443,7 @@ JSON として読めない、または zod の形に合わないメッセージ�
 
 形が正しく、ルールに合わないコマンドは、`error` ではなく `reject`（BD01 9章の符号）を返す。
 
-`admin` を `localhost` 以外の接続から受けたら、`error`（`NOT_ADMIN`）を返す。
+`admin` を、ホストの鍵を示していない接続から受けたら、`error`（`NOT_ADMIN`）を返す。
 
 ## 4. メッセージの大きさの見積もり
 
@@ -462,7 +461,7 @@ JSON として読めない、または zod の形に合わないメッセージ�
 | `recent`（30件） | 3.0KB | 1件100字 |
 | 合計 | 約13KB | |
 
-1局で状態が変わる回数は、手番45回、1手番あたりのコマンド10〜20回として、500〜1000回と見積もる（未検証。BD05 6章と同じ見積もり。M1 で、模擬の出来事の数から実測する）。5台に送るため、1局の送信の合計は約30〜60MBになる。LANの中では問題にならない量である。
+1局で状態が変わる回数は、手番45回、1手番あたりのコマンド10〜20回として、500〜1000回と見積もる（未検証。BD05 6章と同じ見積もり。M1 で、模擬の出来事の数から実測する）。5台に送るため、1局の送信の合計は約30〜60MBになる。1台あたり6〜12MBで、モバイル通信の量として許容の範囲と見る（BD05 6章）。Durable Object からの送信は、無料の枠の要求の数に数えない。
 
 64KBの上限には、見積もりの約5倍の余裕がある。`config` と `recent` は変わることが少ないが、全量を送る方針（方式設計7.1）を優先し、分けて送る最適化はしない。実測で大きすぎた場合に見直す。
 
@@ -472,3 +471,4 @@ JSON として読めない、または zod の形に合わないメッセージ�
 |---|---|
 | 2026-10-26 | 初版を作成 |
 | 2026-10-26 | 多角レビューを反映。不成立の注文の条件を再び隠す、共同注文の行の産物と数を隠す、注文の難易度を送らない、交換の申し出を大画面に出す、`bootId`、未確定のコマンドの再送、席の再発行の承認、形の誤りの返し方を変えた |
+| 2026-10-27 | サーバーを Cloudflare に移したことに合わせた（BD05）。`roomCode` を `roomId` に、管理の判定をホストの鍵に替えた。`bootId`、`exportRecord`、`selectAddress`、ロビーのアドレスの一覧をやめ、`ENGINE_CHANGED` を加えた。生存確認の `ping` を端末から送る形に替えた |

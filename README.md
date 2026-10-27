@@ -11,7 +11,7 @@
 | 遊ぶ人 | `word_farm_rules.html` | ルールブック（正本）。公開版：https://claude.ai/artifact/HoSAWvybiFEWnQJ7oJBBcE |
 | 遊ぶ人（オフライン） | `word_farm_rules_local.html` | ルールブックを単体で開ける形にしたもの。ブラウザで開いて印刷できる |
 | 作る人 | `WORD_FARM_DESIGN_v0.5.md` | 設計メモ。仕様の要約、判断の根拠、保留した案、試遊で確認する項目、模擬の数値 |
-| アプリを作る人 | `WORD_FARM_APP_DESIGN_v0.1.md` | アプリ設計書。ホストPCがサーバー兼大画面、各自のスマホに手札を出す構成 |
+| アプリを作る人 | `WORD_FARM_APP_DESIGN_v0.1.md` | アプリ設計書。ホストPCのブラウザが大画面、各自のスマホに手札を出し、サーバーは Cloudflare の無料プランに置く構成 |
 | 絵や音を作る人 | `art/ASSET_SPEC.md` | アプリ版の素材仕様（Codexでの画像生成とフリー素材の効果音） |
 
 ルールを変えるときは、`word_farm_rules.html` を直してから `word_farm_rules_local.html` を書き出し直す。設計メモには、変えた理由を書く。
