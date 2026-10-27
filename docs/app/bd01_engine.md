@@ -195,8 +195,7 @@ interface GameState {
   prompts: Prompt[];
   answers: Record<string, PromptAnswer>;   // 届いた答え。全員そろうまで処理しない
   trades: TradeOffer[];
-  endFlag: { reason: "orders" | "time"; at: TurnSerial } | null;
-  timeUp: boolean;            // 経過時間そのものはサーバーが数え、表示にだけ付ける（BD03 の ClockView）
+  endFlag: { reason: "orders" | "host"; at: TurnSerial } | null;
   paused: boolean;
   result: GameResult | null;
 }
@@ -210,7 +209,7 @@ interface TradeOffer {
 interface Goods { cards: Bag<WordCard>; products: Bag<Product>; coins: number }
 
 interface GameResult {
-  reason: "target" | "orders" | "time" | "aborted";
+  reason: "target" | "orders" | "host" | "aborted";
   winnerSeat: Seat | null;     // target のときだけ
   ranking: { seat: Seat; rank: number; halfPoints: HalfPoints; coins: number }[];   // 同順位は同じ rank
 }
@@ -223,7 +222,6 @@ interface GameResult {
 | キー | 値 | ルールブック |
 |---|---|---|
 | `targetHalfPoints` | 16 | 01章 |
-| `timeLimitMinutes` | 70 | 01章 |
 | `initialHand` | grow 1、sell 1 | 02章 |
 | `freeTickets` | 2 | 02章、07章 |
 | `seatCoins` | 4人戦 [3,3,4,5]、3人戦 [3,3,4] | 02章 |
@@ -247,7 +245,6 @@ interface GameResult {
 | `orderFaceUp`、`orderRevealRound`、`orderExpireTurns`、`orderCoins` | 3、3、3、2 | 06章 |
 | `jointFaceUp`、`jointExpireTurns`、`jointFinishHalfPoints` | 2、3、1 | 06章 |
 | `japaneseCost` | word 1、talk 2、undeclared 2 | 07章 |
-| `timeLimitEnabled` | true（70分の打ち切りを使う） | 01章 |
 | `animalInclude` | false（動物の頭数の注文に動物の指定を付けない。BD02 6章 Q1） | 08章 |
 | `orderDeck` | `generated`（36枚）か `fixed`（08章の印刷用） | 06章、08章 |
 | `dice` | `server` か `manual` | 方式設計6章 |
@@ -300,7 +297,7 @@ interface GameResult {
 
 続いて `seatCoins` を配り、共同注文を2枚表にし、最初の手番を始める。通常の注文は表にしない。
 
-最初の手番を始める時点を、方式設計5.9の「準備の完了」とする。サーバーは、ここから70分を数える。
+最初の手番を始める時点を、方式設計5.9の「準備の完了」とする。サーバーは、ここから経過の時間を数え、大画面に出す。
 
 ## 7. 手番の進み方
 
@@ -365,7 +362,7 @@ interface GameResult {
 
 手順3で払った点では、手番の人であっても勝ちにしない（方式設計5.7）。この点は次の自分の手番の初め（7.1の手順3）で判定する。
 
-`markTimeUp` で `timeUp` が真になったとき、`endFlag` がなければ `endFlag` を `time` にする。`markTimeUp` は、どの段階でも受け付ける。
+`callLastRound` で、`endFlag` を `host` にする（8.5）。ルールブック01章の70分の打ち切りは、MVP ではホストがこの操作で行う（方式設計5.9）。
 
 ## 8. コマンド
 
@@ -480,10 +477,10 @@ interface GameResult {
 
 | コマンド | 送る者 | 前提 | 効果 |
 |---|---|---|---|
-| `markTimeUp(at)` | サーバー | `timeUp` が偽 | `timeUp` を真にし、7.5のとおり `endFlag` を立てる |
 | `pause(at)`、`resume(at)` | サーバー（管理操作から） | 一時停止していない／している | `paused` を切り替える |
 | `answerFor(promptId, answer)` | 管理 | 問いが残っている | その人の代わりに答える |
 | `endTurnFor(turnSerial)` | 管理 | `phase` が `main`。`turnSerial` が今の手番の通し番号と一致する（違えば `STALE_TARGET`） | 手番の人の代わりに `endTurn` |
+| `callLastRound()` | 管理 | `phase` が `over` でない。`endFlag` がない（あれば `ALREADY_ENDING`） | 7.5のとおり `endFlag` を `host` にする。どの段階でも受け付ける |
 | `abortGame()` | 管理 | `phase` が `over` でない | 方式設計5.9の終わり方の手順2と3を行い、`reason: "aborted"` で終える |
 
 `endTurnFor` に手番の通し番号を持たせるのは、ホストが古い表示を見て押したときに、すでに始まった次の人の手番を終えてしまうことを防ぐためである。
@@ -539,7 +536,7 @@ interface GameResult {
 | `TRADE_GONE` | 申し出がない | その申し出はもうありません |
 | `BAD_DICE` | `inputDice` の出目が1〜6でない、または `dice: server` の設定で送った | 出目を正しく入れてください |
 | `BAD_AMOUNT` | 数が1未満（`sellProducts` の n、`deliverOrder` の空の `items`、`deliverBonus` の n） | 数を1つ以上選んでください |
-| `ALREADY_TIME_UP` | `markTimeUp` の重複（サーバーだけが受け取る） | （表示しない） |
+| `ALREADY_ENDING` | `callLastRound` を、`endFlag` が立ったあとに送った | すでに最終ラウンドです |
 | `NOT_TRADE_PARTY` | `respondTrade` を相手以外が、`withdrawTrade` を出した本人以外が送った | この申し出には操作できません |
 | `TICKET_NOT_ALLOWED` | 宣言しなかった日本語を無料券で払おうとした | 宣言しなかった日本語はコインで払います |
 | `STALE_TARGET` | `endTurnFor` の通し番号が今の手番と違う（管理だけ） | 手番が変わっています。画面を確かめてください |

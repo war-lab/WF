@@ -82,8 +82,7 @@ interface BoardView {
   n: 3 | 4;
   phase: Phase;
   paused: boolean;
-  timeUp: boolean;
-  endFlag: { reason: "orders" | "time"; at: TurnSerial } | null;
+  endFlag: { reason: "orders" | "host"; at: TurnSerial } | null;
   clock: ClockView;                  // 1.4
   board: BoardState;                 // BD01 2.2。そのまま
   piles: Record<WordCard, number>;
@@ -185,7 +184,6 @@ interface PlayerView extends Omit<BoardView, "kind"> {
 interface ClockView {
   startedAt: number | null;          // 準備の完了の時刻（サーバーの時計、ミリ秒）
   elapsedMs: number;                 // 送った時点の経過時間（一時停止の分を除く）
-  limitMs: number;                   // 70分
   serverNow: number;                 // 送った時点のサーバーの時刻
 }
 ```
@@ -250,8 +248,7 @@ type GameEvent = GameEventBase & EventBody;
 | `japanesePaid` | 席、種類、払い方、コイン | 全員 |
 | `turnStarted` | 席、手番の通し番号、ラウンド | 全員 |
 | `turnEnded` | 席、手番の通し番号 | 全員 |
-| `endFlagged` | 理由（`orders`、`time`）、手番の通し番号 | 全員 |
-| `timeUp` | 時刻 | 全員 |
+| `endFlagged` | 理由（`orders`、`host`）、手番の通し番号 | 全員 |
 | `paused`、`resumed` | 時刻 | 全員 |
 | `gameOver` | `GameResult`、最後に払った半分の点 | 全員 |
 | `undone` | 取り消したコマンドの数と、巻き込まれた操作の要約（BD05） | 全員 |
@@ -307,7 +304,7 @@ type AdminOp =
   | { k: "setColor"; participantId: string; color: Color }
   | { k: "setRate"; participantId: string; rate: 1 | 2 }  // 上級者の倍率
   | { k: "kick"; participantId: string }                // ロビーでだけ
-  | { k: "startGame"; options: { orderDeck: "generated" | "fixed"; dice: "server" | "manual"; timeLimitEnabled: boolean; animalInclude: boolean } }
+  | { k: "startGame"; options: { orderDeck: "generated" | "fixed"; dice: "server" | "manual"; animalInclude: boolean } }
   | { k: "pause" } | { k: "resume" }
   | { k: "undoPreview"; seq?: number }                 // 取り消す行。省けば手番の人の最後のコマンド（BD05 2.9）
   | { k: "undoCommit"; rev: number }                   // undoPreview の時点の rev。一致しなければ拒否
@@ -315,12 +312,13 @@ type AdminOp =
   | { k: "endTurnFor"; turnSerial: TurnSerial }        // 一致しなければ拒否（古い表示で別の人の手番を終えないため）
   | { k: "reissueSeat"; seat: Seat }
   | { k: "approveClaim"; seat: Seat; approve: boolean } // 再発行の合言葉で入った端末を承認する（3.6）
+  | { k: "callLastRound" }                           // 最終ラウンドにする（方式設計5.9）
   | { k: "abortGame" };
 ```
 
 `pointer` は、拠点を置く人がスマホで選んでいる途中の交点を、大画面で光らせるための一時的な通知である（方式設計9.2）。ゲームの状態を変えないため、エンジンに渡さず、記録にも残さない。サーバーは、送った人が今拠点を置く番（準備の配置、または `buildHouse` を選んでいる手番の人）であるときだけ、大画面の接続にそのまま転送する。
 
-`Command` は BD01 8章のコマンドの和である。`id` は、`crypto.getRandomValues` で作る128ビットの値の16進表記（32文字）とする（方式設計2.1）。サーバーが発するコマンド（`markTimeUp` など）の `id` も同じ形にし、出どころは記録の `actor` で区別する（BD05 2.3）。
+`Command` は BD01 8章のコマンドの和である。`id` は、`crypto.getRandomValues` で作る128ビットの値の16進表記（32文字）とする（方式設計2.1）。サーバーが発するコマンド（`pause`、`resume`）の `id` も同じ形にし、出どころは記録の `actor` で区別する（BD05 2.3）。
 
 `pause` と `resume` は、管理操作として受け、サーバーが時刻を付けてエンジンのコマンド `pause(at)`、`resume(at)` にする。
 

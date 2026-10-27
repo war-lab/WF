@@ -18,7 +18,7 @@
 
 管理操作は、ホストの鍵（Worker の秘密の値）を知る大画面だけに許す。旧設計の「ループバックからの接続だけ」は、サーバーがホストPCの外にあるため使えない（1.2）。
 
-ゲームの時計は、サーバーの時刻から、準備の完了の時刻と一時停止の合計を引いて求める。70分の打ち切りは Durable Object の Alarm で起こす（3章）。
+ゲームの時計は、サーバーの時刻から、準備の完了の時刻と一時停止の合計を引いて求め、大画面に出すだけとする。70分の打ち切りは自動にせず、ホストが「最終ラウンドにする」を押す（3章、方式設計5.9）。
 
 記録の書き出しは、ゲームの終わりのあとに、大画面のブラウザが記録を取り出し、ブラウザの中でエンジンを再適用して作る（5章）。再適用をサーバーで行わないのは、Durable Object の1件の処理を短く保つためである（1.4）。
 
@@ -33,7 +33,7 @@
 | 接続の管理 | Durable Object | WebSocket の接続と参加者の対応を持つ。休止できる WebSocket（WebSocket Hibernation API）を使う。1つの席には最後につないだ1本だけを有効にする |
 | エンジン | Durable Object | BD01 の `createGame`、`apply`、`viewFor`、`legalActions` を呼ぶ |
 | 保存 | Durable Object | SQLite への記録の追記と、状態の写しの保存（2章） |
-| 時計 | Durable Object | ゲームの経過を求め、Alarm で `markTimeUp` を出す（3章） |
+| 時計 | Durable Object | ゲームの経過を求め、`view` に付ける（3章） |
 | 管理の門番 | Worker と Durable Object | 部屋の作成、管理操作、記録の取り出しを、ホストの鍵を示した要求に限る（1.2） |
 
 Durable Object の名前は部屋の ID から作る（`idFromName(roomId)`）。部屋の ID は、部屋の作成時に Worker が `crypto.getRandomValues` で作る128ビットの値の16進表記（32文字）とする。推測できない値にするのは、部屋のURLを知らない人が参加の画面を開けないようにするためである。
@@ -153,7 +153,7 @@ Workers の料金の資料は、無料プランで1回の要求に使える CPU 
 | `undo` | 取り消しの行だけに入れる。この取り消しで無効にした行の `seq` の一覧（JSON） |
 | `state` | この行を適用したあとの `GameState` の写し（JSON。2.4） |
 
-取り消しの行の `undo` の例は `{"seqs":[60,61,63]}` である。取り消したいコマンドと、そのあとに入って巻き込まれたコマンドを並べる（方式設計8.2）。`actor` が `server` の行（`markTimeUp`、`pause`、`resume`）は並べない（2.9）。この例では、62 がサーバーの行で、取り消しの対象から外れている。
+取り消しの行の `undo` の例は `{"seqs":[60,61,63]}` である。取り消したいコマンドと、そのあとに入って巻き込まれたコマンドを並べる（方式設計8.2）。`actor` が `server` の行（`pause`、`resume`）は並べない（2.9）。この例では、62 がサーバーの行で、取り消しの対象から外れている。
 
 ### 2.4 状態の写し
 
@@ -170,7 +170,7 @@ Workers の料金の資料は、無料プランで1回の要求に使える CPU 
 
 出来事の記録は保存しない。出来事は記録の再適用で作り直せるため、記録の書き出し（5章）の際に、ブラウザで再適用して作る。出来事の名前は次の40個とする。中身の項目と通し番号（`eventSeq`）は BD03 で定める。
 
-gameCreated, seatsAssigned, housePlaced, cardsGranted, promptsOpened, promptAnswered, diceRolled, cardsDiscarded, harvested, planted, animalBought, fed, productsSold, animalSold, orderDeclared, orderSucceeded, orderFailed, ordersRevealed, orderExpired, jointRowFilled, jointCompleted, jointExpired, houseBuilt, bankTraded, harborTraded, cardBought, productBought, tradeProposed, tradeAccepted, tradeDeclined, tradeWithdrawn, japanesePaid, turnStarted, turnEnded, endFlagged, timeUp, paused, resumed, gameOver, undone
+gameCreated, seatsAssigned, housePlaced, cardsGranted, promptsOpened, promptAnswered, diceRolled, cardsDiscarded, harvested, planted, animalBought, fed, productsSold, animalSold, orderDeclared, orderSucceeded, orderFailed, ordersRevealed, orderExpired, jointRowFilled, jointCompleted, jointExpired, houseBuilt, bankTraded, harborTraded, cardBought, productBought, tradeProposed, tradeAccepted, tradeDeclined, tradeWithdrawn, japanesePaid, turnStarted, turnEnded, endFlagged, paused, resumed, gameOver, undone
 
 `undone` だけはエンジンではなくサーバーが出す（2.9）。
 
@@ -211,7 +211,7 @@ Cloudflare の資料では、書き込みが確定するまで Durable Object �
 
 ### 2.7 読み込み（作り直しと休止からの復帰）
 
-Durable Object は、作り直されたときと休止から戻ったときに、メモリ上の状態を失う。次のメッセージ、HTTP の要求、Alarm を処理する前に、コンストラクタで次の手順を行う（`ctx.blockConcurrencyWhile` の中で行い、読み込みの途中に要求が割り込まないようにする）。
+Durable Object は、作り直されたときと休止から戻ったときに、メモリ上の状態を失う。次のメッセージか HTTP の要求を処理する前に、コンストラクタで次の手順を行う（`ctx.blockConcurrencyWhile` の中で行い、読み込みの途中に要求が割り込まないようにする）。
 
 1. `meta`、`room`、`participants` を読む。
 2. `meta` があれば、2.10 の版の確認を行う。
@@ -244,7 +244,7 @@ Durable Object は、作り直されたときと休止から戻ったときに�
 3. 対象と巻き込まれる行を、人が読める形（「Ben：日本語の支払い（単語、1コイン）」など）で大画面に出す（`undoPreview`）。
 4. ホストが確かめて実行を押すと（`undoCommit`）、取り消したあとの状態を次の手順で作る。
    1. 対象の直前の有効な行の `state` を読む。
-   2. 対象より後ろの有効な行のうち、サーバーの行（`markTimeUp`、`pause`、`resume`）を、元の順番のまま再適用する。
+   2. 対象より後ろの有効な行のうち、サーバーの行（`pause`、`resume`）を、元の順番のまま再適用する。
 5. 取り消しの行を、手順4の状態を `state` に入れて追記する。
 6. `rev` を1増やし、全端末に `view` を送る。出来事 `undone`（BD03 で定める）で、取り消されたことを大画面に出す。
 
@@ -256,10 +256,9 @@ Durable Object は、作り直されたときと休止から戻ったときに�
 
 サーバーの行を取り消しの対象から外すのは、時計とエンジンの状態を食い違わせないためである。
 
-- `markTimeUp` を取り消すと、エンジンの `timeUp` が偽に戻る。サーバーは70分の発火を済ませているため送り直さず、時間でゲームが終わらなくなる。
 - `pause` だけが取り消されると、エンジンは進行中、時計は停止という食い違いになる。`resume` だけが取り消されると、時計は進むのに、すべてのコマンドが `PAUSED` で拒否される。
 
-サーバーの行は、前の行の結果に依存しない（`markTimeUp` は `timeUp` を真にするだけ、`pause` と `resume` は `paused` を切り替えるだけ）。そのため、取り消した行を除いた状態に再適用しても意味が変わらない。この性質が、手順4で写しとサーバーの行だけから状態を作れる前提である。
+サーバーの行は、前の行の結果に依存しない（`pause` と `resume` は `paused` を切り替えるだけ）。そのため、取り消した行を除いた状態に再適用しても意味が変わらない。この性質が、手順4で写しとサーバーの行だけから状態を作れる前提である。
 
 ### 2.10 エンジンの版の確認
 
@@ -308,20 +307,15 @@ Durable Object は、作り直されたときと休止から戻ったときに�
 
 旧設計では、ホストPCのスリープで時計が飛ぶことに備え、単調時計と1秒ごとの見張りを使っていた。サーバーが Cloudflare に移ったため、ホストPCのスリープは時計に影響しない。Cloudflare のサーバーの時刻は同期されている前提とし、単調時計と見張りはやめる。
 
-Workers の `Date.now()` は、1回の処理の中では進まない。経過は、メッセージや Alarm を処理するたびにその時点で求めるため、この性質は影響しない。
+Workers の `Date.now()` は、1回の処理の中では進まない。経過は、メッセージを処理するたびにその時点で求めるため、この性質は影響しない。
 
 Durable Object の作り直しや休止の間も、時計は進む。作り直しが数秒で終わる見込みで（2.7）、旧設計の「サーバーが止まっていた間は数えない」規則はやめる。
 
-### 3.3 markTimeUp と一時停止を出す時機
+### 3.3 一時停止
 
-- ゲームの作成時と再開時に、70分に達する時刻を計算し、Alarm をその時刻に設定する（`ctx.storage.setAlarm`）。
-- Alarm が起きたら、経過を求め直す。`timeLimitMinutes`（70分）に達していて、まだ `markTimeUp` を出していなければ、`markTimeUp(at)` をサーバーのコマンドとして処理する（1.3の手順3以降）。`at` は経過のミリ秒である。達していなければ（一時停止の分だけずれた等）、Alarm を設定し直す。
-- ホストが大画面で一時停止を押すと、`pause(at)` を処理し、`pausedSince` を書き、Alarm を消す。再開で `resume(at)` を処理し、`pausedTotalMs` に足して `pausedSince` を空にし、Alarm を設定し直す。
-- `timeLimitEnabled` が偽のゲームでは、Alarm を設定しない。
+- ホストが大画面で一時停止を押すと、`pause(at)` を処理し、`pausedSince` を書く。再開で `resume(at)` を処理し、`pausedTotalMs` に足して `pausedSince` を空にする。
 
-Alarm は、Durable Object が休止していても起きる。処理に失敗した場合は、Cloudflare が自動でやり直す。
-
-`markTimeUp` も記録に残るため、再適用すれば同じ時点で同じ終わり方になる（方式設計5.9）。
+70分を過ぎても、サーバーは何もしない。打ち切りはホストの `callLastRound`（BD01 8.5）で行い、ほかの管理操作と同じく記録に残る（方式設計5.9）。MVP では Alarm を使わない。
 
 大画面の経過の表示は、`view` の `clock`（BD03 1.4）から端末が数え進める。サーバーは1秒ごとに時刻を送らない。
 
@@ -345,7 +339,7 @@ Alarm は、Durable Object が休止していても起きる。処理に失敗�
 
 - Workers の有料プラン（Workers Paid）に上げない。
 - 支払いの手段を登録しない。アカウントは作成済みで、無料プランのまま別のアプリをデプロイできている。アカウントの持ち主は支払いの手段を登録していない。有料プランへの切り替えには支払いの手段が要るため、無料プランのままである（管理画面の表示は見ていない）。
-- 有料プランでだけ使える機能を使わない。使う機能は、Workers、Workers Static Assets、SQLite の Durable Objects、Alarm に限る。
+- 有料プランでだけ使える機能を使わない。使う機能は、Workers、Workers Static Assets、SQLite の Durable Objects に限る。
 - 設定ファイル（`wrangler.jsonc`）で、Durable Objects に SQLite の保存（`new_sqlite_classes`）を指定する。無料プランでは SQLite の Durable Objects だけが使える。
 - カスタムドメインを取らない。`workers.dev` のサブドメインを使う。
 
@@ -599,4 +593,5 @@ Durable Object と Worker は、起動、接続と切断、拒否、保存の異
 | 2026-10-26 | 多角レビューを反映。復旧を先頭からの再適用と照合の行に改め、スナップショットと出来事の記録をやめた（2.4、2.7） |
 | 2026-10-26 | 同じく、取り消しの対象からサーバーの行を除き、`bootId`、書き込みの失敗時の切り詰め、二重起動の防止、ホストPCの電源、M0 の前の実測を加えた |
 | 2026-10-27 | サーバーを Cloudflare Workers と Durable Objects の無料プランに移した（方式設計14.1）。保存を状態の写しに、管理操作をホストの鍵に、時計を Alarm に、記録の書き出しをブラウザでの再適用に改めた |
+| 2026-10-27 | 70分の打ち切りを自動にせず、時計を表示だけにした。Alarm と `markTimeUp` をやめた（3章、方式設計5.9） |
 | 2026-10-27 | M0 前の試作の結果を反映した（4.9）。CPU の上限で打ち切られないことを確かめ、ゲームの作成をブラウザに移す代案を削った（1.4）。既存のアカウントの共有を書いた（4.1、4.2） |
