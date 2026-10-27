@@ -624,3 +624,4 @@ interface ActionHints {
 |---|---|
 | 2026-10-26 | 初版を作成 |
 | 2026-10-26 | 6観点の多角レビューを反映。共同注文を産物と数で指定する形、収入の問いの分け方と出し直しの順番、不成立の条件を再び隠すこと、`endTurnFor` の通し番号、状態から名前を除くこと、拒否の符号の追加と削除 |
+| 2026-10-27 | 70分の自動の打ち切りをやめた。`markTimeUp`、`timeUp`、`timeLimitMinutes`、`timeLimitEnabled`、`ALREADY_TIME_UP` を除き、管理の `callLastRound` と `ALREADY_ENDING` を加えた。`endFlag` の理由 `time` を `host` に替えた（方式設計5.9） |
