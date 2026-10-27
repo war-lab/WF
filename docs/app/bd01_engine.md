@@ -196,7 +196,6 @@ interface GameState {
   answers: Record<string, PromptAnswer>;   // 届いた答え。全員そろうまで処理しない
   trades: TradeOffer[];
   endFlag: { reason: "orders" | "host"; at: TurnSerial } | null;
-  paused: boolean;
   result: GameResult | null;
 }
 
@@ -370,7 +369,6 @@ interface GameResult {
 
 すべての行動と銀行のコマンドには、次の共通の前提がある。以下の表では繰り返さない。
 
-- ゲームが一時停止していない（`PAUSED`）
 - `phase` が `main` である（`WRONG_PHASE`）
 - 送った人が手番の人である（`NOT_YOUR_TURN`）
 
@@ -477,7 +475,6 @@ interface GameResult {
 
 | コマンド | 送る者 | 前提 | 効果 |
 |---|---|---|---|
-| `pause(at)`、`resume(at)` | サーバー（管理操作から） | 一時停止していない／している | `paused` を切り替える |
 | `answerFor(promptId, answer)` | 管理 | 問いが残っている | その人の代わりに答える |
 | `endTurnFor(turnSerial)` | 管理 | `phase` が `main`。`turnSerial` が今の手番の通し番号と一致する（違えば `STALE_TARGET`） | 手番の人の代わりに `endTurn` |
 | `callLastRound()` | 管理 | `phase` が `over` でない。`endFlag` がない（あれば `ALREADY_ENDING`） | 7.5のとおり `endFlag` を `host` にする。どの段階でも受け付ける |
@@ -500,13 +497,13 @@ interface GameResult {
 
 ### 8.7 サーバーが行うもの
 
-`undo` と `reissueSeat` はエンジンのコマンドではない。サーバーが記録の再適用と席の管理で行う（BD05）。
+取り消し（`undoLast`）、一時停止と再開、席の再発行は、エンジンのコマンドではない。サーバーが行う。取り消しは状態の写しの読み込み（BD05 2.9）、一時停止は部屋の時計の状態（BD05 3.3）、席の再発行は参加者の管理（BD03 3.6）である。
 
 ## 9. 拒否の理由
 
 | 符号 | 意味 | スマホに出す文言 |
 |---|---|---|
-| `PAUSED` | 一時停止中 | 一時停止中です |
+| `PAUSED` | 一時停止中（サーバーが返す。BD05 3.3） | 一時停止中です |
 | `GAME_OVER` | ゲームが終わっている | ゲームは終わりました |
 | `WRONG_PHASE` | 今の段階では送れない | 今はできません |
 | `NOT_YOUR_TURN` | 手番の人ではない | 自分の手番ではありません |
@@ -539,9 +536,9 @@ interface GameResult {
 | `ALREADY_ENDING` | `callLastRound` を、`endFlag` が立ったあとに送った | すでに最終ラウンドです |
 | `NOT_TRADE_PARTY` | `respondTrade` を相手以外が、`withdrawTrade` を出した本人以外が送った | この申し出には操作できません |
 | `TICKET_NOT_ALLOWED` | 宣言しなかった日本語を無料券で払おうとした | 宣言しなかった日本語はコインで払います |
-| `STALE_TARGET` | `endTurnFor` の通し番号が今の手番と違う（管理だけ） | 手番が変わっています。画面を確かめてください |
+| `STALE_TARGET` | `endTurnFor` の通し番号が今の手番と違う。`undoLast` の `seq` が最後の有効な行と違う（管理だけ） | 手番が変わっています。画面を確かめてください |
+| `NOTHING_TO_UNDO` | 取り消せる行がない（サーバーが返す。BD05 2.9。管理だけ） | 取り消せる操作がありません |
 | `BAD_MESSAGE` | メッセージの形が正しくない（サーバーが返す。BD03） | 操作を受け付けられませんでした |
-| `STORAGE_ERROR` | 記録を保存できない（サーバーが返す。BD05） | 保存に失敗しました。ホストに知らせてください |
 
 注文が不成立になるのは拒否ではない。コマンドは受け付けられ、出来事 `orderFailed` が出る。拒否と不成立を分けるのは、不成立には sell を失うという結果があるためである。
 
@@ -560,7 +557,7 @@ interface GameResult {
 
 勝ちで終えたときは、`trades` を空にし、`phase` を `over` にする。`result.reason` は `target`、`winnerSeat` は手番の人とする。`ranking` は点とコインで付ける（10.2の手順3）。
 
-### 10.2 注文切れと時間による終わり
+### 10.2 注文切れとホストの宣言による終わり
 
 7.5の手順5で終えるときは、次の順で処理する。
 
@@ -625,3 +622,4 @@ interface ActionHints {
 | 2026-10-26 | 初版を作成 |
 | 2026-10-26 | 6観点の多角レビューを反映。共同注文を産物と数で指定する形、収入の問いの分け方と出し直しの順番、不成立の条件を再び隠すこと、`endTurnFor` の通し番号、状態から名前を除くこと、拒否の符号の追加と削除 |
 | 2026-10-27 | 70分の自動の打ち切りをやめた。`markTimeUp`、`timeUp`、`timeLimitMinutes`、`timeLimitEnabled`、`ALREADY_TIME_UP` を除き、管理の `callLastRound` と `ALREADY_ENDING` を加えた。`endFlag` の理由 `time` を `host` に替えた（方式設計5.9） |
+| 2026-10-27 | 多角レビューを反映。一時停止をエンジンから外し（`paused`、`pause`、`resume` を削除。`PAUSED` はサーバーが返す）、`NOTHING_TO_UNDO` を加え、使わなくなった `STORAGE_ERROR` を除いた。10.2 の見出しと 8.7 を直した |
