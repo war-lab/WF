@@ -1,0 +1,23 @@
+/* 色はルールブックの図に合わせた仮の値。素材の段階（M7）で見直す */
+:root {
+  --sea: #cfe6ee;
+  --paper: #fffdf6;
+  --soil: #8a6a46;
+  --line: #4a4036;
+  --leaf: #5a8f3c;
+  --wheat: #f3e3b3;
+  --wheat-ink: #5a4a1a;
+  --warn: #c0392b;
+  --muted: #7a7266;
+  --ink: #2a2620;
+}
+html,
+body {
+  margin: 0;
+  background: #f4efe2;
+  color: var(--ink);
+  font-family: "Yu Gothic UI", "Hiragino Sans", "Noto Sans JP", sans-serif;
+}
+.board-map text {
+  fill: var(--ink);
+}

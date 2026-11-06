@@ -1,0 +1,2 @@
+ラウンド10.1  1位と2位の差2.82  3R首位が勝つ40%  1局あたり: prod_trade 3.55  prodbuy 2.25  prodbuy_coin 9.48  refused 6.36  coinbank 5.08  orders 8.77  joint_done 0.57
+  勝率: crop 31%  chicken 18%  cow 27%  mixed 22%

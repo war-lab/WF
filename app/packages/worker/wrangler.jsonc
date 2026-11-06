@@ -1,0 +1,20 @@
+// Cloudflare の設定（BD05 4.1、4.2）。無料プランで使える機能（Workers、Static Assets、SQLite の Durable Objects）だけを使う
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "word-farm",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-27",
+  "workers_dev": true,
+  // 画面のファイル（client を vite build した結果）。/api/* だけ Worker のコードを通す
+  "assets": {
+    "directory": "../client/dist",
+    "binding": "ASSETS",
+    "not_found_handling": "404-page",
+    "run_worker_first": ["/api/*"]
+  },
+  "durable_objects": {
+    "bindings": [{ "name": "ROOM", "class_name": "Room" }]
+  },
+  // 無料プランでは SQLite の Durable Objects だけが使える（new_sqlite_classes）
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Room"] }]
+}
