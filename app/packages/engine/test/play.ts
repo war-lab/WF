@@ -53,7 +53,8 @@ export class RandPicker implements Picker {
   }
 }
 
-export type Move = { actor: Actor; cmd: Command };
+/** good は点や物が増える操作。優先して選ぶ方策（BD06 5.1 の候補の中での重み付け）に使う */
+export type Move = { actor: Actor; cmd: Command; good?: boolean };
 
 const seatA = (s: Seat): Actor => ({ k: "seat", seat: s });
 
@@ -122,24 +123,30 @@ export function candidates(s: GameState, pk: Picker): Move[] {
     }
     if (L.rollDice?.enabled) moves.push({ actor: a, cmd: { t: "rollDice" } });
     if (L.inputDice?.enabled) moves.push({ actor: a, cmd: { t: "inputDice", a: 1 + pk.pick(6), b: 1 + pk.pick(6) } });
-    for (const h of L.plant) if (h.enabled) moves.push({ actor: a, cmd: { t: "plant", crop: h.value } });
-    for (const h of L.buyAnimal) if (h.enabled) moves.push({ actor: a, cmd: { t: "buyAnimal", animal: h.value } });
-    for (const h of L.feed) if (h.enabled) moves.push({ actor: a, cmd: { t: "feed", plot: h.value } });
+    for (const h of L.plant) if (h.enabled) moves.push({ actor: a, cmd: { t: "plant", crop: h.value }, good: true });
+    for (const h of L.buyAnimal) if (h.enabled) moves.push({ actor: a, cmd: { t: "buyAnimal", animal: h.value }, good: true });
+    for (const h of L.feed) if (h.enabled) moves.push({ actor: a, cmd: { t: "feed", plot: h.value }, good: true });
     for (const sp of L.sellProducts) moves.push({ actor: a, cmd: { t: "sellProducts", product: sp.product, n: amount(pk, sp.max) } });
     for (const h of L.sellAnimal) if (h.enabled) moves.push({ actor: a, cmd: { t: "sellAnimal", plot: h.value } });
     for (const h of L.deliver) {
       if (!h.enabled) continue;
       const id = h.value.orderId;
-      if (h.value.kind === "animals") moves.push({ actor: a, cmd: { t: "claimAnimalOrder", orderId: id } });
+      if (h.value.kind === "animals") {
+        const f = s.orders.faceUp.find((x) => x.order.id === id)!;
+        const c = f.order.cond as { min: number };
+        const n = pl.plots.filter((x) => x.t === "animal").length;
+        moves.push({ actor: a, cmd: { t: "claimAnimalOrder", orderId: id }, good: n >= c.min });
+      }
       else if (h.value.kind === "bonus") {
         const ks = bagKeys(pl.products);
         const p = ks[pk.pick(ks.length)]!;
-        moves.push({ actor: a, cmd: { t: "deliverBonus", orderId: id, product: p, n: amount(pk, bagGet(pl.products, p)) } });
+        const acc = (s.orders.faceUp.find((x) => x.order.id === id)!.order.cond as { accepted: Product[] }).accepted;
+        moves.push({ actor: a, cmd: { t: "deliverBonus", orderId: id, product: p, n: amount(pk, bagGet(pl.products, p)) }, good: acc.includes(p) });
       } else {
         // 条件を満たす組を持っていれば、半分の確率でそれを出す（成立の経路を通すため）
         const ex = exactItems(s, id, pl.products);
-        const items = ex && pk.pick(2) === 0 ? ex : someItems(pk, pl.products);
-        moves.push({ actor: a, cmd: { t: "deliverOrder", orderId: id, items } });
+        if (ex) moves.push({ actor: a, cmd: { t: "deliverOrder", orderId: id, items: ex }, good: true });
+        moves.push({ actor: a, cmd: { t: "deliverOrder", orderId: id, items: someItems(pk, pl.products) } });
       }
     }
     for (const h of L.contributeJoint) {
@@ -149,7 +156,7 @@ export function candidates(s: GameState, pk: Picker): Move[] {
       const fit = f.joint.lines.findIndex((l, i) => f.rows[i] === null && bagGet(pl.products, l.product) >= l.n);
       if (fit >= 0) {
         const l = f.joint.lines[fit]!;
-        if (matchRow(f, l.product, l.n) >= 0) moves.push({ actor: a, cmd: { t: "contributeJoint", jointId: f.joint.id, product: l.product, n: l.n } });
+        if (matchRow(f, l.product, l.n) >= 0) moves.push({ actor: a, cmd: { t: "contributeJoint", jointId: f.joint.id, product: l.product, n: l.n }, good: true });
       }
     }
     if (L.buildHouse.enabled) {
@@ -170,7 +177,7 @@ export function candidates(s: GameState, pk: Picker): Move[] {
     }
     if (L.buyProduct.enabled) {
       const ps = L.buyProduct.value.products;
-      moves.push({ actor: a, cmd: { t: "buyProduct", product: ps[pk.pick(ps.length)]! } });
+      moves.push({ actor: a, cmd: { t: "buyProduct", product: ps[pk.pick(ps.length)]! }, good: true });
     }
     // 交換の申し出（持っている物から1つ出し、相手の持ち物から1つ求める）
     for (const to of L.tradePartners) {
@@ -196,6 +203,21 @@ export function candidates(s: GameState, pk: Picker): Move[] {
     }
   }
   return moves;
+}
+
+/** 管理の操作の候補（ホストの大画面から送るもの） */
+export function adminMoves(s: GameState, pk: Picker): Move[] {
+  const out: Move[] = [];
+  const admin: Actor = { k: "admin" };
+  if (s.phase.k === "over") return out;
+  if (!s.endFlag) out.push({ actor: admin, cmd: { t: "callLastRound" } });
+  if (pk.pick(4) === 0) out.push({ actor: admin, cmd: { t: "abortGame" } });
+  for (const p of s.prompts) {
+    if (s.answers[p.id] || p.k !== "chooseKind") continue;
+    out.push({ actor: admin, cmd: { t: "answerFor", promptId: p.id, answer: { k: "chooseKind", kinds: Array(p.count).fill(p.options[0]) } } });
+  }
+  if (s.phase.k === "main" && s.turn) out.push({ actor: admin, cmd: { t: "endTurnFor", turnSerial: s.turn.serial } });
+  return out;
 }
 
 function someGoods(pk: Picker, s: GameState, st: Seat) {

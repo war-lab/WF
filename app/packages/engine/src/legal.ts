@@ -153,7 +153,7 @@ export function legalActions(s: GameState, seat: Seat): ActionHints {
     const cardCode = me.coins < s.config.cardBuyPrice ? "NOT_ENOUGH_COINS" : kinds.length === 0 ? "PILE_EMPTY" : null;
     out.buyCard = cardCode ? { value: { kinds }, enabled: false, reason: cardCode } : { value: { kinds }, enabled: true };
     const prods = PRODUCTS.filter((p) => !validate(s, a, { t: "buyProduct", product: p }));
-    const prodCode = s.turn!.productBought ? "PRODUCT_BUY_LIMIT" : prods.length === 0 ? "NOT_ENOUGH_COINS" : null;
+    const prodCode = s.turn!.productBuys >= s.config.productBuyPerTurn ? "PRODUCT_BUY_LIMIT" : prods.length === 0 ? "NOT_ENOUGH_COINS" : null;
     out.buyProduct = prodCode ? { value: { products: prods }, enabled: false, reason: prodCode } : { value: { products: prods }, enabled: true };
   }
 

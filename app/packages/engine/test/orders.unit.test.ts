@@ -19,8 +19,8 @@ import {
 } from "../src/orders/english.ts";
 import { fixedData, fixedJoints, fixedOrders } from "../src/orders/fixed.ts";
 import { EVENTS, genJointDeck, genOne, genOrderDeck } from "../src/orders/generate.ts";
-import { animalHalfPoints, bonusHalfPoints, conditionHalfPoints, orderHalfPoints } from "../src/orders/points.ts";
-import { childRng, intBelow, nextU32, seedRng } from "../src/rng.ts";
+import { animalHalfPoints, bonusHalfPoints, conditionHalfPoints, jointHalfPoints, orderHalfPoints } from "../src/orders/points.ts";
+import { childRng, intBelow, intBetween, nextU32, seedRng } from "../src/rng.ts";
 import type { RngState } from "../src/types.ts";
 import { config, participants } from "./helpers.ts";
 
@@ -66,7 +66,7 @@ describe("点の計算（TC-PTS）", () => {
   });
   it("TC-PTS-10 動物3頭、指定ありは6半点（3点が上限）", () => expect(animalHalfPoints(3, true)).toBe(6));
   it("TC-PTS-11 行の点 2、3、4半点の半分は1、1、2半点", () => {
-    expect([2, 3, 4].map((x) => Math.floor(x / 2))).toEqual([1, 1, 2]);
+    expect([2, 3, 4].map(jointHalfPoints)).toEqual([1, 1, 2]);
   });
 });
 
@@ -176,7 +176,11 @@ describe("生成と乱数（TC-GEN）", () => {
     const r = seedRng("gen09");
     const c = [0, 0, 0, 0, 0, 0];
     const N = 600000;
-    for (let i = 0; i < N; i++) c[intBelow(r, 6)]!++;
+    for (let i = 0; i < N; i++) {
+      const d = intBetween(r, 1, 6);
+      expect(d >= 1 && d <= 6).toBe(true);
+      c[d - 1]!++;
+    }
     const e = N / 6;
     const chi = c.reduce((t, x) => t + (x - e) ** 2 / e, 0);
     expect(chi).toBeLessThan(20.515); // 自由度5、有意水準0.001
@@ -253,9 +257,10 @@ describe("英文（TC-ENG）", () => {
   it("TC-ENG-08 宛先のない注文は to 以下が付かない", () => {
     expect(sentenceDeliver({ egg: 6 }, "Half a dozen eggs, please.", null)).toBe("I sell six eggs.");
   });
-  it("TC-ENG-09 動物1頭、4頭", () => {
+  it("TC-ENG-09 動物1頭、4頭、0頭", () => {
     expect(sentenceAnimals(1)).toBe("I have one animal.");
     expect(sentenceAnimals(4)).toBe("I have four animals.");
+    expect(sentenceAnimals(0)).toBe("I have no animals.");
   });
   it("TC-ENG-10 共同注文の行", () => {
     expect(sentenceJoint("egg", 3, "the village festival")).toBe("I bring three eggs to the village festival.");

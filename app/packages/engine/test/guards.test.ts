@@ -7,7 +7,7 @@ import { checkInvariants } from "../src/invariants.ts";
 import { numberWord } from "../src/orders/english.ts";
 import { choice, intBelow, seedRng } from "../src/rng.ts";
 import type { GameState } from "../src/types.ts";
-import { addPoints, mainState, mkJoint, mkOrder, putJoints, putOrders, seat } from "./helpers.ts";
+import { addPoints, mainState, mkJoint, mkOrder, ok, putJoints, putOrders, seat } from "./helpers.ts";
 
 const broken = (f: (s: GameState) => void): string[] => {
   const s = mainState();
@@ -83,6 +83,27 @@ describe("入力の検査", () => {
     expect(apply(s, seat(0), { t: "plant", crop: "egg" } as never)).toEqual({ ok: false, code: "BAD_MESSAGE" });
     expect(apply(s, seat(0), { t: "bankTrade", give: "egg", get: "grow" } as never)).toEqual({ ok: false, code: "BAD_MESSAGE" });
     expect(apply(s, seat(0), { t: "payJapanese", kind: "word", method: "card" } as never)).toEqual({ ok: false, code: "BAD_MESSAGE" });
+  });
+  it("TC-SYS-12 respondTrade の accept が真偽値でなければ BAD_MESSAGE（承諾として扱わない）", () => {
+    const s = ok(mainState(), seat(0), { t: "proposeTrade", to: 1, give: { cards: {}, products: {}, coins: 1 }, get: { cards: {}, products: {}, coins: 1 } });
+    expect(apply(s, seat(1), { t: "respondTrade", id: s.trades[0]!.id, accept: "no" } as never)).toEqual({ ok: false, code: "BAD_MESSAGE" });
+  });
+  it("問いの答えは決まった項目だけを保存し、0の項目を除く", () => {
+    const s = mainState();
+    s.phase = { k: "income" };
+    s.prompts = [{ id: "p1", k: "discard", seat: 0, count: 1 }, { id: "p2", k: "discard", seat: 1, count: 1 }];
+    const k = Object.keys(s.players[0]!.hand)[0]!;
+    const r = apply(s, seat(0), { t: "answerPrompt", promptId: "p1", answer: { k: "discard", cards: { [k]: 1, cow: 0 }, junk: "x" } } as never);
+    expect(r.ok).toBe(true);
+    expect((r as { state: GameState }).state.answers.p1).toEqual({ k: "discard", cards: { [k]: 1 } });
+  });
+  it("productBuyPerTurn を2にすると、1手番に2回まで産物を買える", () => {
+    const s = mainState({ config: { productBuyPerTurn: 2 } });
+    s.players[0]!.coins = 40;
+    let t = (apply(s, seat(0), { t: "buyProduct", product: "egg" }) as { state: GameState }).state;
+    t = (apply(t, seat(0), { t: "buyProduct", product: "egg" }) as { state: GameState }).state;
+    expect(t.players[0]!.products).toEqual({ egg: 2 });
+    expect(apply(t, seat(0), { t: "buyProduct", product: "egg" })).toEqual({ ok: false, code: "PRODUCT_BUY_LIMIT" });
   });
   it("addPoints の補助は内訳も足す", () => {
     const s = mainState();

@@ -1,8 +1,9 @@
 // 状態の移り方（BD01 5〜7章、10章）。apply が写した状態を書き換える関数の集まり。
 // ここの関数は前提を確かめない。前提は commands.ts の validate で確かめてから呼ぶ。
-import { bagAdd, bagTotal } from "./bag.ts";
+import { bagAdd, bagNormalize, bagTotal } from "./bag.ts";
 import { board } from "./board.ts";
 import type { EngineEvent, FaceUpOrderPublic } from "./events.ts";
+import { jointHalfPoints } from "./orders/points.ts";
 import { intBetween } from "./rng.ts";
 import type {
   AnimalCard,
@@ -198,7 +199,7 @@ export function finishGame(s: GameState, reason: "orders" | "host" | "aborted", 
         src: "jointHalf",
         jointId: f.joint.id,
         row: i as 0 | 1 | 2,
-        hp: Math.floor(f.joint.lines[i]!.hp / 2),
+        hp: jointHalfPoints(f.joint.lines[i]!.hp),
         turn: s.turn?.serial ?? 0,
         reason: "gameEnd",
       };
@@ -260,7 +261,7 @@ export function startTurn(s: GameState, seat: Seat, ev: Events): void {
     dice: null,
     fedPlots: [],
     jointRowDone: false,
-    productBought: false,
+    productBuys: 0,
     failedOrders: [],
     receivedIncome: false,
   };
@@ -362,7 +363,7 @@ export function resolveDiscards(s: GameState, ev: Events): void {
       const n = a.cards[k] ?? 0;
       if (n > 0) returnCard(s, seat, k, n);
     }
-    ev.push({ k: "cardsDiscarded", seat, cards: { ...a.cards } });
+    ev.push({ k: "cardsDiscarded", seat, cards: bagNormalize(a.cards) });
   }
   s.prompts = [];
   s.answers = {};
@@ -587,7 +588,7 @@ export function endTurn(s: GameState, ev: Events): void {
       const rows: { row: number; seat: Seat; hp: number }[] = [];
       f.rows.forEach((row, i) => {
         if (!row) return;
-        const hp = Math.floor(f.joint.lines[i]!.hp / 2);
+        const hp = jointHalfPoints(f.joint.lines[i]!.hp);
         award(s, row.seat, { src: "jointHalf", jointId: f.joint.id, row: i as 0 | 1 | 2, hp, turn: t.serial, reason: "expire" });
         rows.push({ row: i, seat: row.seat, hp });
       });

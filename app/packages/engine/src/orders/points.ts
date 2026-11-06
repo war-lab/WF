@@ -46,6 +46,11 @@ export function bonusHalfPoints(p: Product, n: number): HalfPoints {
   return p === "egg" ? Math.floor(n / 2) : Math.floor((2 * n) / 5);
 }
 
+/** 共同注文の行の半分の点（時間切れとゲームの終わり。BD01 7.5、10.2）。0.5点刻みで切り捨て */
+export function jointHalfPoints(hp: HalfPoints): HalfPoints {
+  return Math.floor(hp / 2);
+}
+
 /** 共同注文の行（BD02 3.2）。難の加算はない */
 export function jointLineHalfPoints(p: Product, n: number): HalfPoints {
   return orderHalfPoints({ [p]: n }, false);

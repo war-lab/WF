@@ -173,7 +173,7 @@ interface PlayerView extends Omit<BoardView, "kind"> {
 }
 ```
 
-`TurnView` は `TurnState` から `receivedIncome` を除いたものである。`receivedIncome` は救済の判定に使うだけで、表示に要らない。
+`TurnView` は `TurnState` から `receivedIncome` を除いたものである。`productBought` は、`TurnState.productBuys` が `productBuyPerTurn` に達したかを表す。`receivedIncome` は救済の判定に使うだけで、表示に要らない。
 
 `FaceUpOrderView` と `FaceUpJointView` は、`cond`、`hp`、`level`、行の産物と数を持たない型として定義する。`viewFor` は、元の注文を写してから消すのではなく、見せてよい項目だけを選んで組み立てる。写してから消す作りにすると、消し忘れで漏れるためである。
 
@@ -237,6 +237,7 @@ type GameEvent = GameEventBase & EventBody;
 | `jointRowFilled` | 席、共同注文の `id`、行、出した産物と数、英文 | 全員 |
 | `jointCompleted` | 共同注文の `id`、行ごとの席と点、完成させた席 | 全員 |
 | `jointExpired` | 共同注文の `id`、行ごとの席と半分の点 | 全員 |
+| `jointRevealed` | 補充して表にした共同注文の `id`、`slot`（行の産物と数は載せない） | 全員 |
 | `houseBuilt` | 席、交点、コイン、英文 | 全員 |
 | `bankTraded` | 席、出したカードと枚数、もらったカード | 全員 |
 | `harborTraded` | 席、港の交点、出したカードと枚数、もらったカード | 全員 |
@@ -472,3 +473,4 @@ JSON として読めない、または zod の形に合わないメッセージ�
 | 2026-10-27 | サーバーを Cloudflare に移したことに合わせた（BD05）。`roomCode` を `roomId` に、管理の判定をホストの鍵に替えた。`bootId`、`exportRecord`、`selectAddress`、ロビーのアドレスの一覧をやめ、`ENGINE_CHANGED` を加えた。生存確認の `ping` を端末から送る形に替えた |
 | 2026-10-27 | 70分の自動の打ち切りをやめたことに合わせ、`timeUp` の状態と出来事、`ClockView.limitMs`、`startGame` の `timeLimitEnabled` を除き、管理操作 `callLastRound` を加えた |
 | 2026-10-27 | 多角レビューを反映。取り消しを `undoLast` 1つにし（`undoPreview`、`undoCommit` を削除）、`lastCommand` を加えた。一時停止をエンジンのコマンドから外した。席の再発行の QR を大画面に出す形にそろえた。生存確認の休止についての説明と、参照の誤りを直した |
+| 2026-11-06 | M1 の実装に合わせ、出来事 `jointRevealed` と `TurnView.productBought` の意味を足した |

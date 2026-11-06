@@ -157,11 +157,23 @@ export function mainState(opts: { n?: 3 | 4; seat?: Seat; serial?: number; round
     dice: [3, 3],
     fedPlots: [],
     jointRowDone: false,
-    productBought: false,
+    productBuys: 0,
     failedOrders: [],
     receivedIncome: true,
   };
   s.phase = { k: "main" };
+  // ラウンド3以上なら、ラウンド3の初め（席0の手番）に表にした3枚を置く。実際に起きる状態にそろえるため
+  if (round >= s.config.orderRevealRound) {
+    const at = (s.config.orderRevealRound - 1) * n + 1;
+    s.orders.revealed = true;
+    s.orders.faceUp = s.orders.deck.splice(0, s.config.orderFaceUp).map((order, slot) => ({
+      slot,
+      order,
+      counterSeat: 0,
+      remaining: s.config.orderExpireTurns,
+      revealedTurn: at,
+    }));
+  }
   return s;
 }
 

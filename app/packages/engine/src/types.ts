@@ -206,7 +206,8 @@ export interface TurnState {
   dice: [number, number] | null;
   fedPlots: number[];
   jointRowDone: boolean;
-  productBought: boolean;
+  /** この手番に銀行で産物を買った回数（上限は productBuyPerTurn） */
+  productBuys: number;
   failedOrders: OrderId[];
   receivedIncome: boolean;
 }

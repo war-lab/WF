@@ -29,7 +29,7 @@ export function bagKeys<K extends string>(b: Bag<K>): K[] {
   return (Object.keys(b) as K[]).filter((k) => (b[k] ?? 0) > 0);
 }
 
-/** 値がすべて0以上の整数で、0の項目がないか。許す鍵の一覧に含まれるか */
+/** 値がすべて0以上の整数で、鍵が許す一覧に含まれるか。0の項目は許し、保存する前に bagNormalize で除く */
 export function bagValid<K extends string>(b: unknown, keys: readonly K[]): b is Bag<K> {
   if (typeof b !== "object" || b === null || Array.isArray(b)) return false;
   for (const [k, v] of Object.entries(b)) {

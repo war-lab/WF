@@ -8,6 +8,7 @@ import {
   addPoints,
   admin,
   answerAllFirst,
+  autoSetup,
   checked,
   clearHands,
   config,
@@ -361,14 +362,24 @@ describe("共同注文（TC-JNT）", () => {
     rejects(s, seat(0), { t: "contributeJoint", jointId: jid(s, 1), product: "carrot", n: 2 }, "JOINT_LIMIT");
   });
   it("TC-JNT-04 1人で3手番かけて3行出すと完成。全行の点と＋1半点がその人に入る", () => {
-    let s = jbase();
+    // 席0が自分の手番ごとに1行ずつ出す。手番の終わりの時間切れの数え方（表にした手番は数えない）を実際に通す
+    let s = manualMain({ seat: 0, serial: 1 });
+    putJoints(s, [joint()]);
+    giveCards(s, 0, { sell: 3 });
+    giveProducts(s, 0, { egg: 3, milk: 2, wheat: 4 });
+    s = checked(s);
     const id = jid(s);
-    for (const [p, n] of [["egg", 3], ["milk", 2], ["wheat", 4]] as const) {
+    const rows = [["egg", 3], ["milk", 2], ["wheat", 4]] as const;
+    rows.forEach(([p, n], i) => {
       s = ok(s, seat(0), { t: "contributeJoint", jointId: id, product: p, n });
-      s = structuredClone(s);
-      s.turn = { ...s.turn!, serial: s.turn!.serial + 4, jointRowDone: false };
-    }
-    expect(s.players[0]!.halfPoints).toBe(3 + 2 + 4 + 1);
+      if (i < 2) {
+        for (let k = 0; k < 4; k++) s = next(s);
+        expect(s.turn!.seat).toBe(0);
+        // 最初の行を出した手番（通し番号1）の終わりは数えず、通し番号5の終わりで1つ減る
+        expect(s.joint.faceUp.find((f) => f.joint.id === id)!.counter!.remaining).toBe(i === 0 ? 3 : 2);
+      }
+    });
+    expect(s.players[0]!.halfPoints).toBe(3 + 2 + 4 + s.config.jointFinishHalfPoints);
     expect(s.joint.faceUp.find((f) => f.joint.id === id)).toBeUndefined();
   });
   it("TC-JNT-05 埋まった行と同じ産物と数は JOINT_MISMATCH", () => {
@@ -462,8 +473,11 @@ describe("共同注文（TC-JNT）", () => {
     expect(t.turn!.seat).toBe(3);
   });
   it("TC-JNT-15 行に出した産物を取り戻すコマンドはない", () => {
-    const L = legalActions(jbase(), 0) as unknown as Record<string, unknown>;
+    const s = jbase();
+    const L = legalActions(s, 0) as unknown as Record<string, unknown>;
     expect(Object.keys(L).filter((k) => /withdraw|reclaim|takeBack/i.test(k))).toEqual([]);
+    // コマンドとして送っても受け付けない
+    for (const t of ["withdrawJoint", "reclaimJoint", "takeBackJoint"]) rejects(s, seat(0), { t, jointId: jid(s) } as never, "BAD_MESSAGE");
   });
   it("TC-JNT-16 準備直後のラウンド1でも contributeJoint を受け付ける", () => {
     let s = started(4, "jnt16", { dice: "manual" });
@@ -483,6 +497,8 @@ describe("共同注文（TC-JNT）", () => {
 describe("終わり方（TC-END）", () => {
   it("TC-END-01 席1の手番で endFlag が orders なら、席3の手番の終わりで終わる", () => {
     let s = manualMain({ seat: 1, serial: 10 });
+    s.orders.faceUp = [];
+    s.orders.deck = [];
     s.endFlag = { reason: "orders", at: 10 };
     s = checked(s);
     s = next(s); // 席1 → 席2
@@ -603,7 +619,7 @@ describe("問い、管理、表示（TC-SYS）", () => {
     }
     expect(s.phase.k).toBe("main");
   });
-  it("管理のコマンドを席から送る、席のコマンドを管理から送ると BAD_MESSAGE", () => {
+  it("TC-SYS-12 管理のコマンドを席から送る、席のコマンドを管理から送ると BAD_MESSAGE", () => {
     const s = checked(manualMain());
     rejects(s, seat(0), { t: "callLastRound" }, "BAD_MESSAGE");
     rejects(s, admin, { t: "endTurn" }, "BAD_MESSAGE");
@@ -633,7 +649,7 @@ describe("問い、管理、表示（TC-SYS）", () => {
     expect(json).not.toContain('"rng"');
     expect(json).not.toContain('"cond"');
     expect(json).not.toContain('"hand"');
-    expect(json).not.toContain(s.orders.deck[0]!.text.length > 20 ? s.orders.deck[0]!.text : "§§");
+    for (const o of s.orders.deck) expect(json).not.toContain(JSON.stringify(o.cond));
     expect(b.players.map((p) => p.handCount)).toEqual([0, 2, 1, 0]);
     expect(b.orders.deckCount).toBe(s.orders.deck.length);
     const v = viewFor(s, 1) as EnginePlayerView;
@@ -662,11 +678,19 @@ describe("問い、管理、表示（TC-SYS）", () => {
     for (const x of cmds) r = ok(r, x.a, x.c);
     expect(JSON.stringify(r)).toBe(JSON.stringify(s));
   });
-  it("TC-SYS-11 参加者の名前は状態に入らない（参加者の識別子だけを持つ）", () => {
-    const ps = participants(4).map((p, i) => ({ ...p, participantId: `id-${i}` }));
-    const s = createGame(config(), { participants: ps }, "sys11");
-    const json = JSON.stringify(s);
-    expect(json).not.toContain("名前");
-    expect(Object.keys(s.players[0]!)).not.toContain("name");
+  it("TC-SYS-11 参加者に特徴のある名前を付けても、各場面の状態にその文字列が入らない", () => {
+    const NAME = "ZQX特徴名";
+    const ps = participants(4).map((p, i) => ({ ...p, name: `${NAME}${i}` }) as never);
+    let s = createGame(config({ dice: "manual" }), { participants: ps }, "sys11");
+    const states: GameState[] = [s];
+    s = autoSetup(s);
+    states.push(s);
+    for (let i = 0; i < 6; i++) {
+      s = s.phase.k === "roll" ? ok(s, seat(s.turn!.seat), diceFor(8)) : s;
+      while (s.phase.k === "income") s = answerAllFirst(s);
+      states.push(s);
+      s = ok(s, seat(s.turn!.seat), { t: "endTurn" });
+    }
+    for (const st of states) expect(JSON.stringify(st)).not.toContain(NAME);
   });
 });

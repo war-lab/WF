@@ -183,13 +183,31 @@ describe("準備（TC-SET）", () => {
     expect(bagGet(s.players[0]!.hand, "cow")).toBe(cows + 1);
     expect(s.prompts).toHaveLength(1);
     expect(s.prompts[0]!.seat).toBe(2);
-    expect(s.prompts[0]!.k === "chooseKind" && s.prompts[0]!.options.includes("cow")).toBe(false);
+    expect(s.prompts[0]).toMatchObject({ k: "chooseKind" });
+    expect((s.prompts[0] as { options: string[] }).options).not.toContain("cow");
   });
 
-  it("TC-SET-14 4人戦では追加の1枚の問いを出さない", () => {
-    const s = started(4);
-    expect(s.phase.k).toBe("roll");
-    expect(s.turn!.serial).toBe(1);
+  it("TC-SET-14 4人戦では追加の1枚の問いを出さない（3人戦では出る）", () => {
+    /** 準備を手で進め、出た問いの source を集める */
+    const sources = (n: 3 | 4) => {
+      let s = createGame(config(), { participants: participants(n) }, `set14-${n}`);
+      const seen: string[] = [];
+      while (s.phase.k === "setupPlace" || s.phase.k === "setupPrompt") {
+        for (const p of s.prompts) if (p.k === "chooseKind" && !seen.includes(`${p.id}:${p.source}`)) seen.push(`${p.id}:${p.source}`);
+        if (s.phase.k === "setupPrompt") {
+          s = answerAllFirst(s);
+          continue;
+        }
+        const step = s.phase.step;
+        const placer = step < n ? step : 2 * n - 1 - step;
+        const v = board.vertices.map((x) => x.id).find((x) => apply(s, seat(placer), { t: "placeHouse", vertex: x }).ok)!;
+        s = ok(s, seat(placer), { t: "placeHouse", vertex: v });
+      }
+      expect(s.phase.k).toBe("roll");
+      return seen.map((x) => x.split(":")[1]);
+    };
+    expect(sources(4)).not.toContain("threePlayer");
+    expect(sources(3).filter((x) => x === "threePlayer")).toHaveLength(3);
   });
 
   it("TC-SET-15 手札が initialHand と配置のカード、無料券、コインが席順の設定どおり（4人戦、3人戦）", () => {
@@ -402,7 +420,8 @@ describe("収入（TC-INC）", () => {
     expect(bagGet(s.players[3]!.hand, "potato")).toBeGreaterThanOrEqual(1);
     expect(s.prompts).toHaveLength(1);
     expect(s.prompts[0]).toMatchObject({ seat: 0, reissued: true });
-    expect(s.prompts[0]!.k === "chooseKind" && s.prompts[0]!.options.includes("potato")).toBe(false);
+    expect(s.prompts[0]).toMatchObject({ k: "chooseKind" });
+    expect((s.prompts[0] as { options: string[] }).options).not.toContain("potato");
   });
 
   it("TC-INC-08b 席3の出し直しを処理するまで、席0の権利を保留する", () => {

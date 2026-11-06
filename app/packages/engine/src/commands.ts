@@ -302,7 +302,7 @@ export function validate(s: GameState, a: Actor, c: Command): RejectCode | null 
       const e = mainTurnCheck(s, a);
       if (e) return e;
       if (!isProduct(c.product)) return "BAD_MESSAGE";
-      if (s.turn!.productBought) return "PRODUCT_BUY_LIMIT";
+      if (s.turn!.productBuys >= s.config.productBuyPerTurn) return "PRODUCT_BUY_LIMIT";
       return player(s, me!).coins >= s.config.productBuyPrice[c.product] ? null : "NOT_ENOUGH_COINS";
     }
     case "proposeTrade": {
@@ -318,6 +318,7 @@ export function validate(s: GameState, a: Actor, c: Command): RejectCode | null 
       if (s.phase.k !== "main") return "WRONG_PHASE";
       const tr = s.trades.find((x) => x.id === c.id);
       if (!tr) return "TRADE_GONE";
+      if (typeof c.accept !== "boolean") return "BAD_MESSAGE";
       if (tr.to !== me) return "NOT_TRADE_PARTY";
       if (c.accept && (!holds(player(s, tr.from), tr.give) || !holds(player(s, tr.to), tr.get))) return "TRADE_NOT_HOLDING";
       return null;
@@ -419,7 +420,8 @@ export function execute(s: GameState, a: Actor, c: Command, ev: Events): void {
     case "answerPrompt":
     case "answerFor": {
       const p = s.prompts.find((x) => x.id === c.promptId)!;
-      s.answers[p.id] = structuredClone(c.answer);
+      // 決まった項目だけを組み立てて保存する。余分な項目と0の項目を状態に残さない
+      s.answers[p.id] = c.answer.k === "chooseKind" ? { k: "chooseKind", kinds: [...c.answer.kinds] } : { k: "discard", cards: bagNormalize(c.answer.cards) };
       ev.push({ k: "promptAnswered", promptId: p.id, seat: p.seat });
       if (s.prompts.every((x) => s.answers[x.id] !== undefined)) {
         if (s.prompts.some((x) => x.k === "discard")) resolveDiscards(s, ev);
@@ -588,7 +590,7 @@ export function execute(s: GameState, a: Actor, c: Command, ev: Events): void {
       const price = s.config.productBuyPrice[c.product];
       p.coins -= price;
       bagAdd(p.products, c.product, 1);
-      s.turn!.productBought = true;
+      s.turn!.productBuys += 1;
       ev.push({ k: "productBought", seat: p.seat, product: c.product, coins: price });
       return;
     }

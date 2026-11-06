@@ -10,7 +10,7 @@ import { checkInvariants } from "../src/invariants.ts";
 import type { Actor, Command, GameState, Seat } from "../src/types.ts";
 import { viewFor } from "../src/view.ts";
 import { config, participants } from "./helpers.ts";
-import { candidates, seededPicker, type Move } from "./play.ts";
+import { adminMoves, candidates, seededPicker, type Move } from "./play.ts";
 
 // npm run test:nightly は --mode nightly で5000局にする（Windows の cmd でも動くよう、環境変数ではなく mode で切り替える）
 const MODE = (import.meta as unknown as { env?: { MODE?: string } }).env?.MODE;
@@ -74,9 +74,29 @@ function checkViews(s: GameState, viewer: Seat): void {
 
 interface Input {
   seed: string;
+  /** 操作の選び方。0：候補から一様、1：点や物が増える操作を優先、2：1に加えて管理の操作を低い確率で混ぜる */
+  style: 0 | 1 | 2;
   n: 3 | 4;
   choices: number[];
   junk: { at: number; x: number; y: number }[];
+}
+
+/** 操作を1つ選ぶ。選び方は style による（Input の説明） */
+export function pickMove(s: GameState, moves: Move[], v: number, style: 0 | 1 | 2, pk: ReturnType<typeof seededPicker>): Move {
+  let m = moves[v % moves.length]!;
+  if (style >= 1) {
+    const good = moves.filter((x) => x.good);
+    if (good.length && v % 5 !== 0) m = good[v % good.length]!;
+  }
+  if (style === 2 && v % 97 === 0) {
+    const ad = adminMoves(s, pk);
+    if (ad.length) {
+      const x = ad[v % ad.length]!;
+      expect(validate(s, x.actor, x.cmd), JSON.stringify(x)).toBeNull();
+      m = x;
+    }
+  }
+  return m;
 }
 
 export function runGame(inp: Input): void {
@@ -111,7 +131,7 @@ export function runGame(inp: Input): void {
       if (m.cmd.t === "respondTrade" && m.cmd.accept) continue;
       expect(validate(s, m.actor, m.cmd), JSON.stringify(m)).toBeNull();
     }
-    const m = moves[v % moves.length]!;
+    const m = pickMove(s, moves, v, inp.style, pk);
     const r = apply(s, m.actor, m.cmd);
     if (!r.ok) {
       expect(m.cmd.t === "respondTrade" && r.code === "TRADE_NOT_HOLDING", `${JSON.stringify(m)} → ${r.code}`).toBe(true);
@@ -119,11 +139,16 @@ export function runGame(inp: Input): void {
     }
     s = r.state;
     log.push(m);
+    for (const e of r.events) {
+      if (e.k === "jointCompleted") reach.jointCompleted += 1;
+      if (e.k === "orderSucceeded" && e.cond.k === "animals") reach.animalOrder += 1;
+    }
     expect(checkInvariants(s), JSON.stringify(m)).toEqual([]);
     checkViews(s, op % s.n);
   }
 
   expect(s.phase.k, "上限の操作数で終わらない").toBe("over");
+  reach[s.result!.reason] += 1;
   expect(s.result!.ranking.map((r) => r.seat).sort()).toEqual(Array.from({ length: inp.n }, (_, i) => i));
 
   // 記録したコマンドの列を最初から再適用すると、同じ最終状態になる
@@ -136,8 +161,12 @@ export function runGame(inp: Input): void {
   expect(JSON.stringify(t)).toBe(JSON.stringify(s));
 }
 
+/** 経路ごとの到達回数。乱数の局が届かない経路を見逃さないため、全局の終わりに0でないことを確かめる */
+const reach = { target: 0, orders: 0, host: 0, aborted: 0, jointCompleted: 0, animalOrder: 0 };
+
 const inputArb: fc.Arbitrary<Input> = fc.record({
   seed: fc.stringMatching(/^[0-9a-f]{32}$/),
+  style: fc.constantFrom(0 as const, 1 as const, 2 as const),
   n: fc.constantFrom(3 as const, 4 as const),
   choices: fc.array(fc.nat({ max: 1_000_000 }), { minLength: MAX_OPS, maxLength: MAX_OPS }),
   junk: fc.array(fc.record({ at: fc.nat({ max: MAX_OPS }), x: fc.nat(), y: fc.nat() }), { maxLength: 40 }),
@@ -146,5 +175,9 @@ const inputArb: fc.Arbitrary<Input> = fc.record({
 describe("性質のテスト（BD06 5章）", () => {
   it(`正しい操作を乱数で選び続けるゲーム ${RUNS} 局で、不変条件、受け付け（TC-SYS-06）、秘密、再現性（TC-SYS-10）が成り立つ`, () => {
     fc.assert(fc.property(inputArb, runGame), { numRuns: RUNS, endOnFailure: process.env.PROP_NO_SHRINK === "1" });
+    // 200局以上回したときだけ、届くべき経路がすべて1回以上通ったことを確かめる（少ない回数の開発用の実行では確かめない）
+    if (RUNS >= 200) {
+      for (const [k, n] of Object.entries(reach)) expect(n, `経路 ${k} に一度も届かない: ${JSON.stringify(reach)}`).toBeGreaterThan(0);
+    }
   }, 3_600_000);
 });

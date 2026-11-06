@@ -1,6 +1,6 @@
 # 基本設計 BD01 ルールエンジン
 
-更新日：2026-10-26
+更新日：2026-11-06
 
 位置づけ：アプリのルールエンジン（`app/packages/engine`）の基本設計。型、状態の移り方、コマンドごとの前提と効果、拒否の理由を定める。
 
@@ -105,6 +105,7 @@ interface PlayerState {
   houses: VertexId[];          // 置いた順。2個目の判定に使う
   ownTurns: number;
   ledger: PointEntry[];        // 点の内訳
+  lastChoice: { crop: CropCard | null; animal: AnimalCard | null };   // 前回の収入で選んだ種類
 }
 
 type PointEntry =
@@ -116,6 +117,8 @@ type PointEntry =
 ```
 
 エンジンの状態に参加者の名前を持たないのは、状態のスナップショットと記録に名前を残さないためである。名前はサーバーが `participantId` から引き、表示の時に付ける（BD05）。
+
+`lastChoice` は、収入の問いの既定の選択（BD04 3.6.1）に使う。作物と動物の問いを分けて出すため（7.2）、まとまりごとに持つ。
 
 `ledger` は記録の書き出し（方式設計10章）の「点の出どころ」に使う。`halfPoints` は `ledger` の `hp` の合計と常に等しい（4章の不変条件）。
 
@@ -140,7 +143,11 @@ interface FaceUpJoint {
 }
 
 interface JointRowFill { seat: Seat; turn: TurnSerial }
+
+interface DoneOrder { order: Order; declaredBy: Seat; turn: TurnSerial }   // 成立した注文
 ```
+
+成立した注文は表から除くため、条件を見せ続けるには別に持つ必要がある。`orders.done` に入れ、表示の `revealedOrders`（BD03 1.3）を作る。
 
 ### 2.5 手番と問い
 
@@ -161,19 +168,25 @@ interface TurnState {
   dice: [number, number] | null;
   fedPlots: number[];          // 餌をやった区画の番号
   jointRowDone: boolean;       // 共同注文に出したか
-  productBought: boolean;      // 銀行で産物を買ったか
+  productBuys: number;         // 銀行で産物を買った回数（上限は productBuyPerTurn）
   failedOrders: OrderId[];     // この手番に不成立になった注文
   receivedIncome: boolean;     // 救済の判定用
 }
 
 type Prompt =
-  | { id: string; k: "chooseKind"; seat: Seat; options: WordCard[]; count: number; source: PromptSource }
+  | { id: string; k: "chooseKind"; seat: Seat; options: WordCard[]; count: number; source: PromptSource;
+      preset: WordCard | null;     // 既定で選んだ状態にする種類（BD04 3.6.1）。収入の問いだけ
+      reissued: boolean }          // 選んだ山が尽きて出し直した問いか
   | { id: string; k: "discard"; seat: Seat; count: number };
 
 type PromptSource = "setupTile" | "threePlayer" | "income" | "marketDay" | "relief";
 ```
 
 `chooseKind` は「種類を選んで1枚もらう」問いの共通の形である。`count` は、同じ人が同じ場面で選ぶ枚数（例：seed のタイル2枚の角に拠点がある）。`options` は、問いを作った時点で山が残っている種類だけを入れる。
+
+`preset` は、その人の `lastChoice` の種類で、山が残っているときだけ入れる。答えを自動では送らない。
+
+`reissued` は、7.2の手順5で出し直した問いに真を入れる。画面は見出しに「選んだカードがなくなりました」を出す（BD04 3.6.1）。
 
 1つの問いの `options` には、作物だけ、動物だけ、全種類のどれかしか入れない。seed と animal の両方の権利を持つ人には、作物の問いと動物の問いを別々に出す（7.2）。作物と動物を1つの問いにすると、作物2枚を選ぶような、権利と合わない答えを形の上で防げないためである。
 
@@ -188,15 +201,33 @@ interface GameState {
   board: BoardState;
   piles: Record<WordCard, number>;
   players: PlayerState[];      // 席の順
-  orders: { deck: Order[]; faceUp: FaceUpOrder[]; revealed: boolean };
+  orders: { deck: Order[]; faceUp: FaceUpOrder[]; revealed: boolean; done: DoneOrder[] };
   joint: { deck: JointOrder[]; faceUp: FaceUpJoint[] };
   turn: TurnState | null;      // 準備中は null
   phase: Phase;
   prompts: Prompt[];
   answers: Record<string, PromptAnswer>;   // 届いた答え。全員そろうまで処理しない
+  dist: Distribution | null;   // カードを配る処理の途中の状態（下記）
   trades: TradeOffer[];
   endFlag: { reason: "orders" | "host"; at: TurnSerial } | null;
   result: GameResult | null;
+  nextId: number;              // 問いと申し出の識別子を作る通し番号
+}
+
+interface Distribution {
+  source: PromptSource;
+  grants: Grant[];             // 権利の一覧（7.2の手順1）
+  cursor: number;              // 次に処理する権利の位置
+  queue: Record<string, WordCard[]>;        // 席とまとまり → 答えの種類の列
+  promptKeys: Record<string, string>;       // 問いの id → 席とまとまり
+  setupStep: number | null;    // 準備の拠点の配置から始めた場合の step
+}
+interface Grant {
+  seat: Seat;
+  fixed: WordCard | null;      // 種類が決まっている権利
+  group: "crop" | "animal" | "any" | null;  // 種類を選ぶ権利のまとまり
+  tile: TileId | null;
+  status: "pending" | "given" | "empty" | "none";
 }
 
 interface TradeOffer {
@@ -214,6 +245,9 @@ interface GameResult {
 }
 ```
 
+`dist` は、7.2の手順5で処理を止めて問いを出し直すとき、どこまで配ったかを持つ。問いの答えを待つ間も状態が保存されるため（BD05 2.4）、処理の途中の位置を状態に置く。準備の配り方（6.1、6.2）と7の出目の Market day も同じ形で扱う。
+
+`nextId` は、乱数を引かずに一意の識別子を作るために使う。識別子のために乱数を引くと、サイコロや盤面の乱数の列が変わるためである。
 ## 3. ルール設定の既定値（v0.9）
 
 方式設計5.3の項目の既定値を示す。値はルールブック v0.9 から取った。
@@ -311,7 +345,7 @@ interface GameResult {
 
 ### 7.2 収入
 
-`rollDice()` は、手番の人が `roll` の段階で送る。サーバーが乱数でサイコロ2個を振る。`dice: manual` の設定では、代わりに `inputDice(a, b)` を受け付ける。
+`rollDice()` は、手番の人が `roll` の段階で送る。サーバーが乱数でサイコロ2個を振る。`dice: manual` の設定では、代わりに `inputDice(a, b)` を受け付け、`rollDice()` は `BAD_DICE` で拒否する。本物のサイコロを使う設定でサーバーが振ると、場の出目と食い違うためである。
 
 出目が7以外の場合は、次の手順で処理する。
 
@@ -419,7 +453,7 @@ interface GameResult {
 | `bankTrade(give, get)` | `give` を4枚以上持つ。`get` の山に残りがある | `give` 4枚 | `get` 1枚 |
 | `harborTrade(vertex, give, get)` | その交点が港で、自分の拠点がある。汎用港なら `give` を3枚、専門港なら2枚以上持つ。専門港なら `give` が港の種類に合う。`get` の山に残りがある | `give` 3枚か2枚 | `get` 1枚 |
 | `buyCard(kind)` | コインが5以上。`kind` の山に残りがある | コイン5 | `kind` 1枚 |
-| `buyProduct(product)` | この手番に産物を買っていない。コインが価格以上 | コイン10か15 | 産物1つ |
+| `buyProduct(product)` | この手番に買った回数が `productBuyPerTurn` 未満。コインが価格以上 | コイン10か15 | 産物1つ |
 
 港の種類に合う、とは次のことである。
 
@@ -445,7 +479,7 @@ interface GameResult {
 
 同じ人から同じ相手への申し出がすでにあれば、新しい申し出で置き換える。古い申し出の承諾が、新しい申し出に対して通ることを防ぐため、申し出の `id` は置き換えるたびに作り直す。
 
-`respondTrade(id, accept)` の前提は、申し出の `to` が送った人であることである。`accept` が真なら、その時点で両者が出す物を持っているかを確かめ、持っていれば交換する。持っていなければ `TRADE_NOT_HOLDING` で拒否し、申し出は残す。持ち物が変われば、あとで承諾し直せるためである。
+`respondTrade(id, accept)` の前提は、申し出の `to` が送った人であることである。`accept` が真偽値でなければ `BAD_MESSAGE` で拒否する。誤った形の値を承諾として扱わないためである。`accept` が真なら、その時点で両者が出す物を持っているかを確かめ、持っていれば交換する。持っていなければ `TRADE_NOT_HOLDING` で拒否し、申し出は残す。持ち物が変われば、あとで承諾し直せるためである。
 
 交換が成立した場合と、`accept` が偽（断った）の場合は、その申し出を `trades` から消す。
 
@@ -491,11 +525,13 @@ interface GameResult {
 | `chooseKind` | 種類の列（長さ `count`） | 各種類が `options` に含まれる |
 | `discard` | 単語カードの `Bag`（合計 `count` 枚） | 手札にその枚数がある |
 
-答えは `answers` に入れるだけで、全員の答えがそろうまで処理しない（7.2）。そろう前なら、同じ人が答えを送り直せる。最後の答えを処理に使う。
+答えは `answers` に入れるだけで、全員の答えがそろうまで処理しない（7.2）。保存するのは答えの形の項目（種類の列、または0の項目を除いたカードの `Bag`）だけとし、送られてきた余分な項目は残さない。そろう前なら、同じ人が答えを送り直せる。最後の答えを処理に使う。
 
 山が尽きているかは、答えを受け取る時点では確かめない。処理の時点で尽きていた場合の扱いは7.2の手順5のとおりである。
 
 ### 8.7 サーバーが行うもの
+
+管理のコマンド（8.5）を席から送った場合と、席のコマンドを管理から送った場合は、`BAD_MESSAGE` で拒否する。権限の確かめの主はサーバー（BD05）で、エンジンの拒否は二重の守りである。
 
 取り消し（`undoLast`）、一時停止と再開、席の再発行は、エンジンのコマンドではない。サーバーが行う。取り消しは状態の写しの読み込み（BD05 2.9）、一時停止は部屋の時計の状態（BD05 3.3）、席の再発行は参加者の管理（BD03 3.6）である。
 
@@ -531,14 +567,14 @@ interface GameResult {
 | `TRADE_EMPTY` | どちらかが何も出さない | お互いに1つ以上出してください |
 | `TRADE_NOT_HOLDING` | 出す物を持っていない | 持っていない物があります |
 | `TRADE_GONE` | 申し出がない | その申し出はもうありません |
-| `BAD_DICE` | `inputDice` の出目が1〜6でない、または `dice: server` の設定で送った | 出目を正しく入れてください |
+| `BAD_DICE` | `inputDice` の出目が1〜6でない、`dice: server` の設定で `inputDice` を送った、`dice: manual` の設定で `rollDice` を送った | 出目を正しく入れてください |
 | `BAD_AMOUNT` | 数が1未満（`sellProducts` の n、`deliverOrder` の空の `items`、`deliverBonus` の n） | 数を1つ以上選んでください |
 | `ALREADY_ENDING` | `callLastRound` を、`endFlag` が立ったあとに送った | すでに最終ラウンドです |
 | `NOT_TRADE_PARTY` | `respondTrade` を相手以外が、`withdrawTrade` を出した本人以外が送った | この申し出には操作できません |
 | `TICKET_NOT_ALLOWED` | 宣言しなかった日本語を無料券で払おうとした | 宣言しなかった日本語はコインで払います |
 | `STALE_TARGET` | `endTurnFor` の通し番号が今の手番と違う。`undoLast` の `seq` が最後の有効な行と違う（管理だけ） | 手番が変わっています。画面を確かめてください |
 | `NOTHING_TO_UNDO` | 取り消せる行がない（サーバーが返す。BD05 2.9。管理だけ） | 取り消せる操作がありません |
-| `BAD_MESSAGE` | メッセージの形が正しくない（サーバーが返す。BD03） | 操作を受け付けられませんでした |
+| `BAD_MESSAGE` | メッセージの形が正しくない（サーバーが返す。BD03）。エンジンも、形の正しくないコマンドと、管理と席の取り違え（8.7）で返す | 操作を受け付けられませんでした |
 
 注文が不成立になるのは拒否ではない。コマンドは受け付けられ、出来事 `orderFailed` が出る。拒否と不成立を分けるのは、不成立には sell を失うという結果があるためである。
 
@@ -578,7 +614,8 @@ interface ActionHints {
   // 問い
   prompts: { prompt: Prompt; answer: PromptAnswer | null }[];   // 自分が答えるべき問い。答え済みも残し、今の答えを持たせる
   // 収入
-  rollDice?: Hint<null>;
+  rollDice?: Hint<null>;                                 // dice: server のときだけ
+  inputDice?: Hint<null>;                                // dice: manual のときだけ
   // 行動
   plant: Hint<Crop>[];
   buyAnimal: Hint<Animal>[];
@@ -615,25 +652,6 @@ interface ActionHints {
 
 ## 付録
 
-### 付録 B 実装で足した項目と決めた扱い
-
-M1 の実装（2026-11-06）で、本書の型にない項目を足し、本書に定めのない扱いを決めた。
-本書の本文はまだ直していない。
-方針の変更ではなく型と扱いの補いであるため、本文への反映は M1 のレビューのあとに行う。
-
-| 番号 | 対象 | 内容 | 理由 |
-|---|---|---|---|
-| B-1 | `PlayerState.lastChoice` | 前回の収入で選んだ作物と動物 | 収入の問いの既定の選択（BD04 3.6.1、TC-INC-24）を作るため |
-| B-2 | `Prompt` の `preset`、`reissued` | 既定で選んだ状態にする種類と、山が尽きて出し直した問いか | BD04 3.6.1 の既定の選択と「選び直してください」の見出しのため |
-| B-3 | `GameState.dist` | 配る処理の途中の状態（権利の一覧、処理した位置、答えの列） | 7.2 の手順5で処理を止めて問いを出し直すとき、止めた位置を状態に持つ必要があるため |
-| B-4 | `GameState.nextId` | 問いと交換の申し出の識別子の通し番号 | 乱数を引かずに一意の id を作り、乱数の列を変えないため |
-| B-5 | `orders.done` | 成立した注文と、宣言した人、手番 | 表示の `revealedOrders`（BD03 1.3）を作るため。成立した注文は表から消えるので、条件を別に持つ |
-| B-6 | 出来事 `jointRevealed` | 共同注文を補充して表にしたこと | BD03 2.2 の一覧に共同注文の補充の出来事がないため |
-| B-7 | `ActionHints.inputDice` | `dice: manual` のときの出目の入力 | 11章の一覧に `inputDice` がなく、`enabled` を返せないため |
-| B-8 | `dice: manual` での `rollDice` | `BAD_DICE` で拒否する | 本物のサイコロを使う設定でサーバーが振ると、場の出目と食い違うため |
-| B-9 | 管理のコマンドを席から、席のコマンドを管理から送ったとき | `BAD_MESSAGE` で拒否する | 9章に対応する符号がないため。権限の確かめの主はサーバー（BD05）で、エンジンの拒否は二重の守りである |
-| B-10 | 動物0頭での `claimAnimalOrder` の英文 | I have no animals. | BD02 7.2 は1頭と複数だけを定めていて、0頭の形がないため |
-
 ### 付録 A 経緯
 
 | 日付 | 出来事 |
@@ -642,4 +660,4 @@ M1 の実装（2026-11-06）で、本書の型にない項目を足し、本書�
 | 2026-10-26 | 6観点の多角レビューを反映。共同注文を産物と数で指定する形、収入の問いの分け方と出し直しの順番、不成立の条件を再び隠すこと、`endTurnFor` の通し番号、状態から名前を除くこと、拒否の符号の追加と削除 |
 | 2026-10-27 | 70分の自動の打ち切りをやめた。`markTimeUp`、`timeUp`、`timeLimitMinutes`、`timeLimitEnabled`、`ALREADY_TIME_UP` を除き、管理の `callLastRound` と `ALREADY_ENDING` を加えた。`endFlag` の理由 `time` を `host` に替えた（方式設計5.9） |
 | 2026-10-27 | 多角レビューを反映。一時停止をエンジンから外し（`paused`、`pause`、`resume` を削除。`PAUSED` はサーバーが返す）、`NOTHING_TO_UNDO` を加え、使わなくなった `STORAGE_ERROR` を除いた。10.2 の見出しと 8.7 を直した |
-| 2026-11-06 | M1 の実装で足した項目と決めた扱いを付録 B にまとめた。本文への反映は M1 のレビューのあとに行う |
+| 2026-11-06 | M1 の実装で足した型と扱いを本文に反映した。`lastChoice`、`preset`、`reissued`、`dist`、`nextId`、`orders.done`、`productBuys`、`inputDice` の操作、`rollDice` と `accept` と管理の取り違えの拒否 |

@@ -158,7 +158,13 @@ describe("行動（TC-ACT）", () => {
       { t: "sellProducts", product: "egg", n: 1 },
       { t: "sellAnimal", plot: 0 },
       { t: "deliverOrder", orderId: s.orders.faceUp[0]!.order.id, items: { egg: 2 } },
+      { t: "deliverBonus", orderId: s.orders.faceUp[0]!.order.id, product: "egg", n: 1 },
+      { t: "claimAnimalOrder", orderId: s.orders.faceUp[0]!.order.id },
+      { t: "contributeJoint", jointId: s.joint.faceUp[0]!.joint.id, product: "egg", n: 2 },
       { t: "buildHouse", vertex: 20 },
+      { t: "bankTrade", give: "grow", get: "sell" },
+      { t: "buyCard", kind: "sell" },
+      { t: "buyProduct", product: "egg" },
       { t: "endTurn" },
     ] as const;
     for (const c of cmds) rejects(s, seat(1), c, "NOT_YOUR_TURN");
@@ -235,7 +241,7 @@ describe("銀行（TC-BNK）", () => {
     rejects(s, seat(0), { t: "buyProduct", product: "egg" }, "PRODUCT_BUY_LIMIT");
     // 次の自分の手番（turn を作り直す）
     s = structuredClone(s);
-    s.turn = { ...s.turn!, serial: s.turn!.serial + 4, round: s.turn!.round + 1, productBought: false };
+    s.turn = { ...s.turn!, serial: s.turn!.serial + 4, round: s.turn!.round + 1, productBuys: 0 };
     expect(ok(s, seat(0), { t: "buyProduct", product: "egg" }).players[0]!.products).toEqual({ carrot: 1, egg: 1 });
   });
   it("TC-BNK-12 手番でない人の銀行の各操作は NOT_YOUR_TURN", () => {

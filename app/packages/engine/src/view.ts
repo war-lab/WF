@@ -150,7 +150,7 @@ function boardView(s: GameState): EngineBoardView {
           dice: s.turn.dice ? [s.turn.dice[0], s.turn.dice[1]] : null,
           fedPlots: [...s.turn.fedPlots],
           jointRowDone: s.turn.jointRowDone,
-          productBought: s.turn.productBought,
+          productBought: s.turn.productBuys >= s.config.productBuyPerTurn,
           failedOrders: [...s.turn.failedOrders],
         }
       : null,
