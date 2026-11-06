@@ -11,7 +11,8 @@
     "typecheck": "tsc -p tsconfig.json",
     "test:nightly": "vitest run test/property.test.ts --mode nightly",
     "coverage": "vitest run --coverage --coverage.include=src/**",
-    "bench": "node bench/perf.ts 50"
+    "bench": "node bench/perf.ts 50",
+    "compare": "node tools/compare.ts 1600"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "^5.1.0",

@@ -22,6 +22,11 @@ JEXPTURN=__import__('os').environ.get('JEXPTURN')=='1'   # 共同注文の時間
 JDELAY=int(__import__('os').environ.get('JDELAY','0'))
 # sellカード1枚で動物1頭を手放し、買値の半分のコインを得る
 ANIMALSELL=__import__('os').environ.get('ANIMALSELL')=='1'
+# APPRULES=1：アプリのエンジン（app/packages/engine）と同じ扱いで回す。照合の再適用（sim/record.py、BD06 5.5）に使う。
+#   単語カードの山に枚数を持たせる（ルールブック09）。尽きた種類は配らず、銀行でも取れない。救済は、実際に1枚も受け取らなかったときに出す
+#   カードを配る順を、手番の人から時計回り、拠点を置いた順、交点に接するタイルの番号の順にする
+APPRULES=__import__('os').environ.get('APPRULES')=='1'
+PILECOUNT={'grow':14,'buy':8,'feed':14,'sell':18,'carrot':8,'potato':8,'wheat':8,'cow':6,'chicken':6}
 from collections import Counter, defaultdict
 
 CARDS = ['grow','buy','feed','sell','carrot','potato','wheat','cow','chicken','two','three','four','five']
@@ -146,7 +151,7 @@ class Game:
         s.deck=[o['id'] for o in ORDERS]; s.rng.shuffle(s.deck)
         s.face=[s.deck.pop() for _ in range(3)]
         if n==3:
-            for p in s.players: p.hand[s.best_any(p)]+=1
+            for p in s.players: s.give(p,s.best_any(p))
         s.devdeck=list(DEVDECK); s.rng.shuffle(s.devdeck); s.guard=None
         for p in s.players: p.dev=[]; p.vp=0; p.fox=0
         s.round=1; s.cur=0; s.winner=None; s.ended=False; s.end_reason=None; s.exhaust=False
@@ -256,9 +261,21 @@ class Game:
     def value(s, p, c, d=None):
         d=d or s.desired(p)
         return WEIGHT[c] if p.hand[c]<d[c] else 0.1*WEIGHT[c]
+    def avail(s, c):
+        # 山に残っている枚数。使ったカードは山に戻すので、総数から全員の手札を引けばよい
+        if not APPRULES: return 1
+        return PILECOUNT[c]-sum(q.hand[c] for q in s.players)
     def best_any(s, p):
         d=s.desired(p)
-        return max(CARDS, key=lambda c:(s.value(p,c,d), -p.hand[c], s.rng.random()))
+        cs=[c for c in CARDS if s.avail(c)>0]
+        if not cs: return None
+        return max(cs, key=lambda c:(s.value(p,c,d), -p.hand[c], s.rng.random()))
+    def give(s, p, c):
+        # 1枚配る。山が尽きていれば配らず False
+        if c is None or s.avail(c)<=0: return False
+        p.hand[c]+=1; return True
+    def clockwise(s):
+        return [s.players[(s.cur+i)%s.n] for i in range(s.n)]
 
     def payouts(s, r):
         for t,x in s.tilenum.items():
@@ -300,6 +317,7 @@ class Game:
                 o=s.deck.pop(); s.face.append(o); s.show_order(o); s.emit(t='refill',order=o)
             if JOINT: s.joint_refill()
         if JOINT: s.check_win(p)
+        if s.ended: return   # 手番の初めに勝ったら、出目も収入もない（ルールブック01）
         p.fed_plots=set()
         for f in p.fields:
             if f and f['t'] in ('cow','chicken'): f['fed']=False
@@ -311,7 +329,7 @@ class Game:
             if SEVEN:
                 for q in s.players:
                     if q.handsize()>=7:
-                        k=q.handsize()//2; q.st['seven_discard']+=k; s.emit(t='seven_discard',p=q.id,n=k)
+                        k=q.handsize()//2; q.st['seven_discard']+=k; dropped=[]
                         for _ in range(k):
                             # 台本で捨てるカードを決めてあれば、それを捨てる
                             pk=getattr(s,'seven_pick',{}).get(q.id)
@@ -320,20 +338,25 @@ class Game:
                                 d=s.desired(q)
                                 c=min([c for c in CARDS if q.hand[c]>0], key=lambda c:(s.value(q,c,d), -q.hand[c]))
                             if q.hand[c]<1: raise RuleError(f'P{q.id}は{c}を持っていない')
-                            q.hand[c]-=1; q.hand+=Counter()
-            for q in s.players:
-                c=s.best_any(q); q.hand[c]+=1; q.st['income']+=1; s.emit(t='market_day',p=q.id,card=c)
+                            q.hand[c]-=1; q.hand+=Counter(); dropped.append(c)
+                        s.emit(t='seven_discard',p=q.id,n=k,cards=dropped)
+            for q in (s.clockwise() if APPRULES else s.players):
+                c=s.best_any(q)
+                if not s.give(q,c): continue
+                q.st['income']+=1; s.emit(t='market_day',p=q.id,card=c)
                 s.log(f"  Market day: P{q.id}+{c}")
             got=True
         else:
             for q,t in s.payouts(r):
                 if True:
                     c=s.card_from(q,t)
-                    q.hand[c]+=1; q.st['income']+=1; s.emit(t='income',p=q.id,card=c,tile=t)
+                    if not s.give(q,c): continue
+                    q.st['income']+=1; s.emit(t='income',p=q.id,card=c,tile=t)
                     if q is p: got=True
                     s.log(f"  収入: P{q.id}+{c}")
         if not got:
-            c=s.best_any(p); p.hand[c]+=1; p.st['relief']+=1; s.emit(t='relief',p=p.id,card=c)
+            c=s.best_any(p)
+            if s.give(p,c): p.st['relief']+=1; s.emit(t='relief',p=p.id,card=c)
             s.log(f"  救済: P{p.id}+{c}")
         for i,f in enumerate(p.fields):
             if f and f['t']=='crop' and f['planted']+DELAY<=p.turns:
@@ -592,11 +615,21 @@ class Game:
             p.hand[c]-=1; p.hand+=Counter(); p.st['discard']+=1
         s.turn_active=False
         if s.ended: return
+        if APPRULES and ORDEXP and EXPTURN:
+            # アプリは、数える人の手番の終わりに時間切れを処理する（BD01 7.5）。次の手番の初めの処理を、ここで先に行う。
+            # 最後の席の手番で注文が尽きたとき、次のラウンドを回さずに終えるため
+            s.tix+=1; s.expire_orders_turn(); s.tix-=1
         s.cur+=1
         if s.cur>=s.n:
             s.cur=0
             if s.exhaust:
                 s.ended=True; s.end_reason='exhaust'
+                if APPRULES:
+                    # 注文切れで終わるときも、未完成の共同注文の行に、行の点の半分を払う（ルールブック01）
+                    for j in s.__dict__.get('jfaces') or []:
+                        for l in j['lines']:
+                            if l.get('by') is not None:
+                                half=math.floor(l['pts'])/2; q=s.players[l['by']]; q.pts+=half; q.st['joint_pts']+=half; q.st['joint_half']+=1
                 # 点もコインも同じなら同順位。勝者を1人に決めず、winners に同点の全員を入れる
                 key=lambda q:(q.pts+q.vp,q.coins); top=key(max(s.players,key=key))
                 s.winners=[q.id for q in s.players if key(q)==top]
@@ -613,11 +646,12 @@ class Game:
     def bot_turn(s):
         p=s.players[s.cur]
         s.start_turn()
-        s.bot_free(p)
+        if not s.ended: s.bot_free(p)
         if DEV and not s.ended: s.bot_dev(p)
         a0=s.actions
         while s.actions>0 and not s.ended:
             if not s.bot_action(p): break
+            if s.ended: break   # 勝ったらその場で終わる。交換や銀行の操作を続けない（ルールブック01）
             s.bot_free(p)
         p.st['acts']+=a0-s.actions; p.st['turns_played']+=1
         if a0-s.actions>p.st.get('maxacts',0): p.st['maxacts']=a0-s.actions
@@ -712,13 +746,13 @@ class Game:
         for _ in range(4):
             d=s.desired(p)
             sur=[c for c in CARDS if p.hand[c]-d[c]>=s.ratio(p,c)]
-            need=[c for c in CARDS if p.hand[c]<d[c]]
+            need=[c for c in CARDS if p.hand[c]<d[c] and s.avail(c)>0]
             if not sur or not need: break
             s.bank(p, sur[0], max(need,key=lambda c:WEIGHT[c]))
         # 銀行：2コイン→好きな1枚（最大2回/手番）
         if COINBANK:
             for _ in range(2):
-                d=s.desired(p); need=[c for c in CARDS if p.hand[c]<d[c]]
+                d=s.desired(p); need=[c for c in CARDS if p.hand[c]<d[c] and s.avail(c)>0]
                 wa=s.want_animal(p); reserve=(ANIMAL_COST[wa] if wa else 0)+s.house_reserve(p)
                 if not need or p.coins<COINPRICE+reserve: break
                 c=max(need,key=lambda c:WEIGHT[c]); p.coins-=COINPRICE; p.hand[c]+=1; p.st['coinbank']+=1

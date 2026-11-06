@@ -134,12 +134,12 @@ class MapGame(Game):
         for k,i in enumerate(order):
             p=s.players[i]; v=s.choose_tile(p); s.place_base(p,v)
             if k>=n:
-                for t in s.L['VT'][v]:
-                    if s.tcat[t]: p.hand[s.card_from(p,s.tcat[t])]+=1
+                for t in (sorted(s.L['VT'][v]) if wf.APPRULES else s.L['VT'][v]):
+                    if s.tcat[t]: s.give(p,s.card_from(p,s.tcat[t]))
         # 初期配置後の期待収入（1回の出目あたりの枚数）
         s.start_ev=[sum(PROB[s.tnum[t]] for b in p.bases for t in s.L['VT'][b] if s.tcat[t]) for p in s.players]
         if n==3:
-            for p in s.players: p.hand[s.best_any(p)]+=1
+            for p in s.players: s.give(p,s.best_any(p))
         # SEATCOIN：席ごとの最初のコイン（例 3,3,4,5）。auto なら確定仕様（4人戦 3,3,4,5、3人戦 3,3,4）
         _sc=os.environ.get('SEATCOIN','')
         if _sc=='auto': _sc='3,3,4,5' if n==4 else '3,3,4'
@@ -186,9 +186,13 @@ class MapGame(Game):
         raise RuntimeError('6と8を離して置けない')
 
     def card_from(s, q, cat):
-        if cat=='seed': return s.best_crop(q)
-        if cat=='animal': return s.want_animal(q) or 'chicken'
-        return cat
+        if cat=='seed': c=s.best_crop(q); alt=['carrot','potato','wheat']
+        elif cat=='animal': c=s.want_animal(q) or 'chicken'; alt=['chicken','cow']
+        else: return cat
+        if s.avail(c)>0: return c
+        # APPRULES：選んだ山が尽きていたら、残っている種類から選び直す（アプリの問いの出し直し、BD01 7.2）。なければ配らない
+        rest=[x for x in alt if s.avail(x)>0]
+        return rest[0] if rest else None
     def maxbase(s): return MAXBASE
     def ratio(s, p, card):
         r=int(os.environ.get('BANKBASE','3'))
@@ -216,6 +220,13 @@ class MapGame(Game):
         if not c: raise RuleError('置ける交点がない')
         return max(c,key=score)
     def payouts(s, r):
+        if wf.APPRULES:
+            # アプリと同じ順：手番の人から時計回り、拠点を置いた順、交点に接するタイルの番号の順
+            for q in s.clockwise():
+                for b in q.bases:
+                    for t in sorted(s.L['VT'][b]):
+                        if s.tnum[t]==r and s.tcat[t]: yield q, s.tcat[t]
+            return
         for t in range(s.L['n']):
             if s.tnum[t]==r:
                 for v in s.L['TV'][t]:

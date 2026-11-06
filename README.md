@@ -82,6 +82,7 @@ npm run test:unit           # 性質のテストを除く単体テストだけ�
 npm run typecheck
 npm run dev                 # client をビルドし、wrangler dev で http://localhost:8787/board を開く
 npm run check:board         # board.json が sim の盤面と一致するか（python が要る）
+npm run compare             # 模擬との照合。sim の記録を各1600局作り、エンジンで再適用して手番ごとに比べる（python が要る、十数分）
 npm run test:nightly -w @word-farm/engine   # 性質のテスト5000局（毎晩用）
 npm run coverage -w @word-farm/engine       # 網羅率（基準は行95%、分岐90%。BD06 10.1）
 npm run bench -w @word-farm/engine          # 処理時間と記録の大きさ（PERF-01、PERF-03）

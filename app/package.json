@@ -16,7 +16,8 @@
     "dev:client": "npm run dev -w @word-farm/client",
     "dev": "npm run build && npm run dev -w @word-farm/worker",
     "deploy": "npm run build && npm run deploy -w @word-farm/worker",
-    "check:board": "python ../sim/export_board.py --check"
+    "check:board": "python ../sim/export_board.py --check",
+    "compare": "npm run compare -w @word-farm/engine"
   },
   "engines": {
     "node": ">=24"
