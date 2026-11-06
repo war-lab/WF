@@ -78,6 +78,7 @@ python probe_buy.py 300 4    # 交換、産物の購入、市場の回数と方�
 cd app
 npm install                 # 初回のみ
 npm test                    # エンジンの単体テストと性質のテスト（200局、数分かかる）
+npm run test:unit           # 性質のテストを除く単体テストだけ（十数秒）。コミット前とPRの前は npm test を通す
 npm run typecheck
 npm run dev                 # client をビルドし、wrangler dev で http://localhost:8787/board を開く
 npm run check:board         # board.json が sim の盤面と一致するか（python が要る）

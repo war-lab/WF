@@ -10,6 +10,7 @@
   ],
   "scripts": {
     "test": "npm run test --workspaces --if-present",
+    "test:unit": "npm run test:unit --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "build": "npm run build -w @word-farm/client",
     "dev:client": "npm run dev -w @word-farm/client",

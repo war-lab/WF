@@ -71,6 +71,8 @@
 
 ゲームの終わりに全部を公開するのは、終わったあとの振り返り（どの注文を読み違えたか）に使うためである。
 
+公開する注文は id の順に並べ、`source` を除く。山の順番と注文の生成の種を出さないためである。id は生成した順の番号で、山はそのあとにシャッフルするため、id の順からは山の順番が分からない。ゲームを終わらせた行は取り消せない（BD05 2.9）が、取り消しの扱いが変わっても残りの山が読めないようにしておく。
+
 ### 1.3 型
 
 ```ts
@@ -98,7 +100,7 @@ interface BoardView {
   promptStatus: { promptId: string; seat: Seat; k: "chooseKind" | "discard"; count: number; answered: boolean }[];
   trades: TradeOffer[];              // BD01 2.6。そのまま
   result: GameResult | null;
-  finalReveal: { orders: Order[] } | null;   // ゲームの終わりにだけ。表と山の全注文
+  finalReveal: { orders: Omit<Order, "source">[] } | null;   // ゲームの終わりにだけ。表と山の全注文を id の順に並べる
   lastCommand: { seq: number; summary: string } | null;   // 取り消しの対象（BD05 2.9）。管理を許された大画面にだけ入れる
 }
 
@@ -474,3 +476,4 @@ JSON として読めない、または zod の形に合わないメッセージ�
 | 2026-10-27 | 70分の自動の打ち切りをやめたことに合わせ、`timeUp` の状態と出来事、`ClockView.limitMs`、`startGame` の `timeLimitEnabled` を除き、管理操作 `callLastRound` を加えた |
 | 2026-10-27 | 多角レビューを反映。取り消しを `undoLast` 1つにし（`undoPreview`、`undoCommit` を削除）、`lastCommand` を加えた。一時停止をエンジンのコマンドから外した。席の再発行の QR を大画面に出す形にそろえた。生存確認の休止についての説明と、参照の誤りを直した |
 | 2026-11-06 | M1 の実装に合わせ、出来事 `jointRevealed` と `TurnView.productBought` の意味を足した |
+| 2026-11-06 | `finalReveal` を id の順に並べ、`source` を除くことにした（1.2） |

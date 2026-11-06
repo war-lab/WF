@@ -7,6 +7,7 @@
   },
   "scripts": {
     "test": "vitest run",
+    "test:unit": "vitest run --exclude test/property.test.ts",
     "typecheck": "tsc -p tsconfig.json",
     "test:nightly": "vitest run test/property.test.ts --mode nightly",
     "coverage": "vitest run --coverage --coverage.include=src/**",

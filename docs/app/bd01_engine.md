@@ -540,7 +540,7 @@ interface GameResult {
 | 符号 | 意味 | スマホに出す文言 |
 |---|---|---|
 | `PAUSED` | 一時停止中（サーバーが返す。BD05 3.3） | 一時停止中です |
-| `GAME_OVER` | ゲームが終わっている | ゲームは終わりました |
+| `GAME_OVER` | ゲームが終わっている。`undoLast` で、ゲームを終わらせた行を取り消そうとした（サーバーが返す。BD05 2.9。管理だけ） | ゲームは終わりました |
 | `WRONG_PHASE` | 今の段階では送れない | 今はできません |
 | `NOT_YOUR_TURN` | 手番の人ではない | 自分の手番ではありません |
 | `NOT_PROMPTED` | その問いの対象ではない、問いがもうない | この質問には答えられません |
@@ -660,4 +660,5 @@ interface ActionHints {
 | 2026-10-26 | 6観点の多角レビューを反映。共同注文を産物と数で指定する形、収入の問いの分け方と出し直しの順番、不成立の条件を再び隠すこと、`endTurnFor` の通し番号、状態から名前を除くこと、拒否の符号の追加と削除 |
 | 2026-10-27 | 70分の自動の打ち切りをやめた。`markTimeUp`、`timeUp`、`timeLimitMinutes`、`timeLimitEnabled`、`ALREADY_TIME_UP` を除き、管理の `callLastRound` と `ALREADY_ENDING` を加えた。`endFlag` の理由 `time` を `host` に替えた（方式設計5.9） |
 | 2026-10-27 | 多角レビューを反映。一時停止をエンジンから外し（`paused`、`pause`、`resume` を削除。`PAUSED` はサーバーが返す）、`NOTHING_TO_UNDO` を加え、使わなくなった `STORAGE_ERROR` を除いた。10.2 の見出しと 8.7 を直した |
+| 2026-11-06 | `GAME_OVER` に、ゲームを終わらせた行の取り消しの拒否を足した（BD05 2.9） |
 | 2026-11-06 | M1 の実装で足した型と扱いを本文に反映した。`lastChoice`、`preset`、`reissued`、`dist`、`nextId`、`orders.done`、`productBuys`、`inputDice` の操作、`rollDice` と `accept` と管理の取り違えの拒否 |

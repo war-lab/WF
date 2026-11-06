@@ -102,7 +102,7 @@ export interface EngineBoardView {
   promptStatus: { promptId: string; seat: Seat; k: "chooseKind" | "discard"; count: number; answered: boolean }[];
   trades: TradeOffer[];
   result: GameResult | null;
-  finalReveal: { orders: Order[] } | null;
+  finalReveal: { orders: Omit<Order, "source">[] } | null;
 }
 
 export interface EnginePlayerView extends Omit<EngineBoardView, "kind"> {
@@ -192,9 +192,17 @@ function boardView(s: GameState): EngineBoardView {
     promptStatus: s.prompts.map((p) => ({ promptId: p.id, seat: p.seat, k: p.k, count: p.count, answered: s.answers[p.id] !== undefined })),
     trades: clone(s.trades),
     result: clone(s.result),
-    // ゲームの終わりにだけ、表と山の全注文を公開する（BD03 1.2）
-    finalReveal: s.phase.k === "over" ? { orders: clone([...s.orders.faceUp.map((f) => f.order), ...s.orders.deck]) } : null,
+    // ゲームの終わりにだけ、表と山の全注文を公開する（BD03 1.2）。
+    // 山の順番と生成の種は出さない。id の順（生成した順。山はそのあとにシャッフルする）に並べ、source を除く
+    finalReveal: s.phase.k === "over" ? { orders: finalOrders(s) } : null,
   };
+}
+
+function finalOrders(s: GameState): Omit<Order, "source">[] {
+  const all = [...s.orders.faceUp.map((f) => f.order), ...s.orders.deck];
+  return all
+    .map(({ source: _source, ...o }) => clone(o))
+    .sort((x, y) => (x.id < y.id ? -1 : x.id > y.id ? 1 : 0));
 }
 
 /** 各端末に送る表示用の状態（方式設計5.1） */

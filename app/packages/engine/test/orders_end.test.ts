@@ -599,6 +599,22 @@ describe("終わり方（TC-END）", () => {
 });
 
 describe("問い、管理、表示（TC-SYS）", () => {
+  it("TC-SYS-13 終局の公開は全注文を id の順に並べ、山の順番と生成の種を出さない", () => {
+    // 終局を取り消された場合に、残りの山の順番と注文の生成の種が見えたまま再開しないようにする（BD03 1.2、BD05 2.9）
+    const s0 = checked(mainState());
+    expect(s0.orders.deck.length).toBeGreaterThan(1);
+    const t = ok(s0, admin, { t: "abortGame" });
+    const fr = (viewFor(t, "board") as EngineBoardView).finalReveal!;
+    const ids = fr.orders.map((o) => o.id);
+    expect(ids).toEqual([...ids].sort());
+    expect(new Set(ids)).toEqual(new Set([...s0.orders.faceUp.map((f) => f.order.id), ...s0.orders.deck.map((o) => o.id)]));
+    expect(ids).not.toEqual([...s0.orders.faceUp.map((f) => f.order.id), ...s0.orders.deck.map((o) => o.id)]);
+    for (const o of fr.orders) expect(o).not.toHaveProperty("source");
+    const seed = (s0.orders.deck[0]!.source as { seed: string }).seed;
+    expect(seed).toMatch(/^[0-9a-f]{32}$/);
+    expect(JSON.stringify(viewFor(t, 0))).not.toContain(seed);
+    expect(fr.orders.find((o) => o.id === s0.orders.deck[0]!.id)!.cond).toEqual(s0.orders.deck[0]!.cond);
+  });
   function promptState(): GameState {
     // 出目7で全員に好きな1枚の問いが出た状態
     const s = rollState({ seat: 0 });
