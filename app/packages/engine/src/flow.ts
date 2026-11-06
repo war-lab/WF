@@ -156,11 +156,18 @@ export function flagIfOrdersOut(s: GameState, ev: Events): void {
 
 // ---------- 勝ちと終わり（BD01 10章） ----------
 
-function ranking(s: GameState) {
+/**
+ * 順位。点、同点ならコインの多い順で、それでも同じなら同順位（ルールブック01）。
+ * 目標点で勝った人（winner）は、点によらず1位とし、ほかの人は2位から並べる。
+ * 手番でない人が共同注文の完成などで勝った人より多い点を持っていることがあるため（ルールブック01）
+ */
+function ranking(s: GameState, winner: Seat | null = null) {
   const ps = s.players.map((p) => ({ seat: p.seat, halfPoints: p.halfPoints, coins: p.coins }));
+  const above = (q: (typeof ps)[number], p: (typeof ps)[number]) =>
+    q.seat !== winner && (q.halfPoints > p.halfPoints || (q.halfPoints === p.halfPoints && q.coins > p.coins));
   return ps.map((p) => ({
     ...p,
-    rank: 1 + ps.filter((q) => q.halfPoints > p.halfPoints || (q.halfPoints === p.halfPoints && q.coins > p.coins)).length,
+    rank: p.seat === winner ? 1 : 1 + (winner === null ? 0 : 1) + ps.filter((q) => above(q, p)).length,
   }))
     .sort((a, b) => a.rank - b.rank || a.seat - b.seat)
     .map((r) => ({ seat: r.seat, rank: r.rank, halfPoints: r.halfPoints, coins: r.coins }));
@@ -178,7 +185,7 @@ export function winNow(s: GameState, seat: Seat, ev: Events): void {
   s.answers = {};
   s.dist = null;
   s.phase = { k: "over" };
-  s.result = { reason: "target", winnerSeat: seat, ranking: ranking(s) };
+  s.result = { reason: "target", winnerSeat: seat, ranking: ranking(s, seat) };
   ev.push({ k: "gameOver", result: s.result, finalHalf: [] });
 }
 

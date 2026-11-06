@@ -18,7 +18,7 @@ import {
   sentenceSellProducts,
 } from "../src/orders/english.ts";
 import { fixedData, fixedJoints, fixedOrders } from "../src/orders/fixed.ts";
-import { EVENTS, genJointDeck, genOne, genOrderDeck } from "../src/orders/generate.ts";
+import { EVENTS, genBonus, genJointDeck, genOne, genOrderDeck } from "../src/orders/generate.ts";
 import { animalHalfPoints, bonusHalfPoints, conditionHalfPoints, jointHalfPoints, orderHalfPoints } from "../src/orders/points.ts";
 import { childRng, intBelow, intBetween, nextU32, seedRng } from "../src/rng.ts";
 import type { RngState } from "../src/types.ts";
@@ -208,6 +208,21 @@ describe("生成と乱数（TC-GEN）", () => {
 const XOSHIRO_REF = [11520, 0, 5927040, 70819200, 2031721883, 1637235492];
 
 describe("英文（TC-ENG）", () => {
+  it("TC-ENG-12 ボーナス注文の受け付ける産物は「A, B or C」で並べる（ルールブック08）", () => {
+    const r = seedRng("eng12");
+    const seen = new Set<number>();
+    for (let i = 0; i < 200; i++) {
+      const d = genBonus(r);
+      const acc = (d.cond as { accepted: string[] }).accepted;
+      seen.add(acc.length);
+      const m = /Bring (.*), as many as you can!$/.exec(d.text)!;
+      expect(m, d.text).not.toBeNull();
+      const words = m[1]!.split(/, | or /);
+      expect(words).toHaveLength(acc.length);
+      expect(m[1]!.split(" or ")).toHaveLength(2);
+    }
+    expect(seen).toEqual(new Set([2, 3]));
+  });
   it("TC-ENG-01 数 1〜99 を数詞にする。21 は twenty-one", () => {
     expect(numberWord(1)).toBe("one");
     expect(numberWord(13)).toBe("thirteen");

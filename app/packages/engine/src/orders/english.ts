@@ -44,6 +44,12 @@ export function joinAnd(parts: string[]): string {
   return `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`;
 }
 
+/** 「A, B or C」。ボーナス注文の受け付ける産物に使う（ルールブック08の例） */
+export function joinOr(parts: string[]): string {
+  if (parts.length <= 1) return parts[0] ?? "";
+  return `${parts.slice(0, -1).join(", ")} or ${parts[parts.length - 1]}`;
+}
+
 /** 英文の中で産物が最初に出てくる位置。出てこなければ -1 */
 function mentionAt(text: string, p: Product): number {
   return text.toLowerCase().indexOf(p);

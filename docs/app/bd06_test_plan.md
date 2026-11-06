@@ -193,6 +193,7 @@ TC-BRD-07 は自動化しない。図と描画の対応は、数字と港の位�
 | TC-ACT-18 | BD01 8.1 | 拠点3個 | `buildHouse` | `HOUSE_LIMIT` |
 | TC-ACT-19 | BD01 8.1、規10 | 港の交点に `buildHouse` | 同じ手番に `harborTrade` | 成功 |
 | TC-ACT-20 | BD01 8 | 手番でない人 | 各行動 | `NOT_YOUR_TURN` |
+| TC-ACT-21 | BD01 8.1 | 区画0のニワトリに餌をやり、売って、同じ区画にニワトリを買い直した | `feed(0)` | `ALREADY_FED`（餌は区画ごと。ルールブック05、10） |
 
 ### 4.6 銀行（TC-BNK）
 
@@ -333,6 +334,7 @@ TC-BRD-07 は自動化しない。図と描画の対応は、数字と港の位�
 | TC-END-09 | BD01 8.5 | 途中 | `abortGame` | 半分の点を払い、`reason` が `aborted` |
 | TC-END-10 | BD01 4 | 終わったあと | 各コマンド | `GAME_OVER` |
 | TC-END-11 | BD01 10.1 | 申し出が残ったまま勝ちで終わる | 終わったあとの状態 | `trades` が空 |
+| TC-END-12 | BD01 10.1 | 手番でない人が勝った人より多い点を持ったまま、手番の人が目標点に届く | `ranking` | 勝った人が1位、ほかの人は2位から点の順 |
 
 ### 4.13 問い、管理、表示（TC-SYS）
 
@@ -404,6 +406,7 @@ TC-GEN-08 の既知の出力列は、実装する時点で xoshiro の作者が�
 | TC-ENG-09 | BD02 7.2 | 動物1頭、4頭、0頭 | I have one animal.、I have four animals.、I have no animals. |
 | TC-ENG-10 | BD02 7.2 | 共同注文の行 | I bring three eggs to the village festival. |
 | TC-ENG-11 | BD02 7.2 | wheat 13のボーナス | I sell thirteen bags of wheat to the farmers' market. |
+| TC-ENG-12 | BD02 5.2 | ボーナス注文を200枚生成 | 受け付ける産物の並べ方 | 2種類は「A or B」、3種類は「A, B or C」 |
 
 ## 5. 性質のテストと統計の照合
 
@@ -761,3 +764,4 @@ Playwright で、手元で動かした Workers の実行環境（`wrangler dev`�
 | 2026-10-27 | 多角レビューを反映。取り消しと一時停止の新しい形に合わせて TC-SRV-06〜07c を直し、名前を伏せる処理、ログと応答の中身、合言葉、版の判定、書き出しの項目、交換画面、1局の通し、非機能の測定（PERF、DEV-15〜18）を足した |
 | 2026-11-06 | M1 のレビューを反映。5.5.2 の指定の確率の記述を直し、模擬との差を4行足した。性質のテストの選び方と到達の確かめを5.1に足した。TC-SYS-12 を足し、TC-INC-23、TC-ENG-09 を広げた |
 | 2026-11-06 | TC-SYS-13（終局の公開から山の順番と生成の種を除く）と TC-SRV-06f（ゲームを終わらせた行の取り消しの拒否）を足した |
+| 2026-11-06 | ルールの空白3点を決めた。TC-ACT-21（餌は区画ごと）、TC-END-12（勝った人を1位に固定）、TC-ENG-12（ボーナス注文の英文を「A, B or C」に）を足した |

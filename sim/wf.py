@@ -104,6 +104,7 @@ class Player:
     def __init__(s, i, strat):
         s.id=i; s.strat=strat; s.hand=Counter(); s.prod=Counter(); s.coins=3; s.pts=0
         s.fields=[None]*4; s.bases=[]; s.turns=0
+        s.fed_plots=set()  # この手番に餌をやった区画。餌は1区画につき1手番1回（ルールブック05）
         s.st=Counter()  # 統計
     def animals(s): return [f for f in s.fields if f and f['t'] in ('cow','chicken')]
     def empty(s): return [i for i,f in enumerate(s.fields) if f is None]
@@ -299,6 +300,7 @@ class Game:
                 o=s.deck.pop(); s.face.append(o); s.show_order(o); s.emit(t='refill',order=o)
             if JOINT: s.joint_refill()
         if JOINT: s.check_win(p)
+        p.fed_plots=set()
         for f in p.fields:
             if f and f['t'] in ('cow','chicken'): f['fed']=False
             if f and f.get('pending'): p.prod['milk']+=f['pending']; s.emit(t='milk',p=p.id,n=f['pending']); f['pending']=0
@@ -385,7 +387,7 @@ class Game:
         s.need_act(); e=p.empty()
         if not e: raise RuleError('空き区画がない')
         if p.coins<ANIMAL_COST[a]: raise RuleError('コイン不足')
-        s.use(p,['buy',a]+(['grow'] if (COWGROW=='buy' and a=='cow') else [])); p.coins-=ANIMAL_COST[a]; p.fields[e[0]]={'t':a,'fed':False}
+        s.use(p,['buy',a]+(['grow'] if (COWGROW=='buy' and a=='cow') else [])); p.coins-=ANIMAL_COST[a]; p.fields[e[0]]={'t':a,'fed':e[0] in p.fed_plots}  # 同じ手番に餌をやった区画で買い直しても、その手番は餌をやれない
         s.actions-=1; p.st['buy_'+a]+=1; s.log(f"  I buy a {a}."); s.emit(t='buy',p=p.id,animal=a,field=e[0])
     def act_feed(s, p, idx):
         # FEEDALL：同じ手番の2頭目以降の餌やりは行動を使わない（I feed my animals.）
@@ -395,7 +397,7 @@ class Game:
         if not f or f['t'] not in ('cow','chicken'): raise RuleError('動物がいない')
         if f['fed']: raise RuleError('この手番は給餌済み')
         if not s.can_feed(p,f): raise RuleError('この牛は今回は餌をやれない')
-        s.use(p,['feed']+(['grow'] if (COWGROW=='feed' and f['t']=='cow') else [])); f['fed']=True; f['last']=p.turns; k,v=ANIMAL_OUT[f['t']]
+        s.use(p,['feed']+(['grow'] if (COWGROW=='feed' and f['t']=='cow') else [])); f['fed']=True; p.fed_plots.add(idx); f['last']=p.turns; k,v=ANIMAL_OUT[f['t']]
         if f['t']=='cow' and COWMODE=='delay': f['pending']=f.get('pending',0)+v
         else: p.prod[k]+=v
         if not free: s.actions-=1

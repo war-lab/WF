@@ -27,6 +27,10 @@ ANIMAL_HINT = {
 }
 NUMW = {1:'one',2:'two',3:'three',4:'four',5:'five',6:'six',7:'seven',8:'eight'}
 CROPS = ['carrot','potato','wheat']
+def join_or(xs):
+    # 「A, B or C」。ルールブック08の例に合わせる
+    return xs[0] if len(xs)==1 else ', '.join(xs[:-1])+' or '+xs[-1]
+
 # 産物ごとの英語（1つ／複数）。小麦とミルクは数えられないので単位を付ける
 def noun(item, n, unit=True):
     if item=='carrot':  return 'a carrot' if n==1 else f'{NUMW[n]} carrots'
@@ -122,7 +126,7 @@ def bonus_points(item, n):
 def gen_bonus(rng, idx):
     allp=['carrot','potato','wheat','egg','milk']
     items=rng.sample(allp, rng.choice([2,3])); items=[x for x in allp if x in items]; rest=[x for x in allp if x not in items]
-    tpl=f"The farmers' market has enough {join([plural(x) for x in rest])}. Bring {' or '.join(plural(x) for x in items)}, as many as you can!"
+    tpl=f"The farmers' market has enough {join([plural(x) for x in rest])}. Bring {join_or([plural(x) for x in items])}, as many as you can!"
     return dict(id=idx, kind='bonus', items=items, req={x:1 for x in items}, text=tpl, level='ボーナス', pts=0.5, to="the farmers' market", picture=False, nums=[])
 def gen_deck(rng, n=24):
     # 同じ英文は1組に1枚まで。ボーナス注文は BONUSN 枚を混ぜる（並びは山を作るときにシャッフルする）

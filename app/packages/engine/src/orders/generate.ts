@@ -3,7 +3,7 @@
 import { choice, intBetween, nextFloat, sample, shuffle } from "../rng.ts";
 import type { Animal, Bag, Crop, JointLine, JointOrder, Order, OrderCondition, Product, RngState } from "../types.ts";
 import { CROP_CARDS, PRODUCTS } from "../types.ts";
-import { joinAnd, noun, numberWord, plural } from "./english.ts";
+import { joinAnd, joinOr, noun, numberWord, plural } from "./english.ts";
 import { animalHalfPoints, conditionHalfPoints, jointLineHalfPoints } from "./points.ts";
 
 /** 宛先（英文の先頭に置く形、文中の形） */
@@ -191,7 +191,7 @@ export function genBonus(r: RngState): Draft {
   const chosen = sample(r, PRODUCTS, choice(r, [2, 3]));
   const accepted = PRODUCTS.filter((p) => chosen.includes(p));
   const rest = PRODUCTS.filter((p) => !chosen.includes(p));
-  const text = `The farmers' market has enough ${joinAnd(rest.map(plural))}. Bring ${accepted.map(plural).join(" or ")}, as many as you can!`;
+  const text = `The farmers' market has enough ${joinAnd(rest.map(plural))}. Bring ${joinOr(accepted.map(plural))}, as many as you can!`;
   return draft(text, "bonus", { k: "bonus", accepted }, null, "the farmers' market", null);
 }
 

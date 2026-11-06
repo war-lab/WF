@@ -591,7 +591,7 @@ interface GameResult {
 
 7.1の手順3の判定と合わせて、ルールブック01章の2つの勝ち方を満たす。
 
-勝ちで終えたときは、`trades` を空にし、`phase` を `over` にする。`result.reason` は `target`、`winnerSeat` は手番の人とする。`ranking` は点とコインで付ける（10.2の手順3）。
+勝ちで終えたときは、`trades` を空にし、`phase` を `over` にする。`result.reason` は `target`、`winnerSeat` は手番の人とする。`ranking` は、`winnerSeat` の人を1位とし、ほかの人を2位から点とコインで付ける（10.2の手順3）。手番でない人が、共同注文の完成などで勝った人より多い点を持っていることがあるためである（ルールブック01）。
 
 ### 10.2 注文切れとホストの宣言による終わり
 
@@ -662,3 +662,4 @@ interface ActionHints {
 | 2026-10-27 | 多角レビューを反映。一時停止をエンジンから外し（`paused`、`pause`、`resume` を削除。`PAUSED` はサーバーが返す）、`NOTHING_TO_UNDO` を加え、使わなくなった `STORAGE_ERROR` を除いた。10.2 の見出しと 8.7 を直した |
 | 2026-11-06 | `GAME_OVER` に、ゲームを終わらせた行の取り消しの拒否を足した（BD05 2.9） |
 | 2026-11-06 | M1 の実装で足した型と扱いを本文に反映した。`lastChoice`、`preset`、`reissued`、`dist`、`nextId`、`orders.done`、`productBuys`、`inputDice` の操作、`rollDice` と `accept` と管理の取り違えの拒否 |
+| 2026-11-06 | 目標点で勝った人を `ranking` の1位に固定した（10.1） |

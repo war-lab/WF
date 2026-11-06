@@ -86,6 +86,17 @@ describe("行動（TC-ACT）", () => {
     expect(s.players[0]!.products).toEqual({ egg: 4 });
     rejects(s, seat(0), { t: "feed", plot: 2 }, "NOT_ANIMAL_PLOT");
   });
+  it("TC-ACT-21 餌をやった区画の動物を売って買い直しても、その手番はその区画に ALREADY_FED（餌は1区画につき1手番1回）", () => {
+    let s = base();
+    giveCards(s, 0, { feed: 2, sell: 1, buy: 1, chicken: 1 });
+    s.players[0]!.coins = 2;
+    s.players[0]!.plots[0] = { t: "animal", animal: "chicken" };
+    s = ok(checked(s), seat(0), { t: "feed", plot: 0 });
+    s = ok(s, seat(0), { t: "sellAnimal", plot: 0 });
+    s = ok(s, seat(0), { t: "buyAnimal", animal: "chicken" });
+    expect(s.players[0]!.plots[0]).toEqual({ t: "animal", animal: "chicken" });
+    rejects(s, seat(0), { t: "feed", plot: 0 }, "ALREADY_FED");
+  });
   it("TC-ACT-11、12、13 egg 5 を売るとコイン5、sell 1。持たない数は MISSING_PRODUCTS、0は BAD_AMOUNT", () => {
     const s = base();
     giveCards(s, 0, { sell: 1 });

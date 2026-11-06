@@ -566,6 +566,18 @@ describe("終わり方（TC-END）", () => {
       [3, 3],
     ]);
   });
+  it("TC-END-12 目標点で勝った人は、ほかの人より点が少なくても順位1位。ほかの人は2位から点の順", () => {
+    let s = base();
+    giveCards(s, 0, { sell: 1 });
+    giveProducts(s, 0, { carrot: 3 });
+    addPoints(s, 0, 13);
+    addPoints(s, 1, 20); // 共同注文の完成などで、手番でない人が先に目標を超えている
+    addPoints(s, 2, 2);
+    putOrders(s, [exact3()]);
+    s = ok(checked(s), seat(0), { t: "deliverOrder", orderId: s.orders.faceUp[0]!.order.id, items: { carrot: 3 } });
+    expect(s.result!.winnerSeat).toBe(0);
+    expect(s.result!.ranking.map((r) => [r.seat, r.rank])).toEqual([[0, 1], [1, 2], [2, 3], [3, 4]]);
+  });
   it("TC-END-08、11 勝ちで終わると reason target、winnerSeat、ranking があり、申し出が残っていても trades は空", () => {
     let s = base();
     giveCards(s, 0, { sell: 1, grow: 1 });
