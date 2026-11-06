@@ -77,10 +77,13 @@ python probe_buy.py 300 4    # 交換、産物の購入、市場の回数と方�
 ```text
 cd app
 npm install                 # 初回のみ
-npm test                    # エンジンの単体テスト
+npm test                    # エンジンの単体テストと性質のテスト（200局、数分かかる）
 npm run typecheck
 npm run dev                 # client をビルドし、wrangler dev で http://localhost:8787/board を開く
 npm run check:board         # board.json が sim の盤面と一致するか（python が要る）
+npm run test:nightly -w @word-farm/engine   # 性質のテスト5000局（毎晩用）
+npm run coverage -w @word-farm/engine       # 網羅率（基準は行95%、分岐90%。BD06 10.1）
+npm run bench -w @word-farm/engine          # 処理時間と記録の大きさ（PERF-01、PERF-03）
 ```
 
 盤面の数字や港を変えたら、`sim/fixed_layout.json` を直してから `python sim/export_board.py` で `app/packages/engine/src/data/board.json` を書き出し直す。`board.json` は手で直さない。大画面に `?sample=rulebook` を付けると、ルールブックの図と同じ種類で盤面を描き、`?ids` で交点の番号を出す。

@@ -12,7 +12,9 @@ import { viewFor } from "../src/view.ts";
 import { config, participants } from "./helpers.ts";
 import { candidates, seededPicker, type Move } from "./play.ts";
 
-const RUNS = Number(process.env.PROP_RUNS ?? 200);
+// npm run test:nightly は --mode nightly で5000局にする（Windows の cmd でも動くよう、環境変数ではなく mode で切り替える）
+const MODE = (import.meta as unknown as { env?: { MODE?: string } }).env?.MODE;
+const RUNS = Number(process.env.PROP_RUNS ?? (MODE === "nightly" ? 5000 : 200));
 const MAX_OPS = 3000;
 
 /** 乱入させる不正なコマンドの材料（形は正しいが、状態に合わないことが多い） */
@@ -142,7 +144,7 @@ const inputArb: fc.Arbitrary<Input> = fc.record({
 });
 
 describe("性質のテスト（BD06 5章）", () => {
-  it(`正しい操作を乱数で選び続けるゲーム ${RUNS} 局で、不変条件、受け付け、秘密、再現性が成り立つ`, () => {
+  it(`正しい操作を乱数で選び続けるゲーム ${RUNS} 局で、不変条件、受け付け（TC-SYS-06）、秘密、再現性（TC-SYS-10）が成り立つ`, () => {
     fc.assert(fc.property(inputArb, runGame), { numRuns: RUNS, endOnFailure: process.env.PROP_NO_SHRINK === "1" });
   }, 3_600_000);
 });

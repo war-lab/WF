@@ -16,7 +16,10 @@ export interface Picker {
 export class ListPicker implements Picker {
   i = 0;
   exhausted = false;
-  constructor(private readonly xs: number[]) {}
+  private readonly xs: number[];
+  constructor(xs: number[]) {
+    this.xs = xs;
+  }
   pick(k: number): number {
     if (k <= 1) return 0;
     if (this.i >= this.xs.length) {
@@ -41,7 +44,10 @@ export function seededPicker(seed: number): Picker {
 
 /** 乱数の関数から値を取り出す */
 export class RandPicker implements Picker {
-  constructor(private readonly rand: () => number) {}
+  private readonly rand: () => number;
+  constructor(rand: () => number) {
+    this.rand = rand;
+  }
   pick(k: number): number {
     return k <= 1 ? 0 : Math.floor(this.rand() * k);
   }
