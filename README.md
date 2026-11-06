@@ -77,7 +77,7 @@ python probe_buy.py 300 4    # 交換、産物の購入、市場の回数と方�
 ```text
 cd app
 npm install                 # 初回のみ
-npm test                    # エンジンの単体テストと性質のテスト（200局、数分かかる）
+npm test                    # エンジン（単体と性質のテスト200局、数分かかる）、サーバー（部屋の処理と Miniflare の結合）、端末の接続のテスト
 npm run test:unit           # 性質のテストを除く単体テストだけ（十数秒）。コミット前とPRの前は npm test を通す
 npm run typecheck
 npm run dev                 # client をビルドし、wrangler dev で http://localhost:8787/board を開く
@@ -86,7 +86,10 @@ npm run compare             # 模擬との照合。sim の記録を各1600局作
 npm run test:nightly -w @word-farm/engine   # 性質のテスト5000局（毎晩用）
 npm run coverage -w @word-farm/engine       # 網羅率（基準は行95%、分岐90%。BD06 10.1）
 npm run bench -w @word-farm/engine          # 処理時間と記録の大きさ（PERF-01、PERF-03）
+npm run verify -w @word-farm/protocol -- record.json   # 写しを含めて取り出した記録を再適用し、各行の写しと比べる（BD05 5.4）
 ```
+
+手元で `npm run dev` を使う前に、`app/packages/worker/.dev.vars` に `HOST_KEY=<ホストの鍵>` を書く（git の対象外）。デプロイした版の鍵は `npx wrangler secret put HOST_KEY` で設定する（BD05 4.3）。
 
 盤面の数字や港を変えたら、`sim/fixed_layout.json` を直してから `python sim/export_board.py` で `app/packages/engine/src/data/board.json` を書き出し直す。`board.json` は手で直さない。大画面に `?sample=rulebook` を付けると、ルールブックの図と同じ種類で盤面を描き、`?ids` で交点の番号を出す。
 

@@ -3,12 +3,21 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "wrangler dev",
-    "deploy": "wrangler deploy",
-    "typecheck": "tsc -p tsconfig.json"
+    "engine-version": "node scripts/engine-version.mjs",
+    "dev": "npm run engine-version && wrangler dev",
+    "deploy": "npm run engine-version && wrangler deploy",
+    "test": "npm run engine-version && vitest run",
+    "typecheck": "npm run engine-version && tsc -p tsconfig.json && tsc -p test/tsconfig.json",
+    "test:unit": "npm run test"
+  },
+  "dependencies": {
+    "@word-farm/engine": "*",
+    "@word-farm/protocol": "*"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20261104.1",
+    "esbuild": "^0.28.2",
+    "miniflare": "^5.20261103.0-beta",
     "wrangler": "^4.157.0"
   }
 }

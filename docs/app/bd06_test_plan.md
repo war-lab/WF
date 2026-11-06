@@ -42,7 +42,7 @@ E2E は、手動の結合テストの代わりにはならない。実機のテ�
 |---|---|
 | エンジン単体、性質 | Vitest、fast-check |
 | 模擬との照合 | Python の模擬の記録（`sim/record.py`）、Node.js の再適用（`app/packages/engine/tools/replay.ts`、`compare.ts`） |
-| サーバーの結合 | Vitest、@cloudflare/vitest-pool-workers（Durable Object を Workers の実行環境の中で動かす） |
+| サーバーの結合 | Vitest。部屋の処理（`room.ts`）の単体テストは `node:sqlite` と偽の接続で、Durable Object の結合テストは Miniflare（esbuild でまとめた Worker を手元の workerd で動かす）で行う（6章） |
 | E2E | Playwright（Chromium、WebKit） |
 
 エンジン単体のテストは、状態を一から組み立てる補助の関数（以下、状態の組み立て器）を使って書く。ゲームの最初から操作を積み重ねて状態を作ると、テストが前提の操作の誤りに引きずられるためである。
@@ -623,7 +623,21 @@ fast-check の既定の縮小を使う。失敗した入力は、種と選択の
 | TC-SRV-22 | `hello` のトークンのハッシュを求める間に、同じトークンの2本目の `hello` が届いても、席を持つ接続は1本だけになり、もう1本に `replaced` が届く（BD05 1.3） |
 | TC-SRV-20 | 書き込みに失敗したコマンドの `ack` は端末に届かず、作り直しのあとに同じ `id` で送り直すと、1回だけ適用される（BD05 2.5） |
 
-TC-SRV-03 と TC-SRV-20 は、Durable Object に試験用の障害注入の口（書き込みの直後で作り直させる）を設けて行う。この口は試験用の設定でだけ有効にする。Workers の実行環境の中で、書き込みの失敗そのものを起こせるかは確かめていない（未検証）。起こせない場合は、作り直しで代え、その旨をテストの記録に残す。
+TC-SRV-03 と TC-SRV-20 は、Durable Object に試験用の障害注入の口（書き込みの直後で作り直させる）を設けて行う。この口は試験用の設定でだけ有効にする（BD05 6.1）。Workers の実行環境の中で、書き込みの失敗そのものを起こす方法は見つからなかった。作り直し（`ctx.abort()`）で代えた。
+
+テストは2つに分けて置く。
+
+| ファイル | 動かし方 | 受け持つ ID |
+|---|---|---|
+| `app/packages/worker/test/room.test.ts`、`record.test.ts` | 部屋の処理を `node:sqlite` と偽の接続、手で進める時計で動かす。作り直しは、同じ保存の上に部屋の処理を作り直して表す | 01〜04c、05〜07c、08、08c〜08f、09〜12、13b、13c、14〜16b、18、19〜19d、21、22 |
+| `app/packages/worker/test/miniflare.test.ts` | 実際の Durable Object を Miniflare で動かし、HTTP と WebSocket でつなぐ | 01〜04（作り直しと障害注入）、04c、08b、08c、08g、13b、17、20、21 |
+| `app/packages/client/test/connection.test.ts` | 端末の側の接続を、偽の WebSocket と時計で動かす | 13、13c（端末の側） |
+
+`@cloudflare/vitest-pool-workers` は使わない。vitest 4 系が前提で、エンジンのテストで使う vitest 5 と組み合わせられないためである（2026-11-06）。
+
+TC-SRV-04b（休止からの復帰）は、単体テストで、メモリを消して接続と付箋だけを残す形で確かめた。Miniflare は休止しないため、実際の休止は DEV-17 で確かめる。
+
+2026-11-06 に、6章の全 ID のテストが通った（worker 53件、client 9件）。Miniflare では、書き込みの直後に作り直させると書き込みが残らなかった（BD05 2.5）。
 
 ## 7. E2E
 
@@ -820,3 +834,4 @@ Playwright で、手元で動かした Workers の実行環境（`wrangler dev`�
 | 2026-11-06 | TC-SYS-13（終局の公開から山の順番と生成の種を除く）と TC-SRV-06f（ゲームを終わらせた行の取り消しの拒否）を足した |
 | 2026-11-06 | ルールの空白3点を決めた。TC-ACT-21（餌は区画ごと）、TC-END-12（勝った人を1位に固定）、TC-ENG-12（ボーナス注文の英文を「A, B or C」に）を足した |
 | 2026-11-06 | 5.5 を、模擬の記録の再適用による照合に改めた。統計で比べる方式とボットの移植をやめた。TC-CMP-01 を足した |
+| 2026-11-06 | M3 のサーバーの結合テストを実装した。テストの道具を `@cloudflare/vitest-pool-workers` から `node:sqlite` と Miniflare に替え、ID とファイルの対応を6章に書いた |

@@ -301,7 +301,8 @@ type ClientMsg =
   | { t: "cmd"; id: string; cmd: Command; meta?: { sentenceShown?: boolean } }   // ゲームのコマンド。meta はエンジンに渡さず記録だけに残す（BD04 の「英文を見る」）
   | { t: "admin"; id: string; op: AdminOp }             // ホストの鍵を示した大画面からだけ
   | { t: "ping"; n: number }                            // 生存確認（3.7）と、画面の復帰時の確かめ（3.5）
-  | { t: "pointer"; vertex: VertexId | null };          // 確定前に選んでいる交点（下記）
+  | { t: "pointer"; vertex: VertexId | null }           // 確定前に選んでいる交点（下記）
+  | { t: "claimConfirm" };                              // 席の再発行の合言葉で入った端末が、その席に入ると確かめた（3.6 の手順3）
 
 type AdminOp =
   | { k: "reorder"; participantIds: string[] }          // 時計回りの並び
@@ -329,7 +330,7 @@ type AdminOp =
 
 ```ts
 type ServerMsg =
-  | { t: "welcome"; participantId: string; token: string; role: "player" | "board"; admin: boolean; serverNow: number }
+  | { t: "welcome"; participantId: string | null; token: string | null; role: "player" | "board"; admin: boolean; serverNow: number; seat: Seat | null }   // 大画面と、合言葉で入って承認を待つ端末は participantId と token が null。seat はゲーム中の席
   | { t: "lobby"; lobby: LobbyView }
   | { t: "view"; view: BoardView | PlayerView; events: GameEvent[]; recent: GameEvent[] }
   | { t: "ack"; id: string; rev: number }
@@ -337,12 +338,14 @@ type ServerMsg =
   | { t: "error"; code: ProtocolErrorCode; message: string }
   | { t: "pong"; n: number }                            // 端末からの ping への返事
   | { t: "claimPending"; seat: Seat; seatName: string } // 再発行の合言葉で入った端末に、どの席かを知らせる（3.6）
+  | { t: "claimRequest"; seat: Seat }                   // 管理を許された大画面へ：合言葉で入った端末が確かめた。承認の確認を出す（3.6）
+  | { t: "claimCode"; seat: Seat; code: string; expiresAt: number }   // reissueSeat を送った大画面へ：QRコードに入れる合言葉（BD05 4.6）
   | { t: "replaced" }                                   // 同じ席に新しい接続が来たので切る
   | { t: "pointer"; seat: Seat; vertex: VertexId | null };   // 大画面だけに送る。端末からの pointer の転送
 
 type ProtocolErrorCode =
   | "BAD_MESSAGE" | "TOO_LARGE" | "VERSION" | "ROOM" | "TOKEN"
-  | "NOT_ADMIN" | "LOBBY_FULL" | "NAME_TAKEN" | "GAME_STARTED" | "ENGINE_CHANGED";
+  | "NOT_ADMIN" | "LOBBY_FULL" | "NAME_TAKEN" | "GAME_STARTED" | "ENGINE_CHANGED" | "CLAIM";
 ```
 
 `ack` の `rev` は、そのコマンドを適用したあとの版である。端末は、`ack` の `rev` 以上の `view` を受け取るまで、押したボタンを「処理中」で止めておく。
@@ -365,6 +368,7 @@ type ProtocolErrorCode =
 ```ts
 interface LobbyView {
   roomId: string;
+  rev: number;                // 3.3 の rev。ロビーの変更でも上がる
   participants: {
     id: string;
     name: string;
@@ -407,11 +411,11 @@ interface LobbyView {
 
 スマホをなくした場合などに、ホストが `reissueSeat` で席を作り直す（方式設計7.4の手順4）。次の手順で行う。
 
-1. サーバーは使い捨ての合言葉を作り、合言葉入りのQRコードを大画面に出す。テレビに映ったQRコードをほかの参加者が先に読んでも、手順3のホストの承認がなければ席は移らない（BD05 4.6）。
+1. サーバーは使い捨ての合言葉を作り、`claimCode` で大画面に返す。大画面は合言葉入りのQRコードを出す。テレビに映ったQRコードをほかの参加者が先に読んでも、手順3のホストの承認がなければ席は移らない（BD05 4.6）。
 2. 端末は QRコードから開き、`hello` に `claim` を付けて送る。サーバーは `claimPending` で、どの席の再発行かを端末に知らせる。端末は「Aki の席に入りますか」と確かめさせる。
-3. 端末で確かめると、大画面に承認の確認が出る。ホストが `approveClaim` で承認したら、サーバーはその端末に新しいトークンを発行し、古いトークンを無効にする。
+3. 端末で確かめると（`claimConfirm`）、サーバーは管理を許された大画面に `claimRequest` を送り、大画面に承認の確認が出る。ホストが `approveClaim` で承認したら、サーバーはその端末に新しいトークンを発行し、古いトークンを無効にする。
 
-合言葉は1回使われるか5分たつと無効にする（BD05 4.6）。
+合言葉は1回使われるか5分たつと無効にする（BD05 4.6）。ホストが承認しなかった場合、サーバーはその端末に `error`（`CLAIM`）を返す。合言葉はサーバーのメモリにだけ持つため、承認の前に Durable Object が作り直されたら、ホストが再発行をもう一度押す。
 
 ### 3.7 生存確認
 
@@ -477,3 +481,4 @@ JSON として読めない、または zod の形に合わないメッセージ�
 | 2026-10-27 | 多角レビューを反映。取り消しを `undoLast` 1つにし（`undoPreview`、`undoCommit` を削除）、`lastCommand` を加えた。一時停止をエンジンのコマンドから外した。席の再発行の QR を大画面に出す形にそろえた。生存確認の休止についての説明と、参照の誤りを直した |
 | 2026-11-06 | M1 の実装に合わせ、出来事 `jointRevealed` と `TurnView.productBought` の意味を足した |
 | 2026-11-06 | `finalReveal` を id の順に並べ、`source` を除くことにした（1.2） |
+| 2026-11-06 | M3 の実装に合わせ、席の再発行のメッセージ（`claimConfirm`、`claimRequest`、`claimCode`）、`welcome` の `seat`、`CLAIM`、`LobbyView.rev` を足した |

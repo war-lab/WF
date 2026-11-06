@@ -1,4 +1,8 @@
 {
   "extends": "../../tsconfig.base.json",
-  "include": ["src"]
+  "compilerOptions": {
+    // エンジンが使う structuredClone の型のため（実行は Workers とブラウザ。どちらにもある）
+    "types": ["node"]
+  },
+  "include": ["src", "tools"]
 }
