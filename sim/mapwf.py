@@ -92,9 +92,9 @@ class MapGame(Game):
         s.harbor={}   # 交点→港の種類
         if HARBORS and FIXED:
             types=['any','any']+s.rng.sample(TILES,4); s.rng.shuffle(types)
-            # 汎用港（3:1）は位置を固定（交点37と3）。専門港の種類だけ毎回変わる。乱数の使い方は以前と同じ
+            # 汎用港（3:1）は位置を固定（fixed_layout.json の anyHarbors）。専門港の種類だけ毎回変わる。乱数の使い方は以前と同じ
             specs=[t for t in types if t!='any']
-            for v in FIXED['harbors']: s.harbor[v]='any' if v in (37,3) else specs.pop(0)
+            for v in FIXED['harbors']: s.harbor[v]='any' if v in FIXED['anyHarbors'] else specs.pop(0)
         elif HARBORS and HSINGLE:
             # 港は「タイル1枚だけに接する外側の角」1か所。その角のタイルは6・8にしない
             co=s.L['coords']; cx=sum(x for x,y in co.values())/len(co); cy=sum(y for x,y in co.values())/len(co)

@@ -45,6 +45,7 @@
 | `sim/` | 模擬エンジンとボット、注文の生成、紹介動画の台本 |
 | `sim/results/` | 模擬対局の結果（設計メモの付録の元データ） |
 | `sim/backup/` | 作業前のコードの控え |
+| `app/` | アプリ（npm workspaces。engine、protocol、worker、client）。構成はアプリ設計書の付録 A |
 | `video/` | 紹介動画（Remotion） |
 | `archive/` | 方針転換前の旧設計（v0.5、ブラウザ対戦と5文型の版） |
 
@@ -70,6 +71,19 @@ python probe_buy.py 300 4    # 交換、産物の購入、市場の回数と方�
 ```
 
 `cli.py` は旧6タイル版の対話式実行で、今の仕様には対応していない。
+
+## アプリの動かし方
+
+```text
+cd app
+npm install                 # 初回のみ
+npm test                    # エンジンの単体テスト
+npm run typecheck
+npm run dev                 # client をビルドし、wrangler dev で http://localhost:8787/board を開く
+npm run check:board         # board.json が sim の盤面と一致するか（python が要る）
+```
+
+盤面の数字や港を変えたら、`sim/fixed_layout.json` を直してから `python sim/export_board.py` で `app/packages/engine/src/data/board.json` を書き出し直す。`board.json` は手で直さない。大画面に `?sample=rulebook` を付けると、ルールブックの図と同じ種類で盤面を描き、`?ids` で交点の番号を出す。
 
 ## 紹介動画の作り方
 

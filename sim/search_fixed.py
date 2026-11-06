@@ -47,4 +47,10 @@ score,num,hv,mx,three=best
 feas=cat_feasible(num,2000)
 print('score',round(score,5),'最大の交点価値',round(mx,3),'内側交点の価値',[round(x,3) for x in three])
 print('数字',[num[i] for i in range(13)],'港の交点',hv,'種類の割り当てが条件を満たす割合',feas)
-json.dump({'num':[num[i] for i in range(13)],'harbors':hv},open('fixed_layout.json','w'))
+# 汎用港の交点（anyHarbors）は探索しない。今のファイルの値が新しい harbors に含まれていれば引き継ぐ
+out={'num':[num[i] for i in range(13)],'harbors':hv}
+try: prev=json.load(open('fixed_layout.json',encoding='utf-8')).get('anyHarbors')
+except FileNotFoundError: prev=None
+if prev and all(v in hv for v in prev): out['anyHarbors']=prev
+else: print('注意: anyHarbors を引き継げない。harbors の中から2つを選んで fixed_layout.json に足すこと（足すまで mapwf.py は KeyError で止まる）')
+json.dump(out,open('fixed_layout.json','w'))
