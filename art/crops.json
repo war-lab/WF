@@ -1,10 +1,38 @@
 {
-  "_note": "art/raw の生成した画像から art/final へ切り出した位置と大きさ（art/cut_tile.py の引数）。塗り足しのない grow と feed は全体を使う",
-  "tile-grow": { "size": 1.0, "dx": 0, "dy": 0 },
-  "tile-feed": { "size": 1.0, "dx": 0, "dy": 0 },
-  "tile-seed": { "size": 0.84, "dx": 0, "dy": 0 },
-  "tile-animal": { "size": 0.84, "dx": 0, "dy": 0 },
-  "tile-buy": { "size": 0.92, "dx": 0, "dy": -0.04 },
-  "tile-sell": { "size": 0.94, "dx": -0.02, "dy": -0.02 },
-  "tile-market": { "size": 1.0, "dx": 0, "dy": 0 }
+  "_note": "art/raw の生成した画像から art/final へ切り出した位置と大きさ（art/cut_tile.py の引数）。塗り足しのない grow は全体を使う",
+  "tile-grow": {
+    "size": 1.0,
+    "dx": 0,
+    "dy": 0
+  },
+  "tile-feed": {
+    "size": 0.84,
+    "dx": 0,
+    "dy": 0
+  },
+  "tile-seed": {
+    "size": 0.84,
+    "dx": 0,
+    "dy": 0
+  },
+  "tile-animal": {
+    "size": 0.84,
+    "dx": 0,
+    "dy": 0
+  },
+  "tile-buy": {
+    "size": 0.92,
+    "dx": 0,
+    "dy": -0.04
+  },
+  "tile-sell": {
+    "size": 0.94,
+    "dx": -0.02,
+    "dy": -0.02
+  },
+  "tile-market": {
+    "size": 1.0,
+    "dx": 0,
+    "dy": 0
+  }
 }
