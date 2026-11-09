@@ -115,6 +115,11 @@ export class Room extends DurableObject<Env> {
         return Response.json({ ok: true });
       }
       if (path === "/test/restart") this.ctx.abort("test: restart");
+      if (path === "/test/give" && request.method === "POST") {
+        const b = (await request.json()) as { seat: number; cards?: Record<string, number>; products?: Record<string, number>; coins?: number };
+        const err = this.core.debugGive(b.seat, b);
+        return err ? Response.json({ error: err }, { status: 409 }) : Response.json({ ok: true });
+      }
       if (path === "/test/tables") return Response.json(this.ctx.storage.sql.exec("SELECT name FROM sqlite_master").toArray());
     }
     return Response.json({ error: "NOT_FOUND" }, { status: 404 });

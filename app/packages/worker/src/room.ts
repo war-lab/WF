@@ -312,9 +312,16 @@ export class RoomCore {
     if (close) c.close(1008, code);
   }
 
+  /** 閉じた接続。Durable Object では、閉じた知らせを処理している間は、まだ getWebSockets() に残るため、明示的に除く */
+  private closed = new WeakSet<Conn>();
+
+  private live(): Conn[] {
+    return this.d.conns().filter((c) => !this.closed.has(c));
+  }
+
   private connectedPids(): Set<string> {
     const out = new Set<string>();
-    for (const c of this.d.conns()) {
+    for (const c of this.live()) {
       const a = c.getAttachment();
       if (a?.role === "player" && a.pid && !a.pendingTokenHash) out.add(a.pid);
     }
@@ -384,7 +391,7 @@ export class RoomCore {
   /** 状態か参加者が変わったあと、全端末に今の表示を送る（BD03 3.3） */
   private broadcast(events: GameEvent[]): void {
     const now = this.d.now();
-    for (const c of this.d.conns()) {
+    for (const c of this.live()) {
       const a = c.getAttachment();
       if (!a) continue;
       this.sendCurrent(c, a, now, events);
@@ -453,6 +460,7 @@ export class RoomCore {
   }
 
   onClose(c: Conn): void {
+    this.closed.add(c);
     this.lastSeen.delete(c);
     this.bad.delete(c);
     if (!this.initialized || this.stopped) return;
@@ -462,7 +470,7 @@ export class RoomCore {
 
   private broadcastExcept(gone: Conn): void {
     const now = this.d.now();
-    for (const c of this.d.conns()) {
+    for (const c of this.live()) {
       if (c === gone) continue;
       const a = c.getAttachment();
       if (a) this.sendCurrent(c, a, now, []);
@@ -965,6 +973,34 @@ export class RoomCore {
       return row;
     });
     return { ok: true, body: { meta: this.meta, participants, commands } };
+  }
+
+  /**
+   * 試験用：席にカード、産物、コインを渡す（E2E で注文を届ける状態を作るため。本番では呼ばない。BD06 TC-SRV-17）。
+   * カードは山から渡し、総数を保つ。最後の行の写しも書き換えるため、記録の検証では食い違いになる
+   */
+  debugGive(seat: number, g: { cards?: Partial<Record<WordCard, number>>; products?: Record<string, number>; coins?: number }): string | null {
+    const s = this.state;
+    if (!s || !s.players[seat]) return "NO_GAME";
+    const p = s.players[seat]!;
+    for (const [k, n] of Object.entries(g.cards ?? {})) {
+      const kind = k as WordCard;
+      if ((s.piles[kind] ?? 0) < (n ?? 0)) return "PILE_EMPTY";
+      s.piles[kind] -= n ?? 0;
+      p.hand[kind] = (p.hand[kind] ?? 0) + (n ?? 0);
+    }
+    for (const [k, n] of Object.entries(g.products ?? {})) {
+      const prod = k as keyof typeof p.products;
+      p.products[prod] = (p.products[prod] ?? 0) + n;
+    }
+    p.coins += g.coins ?? 0;
+    this.rev();
+    this.d.sql.transaction(() => {
+      this.d.sql.exec("UPDATE commands SET state = ? WHERE seq = (SELECT MAX(seq) FROM commands)", JSON.stringify(s));
+      this.saveRoom();
+    });
+    this.broadcast([]);
+    return null;
   }
 
   /** 試験用：今の状態とメモリ上の値（本番では呼ばない。BD06 TC-SRV-17） */

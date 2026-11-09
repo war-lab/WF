@@ -63,8 +63,9 @@ export function BoardGame({ net, view }: { net: Net; view: BoardView }) {
       // 宣言の結果は、英文を出してから約3秒おいて出す（BD04 6章）
       const result = m.events.find((e) => e.k === "orderSucceeded" || e.k === "orderFailed");
       if (result) {
-        setDelayed(result);
-        window.setTimeout(() => setDelayed((d) => (d === result ? null : d)), 3000);
+        // 聞き手が本人の声と英文を照らし合わせる間を作るため、結果は約3秒おいてから出し、しばらく出しておく
+        window.setTimeout(() => setDelayed(result), 3000);
+        window.setTimeout(() => setDelayed((d) => (d === result ? null : d)), 3000 + 5000);
       }
       if (m.events.some((e) => e.k === "housePlaced" || e.k === "turnStarted")) setPointer(null);
     }
@@ -91,7 +92,21 @@ export function BoardGame({ net, view }: { net: Net; view: BoardView }) {
   const elapsed = view.clock.startedAt === null ? 0 : view.clock.elapsedMs + (view.paused ? 0 : now - receivedAt);
   const placing = setupSeat(view);
   const recent = net.state.recent;
-  const lastText = [...recent].reverse().map((e) => ({ e, t: eventText(e, name) })).find((x) => x.t !== null);
+  // 成立と不成立は、約3秒おいてから別に出す（delayed）。それまでは宣言の英文を出し続ける。
+  // 同じ処理で出た出来事（同じ rev）に宣言があれば、その英文を優先する。成立と同時に出る補充の文で、英文が消えないため
+  const lastRev = recent.at(-1)?.rev;
+  const decl = [...recent].reverse().find((e) => e.rev === lastRev && DECL.has(e.k));
+  // 同じ処理で起きた完成、時間切れ、最終ラウンドの知らせは、英文の下に別の行で出す（BD04 6章）
+  const notes = decl
+    ? recent.filter((e) => e.rev === lastRev && ["jointCompleted", "jointExpired", "orderExpired", "endFlagged"].includes(e.k)).map((e) => eventText(e, name))
+    : [];
+  const lastText = decl
+    ? { e: decl, t: eventText(decl, name) }
+    : [...recent]
+        .reverse()
+        .filter((e) => e.k !== "orderSucceeded" && e.k !== "orderFailed")
+        .map((e) => ({ e, t: eventText(e, name) }))
+        .find((x) => x.t !== null);
   // 読み上げの促し（BD04 2.4）：表にした注文があり、そのあとに宣言も手番の交代もない間
   const revealIdx = recent.findLastIndex((e) => e.k === "ordersRevealed" || e.k === "jointRevealed");
   const readAloud =
@@ -191,6 +206,11 @@ export function BoardGame({ net, view }: { net: Net; view: BoardView }) {
         ) : (
           lastText && <p className="sentence">{lastText.t}</p>
         )}
+        {notes.map((n, i) => (
+          <p key={i} className="note-line">
+            {n}
+          </p>
+        ))}
         {readAloud && <p className="read">{readAloud} さん、新しい注文を読み上げてください（Read the new orders aloud）</p>}
         {view.trades.map((t) => (
           <p key={t.id} className="trade">

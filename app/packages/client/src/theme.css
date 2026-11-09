@@ -296,6 +296,12 @@ button.on {
 .h-game .band .result.ng {
   color: var(--warn);
 }
+.h-game .band .note-line {
+  font-size: 32px;
+  margin: 0;
+  color: var(--leaf);
+  font-weight: 700;
+}
 .h-game .band .read,
 .h-game .band .trade {
   font-size: 28px;

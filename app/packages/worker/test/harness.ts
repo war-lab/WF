@@ -133,6 +133,16 @@ export class Server {
     return c;
   }
 
+  /**
+   * 端末の側から接続が切れたときの Durable Object の振る舞いを再現する。
+   * 閉じた知らせ（webSocketClose）を処理している間は、閉じた接続がまだ getWebSockets() に残っている
+   */
+  drop(c: FakeConn): void {
+    c.closed = true;
+    this.core.onClose(c);
+    this.open.delete(c);
+  }
+
   async send(c: FakeConn, m: unknown): Promise<void> {
     try {
       await this.core.onMessage(c, typeof m === "string" ? m : JSON.stringify(m));

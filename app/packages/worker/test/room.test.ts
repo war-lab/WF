@@ -238,8 +238,7 @@ describe("取り消し（TC-SRV-05〜07c）", () => {
     await t.srv.cmd(turnConn(t), { t: "inputDice", a: 2, b: 2 });
     const r0 = rev(t);
     const seq = (t.board.last("view").view as BoardView).lastCommand!.seq;
-    t.seats[1]!.close();
-    t.srv.core.onClose(t.seats[1]!);
+    t.srv.drop(t.seats[1]!);
     const c = t.srv.connect();
     await t.srv.hello(c, { token: t.tokens[1] });
     expect(rev(t)).toBe(r0);
@@ -506,6 +505,16 @@ describe("接続と席（TC-SRV-11〜13、18、22）", () => {
     expect(v.players.find((p) => p.seat === 1)!.connected).toBe(true);
   });
 
+  it("端末が接続を閉じると、閉じた知らせの処理の中で、ほかの端末に connected: false を送る", async () => {
+    const t = await startTable();
+    await finishSetup(t);
+    t.board.clear();
+    t.srv.drop(t.seats[2]!);
+    const v = t.board.last("view").view as BoardView;
+    expect(v.players.find((p) => p.seat === 2)!.connected).toBe(false);
+    expect(v.players.find((p) => p.seat === 1)!.connected).toBe(true);
+  });
+
   it("TC-SRV-18 休止から戻った直後は、どの接続も切られない", async () => {
     const t = await startTable();
     t.srv.time += 10 * 60_000;
@@ -644,8 +653,7 @@ describe("ロビー（BD03 3.4）", () => {
     const colors = Object.fromEntries(b.last("lobby").lobby.participants.map((p) => [p.name, p.color]));
     expect(colors).toEqual({ A: "green", B: "blue", C: "red" });
     expect(b.last("lobby").lobby.canStart).toBe(true);
-    cs[1]!.close();
-    srv.core.onClose(cs[1]!);
+    srv.drop(cs[1]!);
     expect(b.last("lobby").lobby.canStart).toBe(false);
     const id = await srv.admin(b, { k: "startGame", options: { orderDeck: "fixed", dice: "manual", animalInclude: false } });
     expect(b.last("reject")).toMatchObject({ id, code: "WRONG_PHASE" });
@@ -696,6 +704,22 @@ describe("代わりに答える（BD04 2.5）", () => {
     s.prompts = [{ id: "p", k: "discard", seat: 0, count: 4 }];
     expect(defaultAnswer(s, "p")).toEqual({ k: "discard", cards: { grow: 2, sell: 1, feed: 1 } });
     expect(defaultAnswer(s, "none")).toBeNull();
+  });
+});
+
+describe("試験用の口（E2E のため）", () => {
+  it("debugGive はカードを山から渡し、不変条件を保ったまま全端末に表示を送る", async () => {
+    const { checkInvariants } = await import("@word-farm/engine");
+    const t = await startTable();
+    await finishSetup(t);
+    const r0 = rev(t);
+    expect(t.srv.core.debugGive(1, { cards: { sell: 2 }, products: { carrot: 3 }, coins: 5 })).toBeNull();
+    const s = state(t);
+    expect(s.players[1]!.products.carrot).toBe(3);
+    expect(checkInvariants(s)).toEqual([]);
+    expect(rev(t)).toBe(r0 + 1);
+    expect((t.seats[1]!.last("view").view as PlayerView).me.hand.sell).toBeGreaterThanOrEqual(2);
+    expect(t.srv.core.debugGive(1, { cards: { cow: 99 } })).toBe("PILE_EMPTY");
   });
 });
 
