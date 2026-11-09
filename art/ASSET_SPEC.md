@@ -1,6 +1,6 @@
 # WORD FARM 素材仕様書 v0.1
 
-更新日：2026-10-19
+更新日：2026-11-09
 
 位置づけ：アプリ版で使う絵と音の素材を、Codexの画像生成とフリー素材で用意するための仕様。
 
@@ -29,17 +29,19 @@
 
 タイルの絵は正方形で生成し、ゲーム側で六角形の型で切り抜く。
 
+タイルの中の配置は次のとおりとする。種類を示す絵（grow ならじょうろ）は上部（上から16〜38%、横幅の中央66%）に置き、中央は数字のトークン、下部は種類の単語に空ける。トークンと単語はプログラムで描く。中央に絵を置くと、盤面に並べたときにトークンで隠れるためである（2026-11-09 の見本で確かめた）。
+
 型は先端が上を向く正六角形とし、幅と高さの比は √3 : 2 とする。
 
 ## 2. 絵柄の指定
 
-見本1枚を作って確定するまでは、次を暫定の指定とする。
+2026-11-09 に grow のタイル（`art/final/tile-grow@2x.png`）を見本として確定し、次の指定にした。以後の素材は、この見本を参照の画像として Codex に渡して作る（6.1）。
 
 | 項目 | 指定 |
 |---|---|
 | 視点 | 真上からやや斜めに見下ろす。タイルは真上から見た地面として描く |
-| 塗り | 絵本風の厚塗り。やわらかい陰影と、細かい質感（土の粒、麦の穂）を描き込む |
-| 輪郭線 | 濃い茶色の細い線。黒は使わない |
+| 塗り | 絵本風の厚塗り。やわらかい陰影で、形は単純にし、細部は少なくする。盤面の大きさ（タイルの幅180ピクセル）で読めることを優先し、小石や細かい粒のような模様は描かない |
+| 輪郭線 | 濃い茶色の線。黒は使わない |
 | 光源 | 左上から。影は右下に落とす |
 | 色 | 彩度は高め。緑、麦色、土色を基調とし、アクセントに赤と空色を使う |
 | 避けるもの | 写真風、3DCG風、アニメ塗り、文字、透かし、枠線、画面の端で切れた被写体 |
@@ -107,16 +109,26 @@
 
 ```text
 [共通部分]
-Style: storybook illustration with soft painterly shading and rich fine detail,
-thin dark-brown outlines (no black), light from the upper left with soft shadows to the lower right,
+Style: storybook illustration with soft painterly shading, simple bold shapes and LOW detail,
+readable at a small size (about 180 pixels wide), dark-brown outlines (no black),
+light from the upper left with soft shadows to the lower right,
 saturated warm palette based on leaf green, wheat yellow and soil brown, accents of red and sky blue.
 Do not include any text, letters, numbers, watermark, border or frame.
 Do not crop the subject at the image edge.
 
 [素材ごとの部分：タイルの例]
-Subject: a farm field seen from directly above, filling the entire square canvas edge to edge,
-rows of young green sprouts on rich brown soil with a small watering can.
-Canvas: 1024x1024 PNG, opaque, no transparency.
+Subject: a farm field seen from directly above (top-down view), filling the entire square canvas edge to edge
+with neat horizontal rows of young green sprouts growing in rich brown tilled soil.
+Composition (important): a red watering can is the key object. Place it in the UPPER part of the image,
+horizontally centered, inside the central 66% of the width and the band between 16% and 38% of the height from the top
+(the top of a pointy-top hexagon is narrow, so objects placed higher get cut).
+The center and the whole lower half must contain only the plain rows of sprouts and soil, with no objects,
+because a round number token and a word label will be drawn there later.
+Paint the illustration over the ENTIRE square canvas, all four corners included. Do NOT draw any hexagon,
+tile shape, outline, border, frame or white background; the hexagon will be cut out later by software.
+The soil rows must continue seamlessly from top to bottom with no visible seam or change of pattern.
+Not a photograph, not 3D render, not anime. No sky, no horizon, no mountains, no landscape scenery.
+Square image, opaque background.
 
 [素材ごとの部分：透過素材の例]
 Subject: a single ripe carrot with green leaves, centered, 3/4 top-down view.
@@ -140,6 +152,20 @@ frame 1 is the smallest spark and frame 8 fades out. Fully transparent backgroun
 | animal | 柵に囲まれた牧草地 |
 | market | 小さな広場と、色とりどりの日よけ |
 
+### 6.1 Codex の呼び出し方
+
+2026-11-09 に、Codex CLI（0.164.0、ChatGPT のアカウントでログイン）の画像生成で、次の手順が動いた。
+
+1. 指示文をファイルに書き、`codex exec -s read-only --skip-git-repo-check --json - < 指示文.txt` で渡す。指示文を引数で渡すと、標準入力の追加の入力を待って止まった。引数で渡した別の回では、指示と無関係な画像（写真風の山と湖）が返った。
+2. 指示文の頭で、BEGIN PROMPT と END PROMPT の間の文を、変えずに画像生成に渡すよう求め、渡した文と、保存先のパスを返させる。渡した文を返させるのは、指示どおりに渡ったかを確かめるためである。
+3. Codex にはファイルを保存させない。Windows では、書き込みを許す設定（`-s workspace-write`）でも、Codex がコマンドを実行できなかった。生成された画像は `~/.codex/generated_images/` の下に置かれるので、こちらで `art/raw/` にコピーする。
+4. 返る大きさは指定どおりにならない（正方形を求めて 1254×1254 が返った）。検収の前に、指定の大きさへ縮める。
+5. 見本の一部だけを直すときは、`-i <画像>` で元の画像を渡し、変える点だけを書いて直させる。作り直すより見た目が保たれる。位置と大きさの指示は割合で書くが、指示どおりにはならないことがある（「2割小さく」で4割小さくなった）。検収で確かめ、ずれたら直させる。
+
+画像生成には、ChatGPT のプランの使用量の上限がある。2026-11-06 に上限に達し、約3時間使えなかった。
+
+タイルの検収では、`python art/mock_tile.py <画像> <単語>` で、六角に切り抜き、盤面の大きさで数字のトークンと単語を重ねた見え方を作って確かめる。
+
 ## 7. 検収の項目
 
 生成した画像は、`art/final/` に移す前に次を確認する。
@@ -148,7 +174,7 @@ frame 1 is the smallest spark and frame 8 fades out. Fully transparent backgroun
 2. 指定したサイズと余白を守っているか。
 3. 文字、数字、透かし、枠線が描かれていないか。
 4. 見本の絵柄（線、塗り、光の向き、色）と揃っているか。並べて比べる。
-5. タイルを六角に切り抜いたとき、題材の主要部分が欠けないか。
+5. タイルを六角に切り抜いたとき、題材の主要部分が欠けないか。盤面の大きさで、数字のトークンと単語に隠れないか。
 6. スプライトシートのコマ数、コマの大きさ、隙間が指定どおりか。
 
 ## 8. 生成の順番
@@ -162,3 +188,10 @@ frame 1 is the smallest spark and frame 8 fades out. Fully transparent backgroun
 手順2までは第1回試遊の前に行ってよい。
 
 手順3以降は、試遊でタイルや産物の種類が変わる可能性があるため、試遊の後に行う。
+
+## 経緯
+
+| 日付 | 出来事 |
+|---|---|
+| 2026-10-19 | 初版を作成 |
+| 2026-11-09 | grow の見本を確定した。絵柄の指定を「細部は少なく」に改め、タイルの中の配置、Codex の呼び出し方、検収の見え方の作り方を足した |
