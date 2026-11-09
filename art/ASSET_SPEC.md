@@ -27,7 +27,9 @@
 | 効果音、BGM | フリー素材 | ライセンス台帳で管理する（5章） |
 | スプライトシートのアトラス（コマ位置のJSON） | ツールで生成 | 生成画像からコマ位置を手で書くと誤りが出る |
 
-タイルの絵は正方形で生成し、ゲーム側で六角形の型で切り抜く。
+タイルの絵は、塗り足しを付けた正方形で生成する。画像の中央84%をタイルの範囲とし、その外側にも同じ地面を描き足させる。検収のときに、塗り足しの中から切り出す正方形の位置と大きさを選び（`art/cut_tile.py`）、1024×1024 にしてから、ゲーム側で六角形の型で切り抜く。
+
+塗り足しを付けるのは、題材が六角形の縁で欠けたときに、描き直さずに切り出す位置をずらして直すためである。塗り足しのない正方形では、六角形の高さが正方形の高さと同じで、縦にずらす余地がない（2026-11-09 の grow の見本で、上の先端で欠けたじょうろを描き直した）。
 
 タイルの中の配置は次のとおりとする。種類を示す絵（grow ならじょうろ）は上部（上から16〜38%、横幅の中央66%）に置き、中央は数字のトークン、下部は種類の単語に空ける。トークンと単語はプログラムで描く。中央に絵を置くと、盤面に並べたときにトークンで隠れるためである（2026-11-09 の見本で確かめた）。
 
@@ -119,10 +121,12 @@ Do not crop the subject at the image edge.
 [素材ごとの部分：タイルの例]
 Subject: a farm field seen from directly above (top-down view), filling the entire square canvas edge to edge
 with neat horizontal rows of young green sprouts growing in rich brown tilled soil.
-Composition (important): a red watering can is the key object. Place it in the UPPER part of the image,
-horizontally centered, inside the central 66% of the width and the band between 16% and 38% of the height from the top
-(the top of a pointy-top hexagon is narrow, so objects placed higher get cut).
-The center and the whole lower half must contain only the plain rows of sprouts and soil, with no objects,
+Bleed (important): the tile area is only the central 84% of the canvas. Continue the same ground pattern
+into the outer 8% margin on every side as bleed, with nothing important there; the tile is cropped out later.
+Composition (important): a red watering can is the key object. Place it horizontally centered,
+entirely inside the central 55% of the canvas width and inside the band between 21% and 40% of the canvas height
+from the top (the top of a pointy-top hexagon is narrow, so objects placed higher get cut).
+Below 45% of the canvas height there must be only the plain rows of sprouts and soil, with no objects,
 because a round number token and a word label will be drawn there later.
 Paint the illustration over the ENTIRE square canvas, all four corners included. Do NOT draw any hexagon,
 tile shape, outline, border, frame or white background; the hexagon will be cut out later by software.
@@ -164,7 +168,7 @@ frame 1 is the smallest spark and frame 8 fades out. Fully transparent backgroun
 
 画像生成には、ChatGPT のプランの使用量の上限がある。2026-11-06 に上限に達し、約3時間使えなかった。
 
-タイルの検収では、`python art/mock_tile.py <画像> <単語>` で、六角に切り抜き、盤面の大きさで数字のトークンと単語を重ねた見え方を作って確かめる。
+タイルの検収では、`python art/cut_tile.py <生成した画像> <切り出した画像>` で塗り足しの中から正方形を切り出し（既定は中央84%。欠けるときは `--dx`、`--dy`、`--size` で調整する）、`python art/mock_tile.py <切り出した画像> <単語>` で、六角に切り抜き、盤面の大きさで数字のトークンと単語を重ねた見え方を作って確かめる。
 
 ## 7. 検収の項目
 
@@ -195,3 +199,4 @@ frame 1 is the smallest spark and frame 8 fades out. Fully transparent backgroun
 |---|---|
 | 2026-10-19 | 初版を作成 |
 | 2026-11-09 | grow の見本を確定した。絵柄の指定を「細部は少なく」に改め、タイルの中の配置、Codex の呼び出し方、検収の見え方の作り方を足した |
+| 2026-11-09 | タイルを塗り足し付きで生成し、切り出す位置を検収で選ぶ形にした（1章、`art/cut_tile.py`） |
