@@ -206,6 +206,7 @@ button.on {
   overflow: hidden;
 }
 .pp {
+  overflow: hidden;
   height: 212px;
   box-sizing: border-box;
   padding: 8px 12px;
@@ -229,6 +230,9 @@ button.on {
   font-size: 44px;
   font-weight: 700;
   margin-left: auto;
+}
+.pp .prod {
+  font-size: 20px;
 }
 .pp .plots {
   display: flex;

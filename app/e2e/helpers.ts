@@ -53,3 +53,96 @@ export async function setupTable(browser: Browser, n = 4, opts: { dice?: "server
 export async function closeTable(t: Table): Promise<void> {
   for (const c of [t.boardCtx, ...t.phoneCtx]) await c.close();
 }
+
+/** 準備を最後まで進める。拠点を置く番のスマホで最初の候補を選んで置き、問いには最初の選択肢で答える */
+export async function completeSetup(t: Table): Promise<void> {
+  for (let guard = 0; guard < 80; guard++) {
+    if (await t.board.locator(".h-game .top .who").filter({ hasText: "の手番" }).count()) return;
+    let acted = false;
+    for (const p of t.phones) {
+      if (await p.getByText("拠点を置く交点を選んでください").isVisible()) {
+        await p.locator("circle[data-candidate]").first().click({ force: true });
+        await p.getByRole("button", { name: "ここに置く" }).click();
+        await p.getByRole("button", { name: "置く", exact: true }).click();
+        acted = true;
+        break;
+      }
+      const choice = p.locator(".choices button[data-kind]:not([disabled])");
+      if (await choice.count()) {
+        const need = await p.getByText(/あと\d+枚選んでください/).count();
+        await choice.first().click();
+        if (need) while (await p.getByRole("button", { name: "決める" }).isDisabled()) await choice.first().click();
+        await p.getByRole("button", { name: "決める" }).click();
+        acted = true;
+        break;
+      }
+    }
+    if (!acted) await t.board.waitForTimeout(150);
+  }
+  for (const [i, p] of t.phones.entries()) await p.screenshot({ path: `e2e/.out/stuck-phone${i}.png` });
+  throw new Error("準備が終わらない");
+}
+
+/** 開いている問いに、どのスマホでも最初の選択肢で答える。答えたら true */
+export async function answerAnyPrompt(t: Table): Promise<boolean> {
+  for (const p of t.phones) {
+    const choice = p.locator(".choices button[data-kind]:not([disabled])");
+    const decide = p.getByRole("button", { name: "決める" });
+    if (await decide.count()) {
+      // 収入の問いは、前回の種類を選んだ状態で出る（BD04 3.6.1）。そのときはすぐに決められる
+      for (let k = 0; k < 6 && (await decide.isDisabled({ timeout: 500 }).catch(() => false)); k++) {
+        if (await choice.count()) await choice.first().click();
+        else break;
+      }
+      if (await decide.isDisabled({ timeout: 500 }).catch(() => false)) {
+        await p.screenshot({ path: "e2e/.out/prompt-stuck.png" });
+        throw new Error("問いに答えられない");
+      }
+      // 押す直前に問いが閉じることがある（ほかの人の答えで処理が進んだとき）
+      await decide.click({ timeout: 2000 }).catch(() => undefined);
+      return true;
+    }
+    const plus = p.locator(".discard button", { hasText: "＋" });
+    if (await plus.count()) {
+      while (await p.getByRole("button", { name: "捨てる" }).isDisabled()) {
+        const btn = p.locator(".discard button:not([disabled])", { hasText: "＋" }).first();
+        await btn.click();
+      }
+      await p.getByRole("button", { name: "捨てる" }).click();
+      await p.getByRole("button", { name: "捨てる" }).click();
+      return true;
+    }
+  }
+  return false;
+}
+
+/** 手番の人のスマホ */
+export async function turnPhone(t: Table): Promise<import("@playwright/test").Page> {
+  for (let g = 0; g < 50; g++) {
+    for (const p of t.phones) if (await p.getByText("あなたの番です").isVisible()) return p;
+    await t.board.waitForTimeout(100);
+  }
+  throw new Error("手番の人のスマホが見つからない");
+}
+
+/** 1手番を、出目を入れて問いに答え、何もせずに終える */
+export async function playEmptyTurn(t: Table, dice: [number, number]): Promise<void> {
+  const p = await turnPhone(t);
+  const sel = p.locator(".dice-input select");
+  await sel.nth(0).selectOption(String(dice[0]));
+  await sel.nth(1).selectOption(String(dice[1]));
+  await p.getByRole("button", { name: "入れる" }).click();
+  let ready = false;
+  for (let g = 0; g < 60 && !ready; g++) {
+    if (await answerAnyPrompt(t)) continue;
+    ready = await p.getByRole("button", { name: "手番終了" }).isEnabled({ timeout: 200 }).catch(() => false);
+    if (!ready) await t.board.waitForTimeout(100);
+  }
+  if (!ready) {
+    for (const [i, ph] of t.phones.entries()) await ph.screenshot({ path: `e2e/.out/turn-stuck-${i}.png` });
+    throw new Error("手番終了を押せる状態にならない");
+  }
+  await p.getByRole("button", { name: "手番終了" }).click();
+  await p.getByRole("button", { name: "終える" }).click();
+  await expect(p.getByText("あなたの番です")).toHaveCount(0);
+}

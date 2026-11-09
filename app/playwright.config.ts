@@ -7,6 +7,7 @@ export default defineConfig({
   timeout: 180_000,
   workers: 1,
   reporter: [["list"]],
-  use: { baseURL: process.env.E2E_BASE ?? "http://127.0.0.1:8787", trace: "retain-on-failure" },
+  // 操作ごとの待ちに上限を置く。画面が切り替わって要素が消えたときに、テストの時間切れまで待ち続けないため
+  use: { baseURL: process.env.E2E_BASE ?? "http://127.0.0.1:8787", trace: "retain-on-failure", actionTimeout: 5000 },
   outputDir: "e2e/.out",
 });

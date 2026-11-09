@@ -54,8 +54,9 @@ function Screen({ net }: { net: Net }) {
   if (v.phase.k === "over") return <Result view={v} />;
   const myPrompt = v.me.prompts.find((p) => !v.me.answers[p.id]);
   const answered = v.me.prompts.find((p) => v.me.answers[p.id]);
-  if (myPrompt) return <Ask net={net} view={v} prompt={myPrompt} />;
-  if (answered && v.promptStatus.some((p) => !p.answered)) return <Waiting net={net} view={v} prompt={answered} />;
+  // 問いごとに作り直す。前の問いで選んだ状態を次の問いに持ち越さないため
+  if (myPrompt) return <Ask key={myPrompt.id} net={net} view={v} prompt={myPrompt} />;
+  if (answered && v.promptStatus.some((p) => !p.answered)) return <Waiting key={answered.id} net={net} view={v} prompt={answered} />;
   if (v.phase.k === "setupPlace" || v.phase.k === "setupPrompt") return <Setup net={net} view={v} />;
   return <Play net={net} view={v} />;
 }
