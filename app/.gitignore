@@ -4,3 +4,5 @@ dist/
 coverage/
 packages/worker/src/engine-version.ts
 packages/worker/.mf-test-*/
+e2e/.out/
+test-results/

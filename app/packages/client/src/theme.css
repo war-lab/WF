@@ -21,3 +21,427 @@ body {
 .board-map text {
   fill: var(--ink);
 }
+
+button {
+  font: inherit;
+  touch-action: manipulation;
+}
+button:disabled {
+  opacity: 0.45;
+}
+.cover {
+  position: fixed;
+  inset: 0;
+  background: rgba(40, 32, 20, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+.cover-box {
+  background: var(--paper);
+  border-radius: 12px;
+  padding: 24px 28px;
+  max-width: 80%;
+  text-align: center;
+  font-size: 1.2em;
+}
+
+/* ---------- 共通 ---------- */
+.primary {
+  background: var(--leaf);
+  color: #fff;
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 18px;
+  font-weight: 700;
+}
+button {
+  min-height: 44px;
+  border-radius: 10px;
+  border: 1px solid #b9ab8e;
+  background: var(--paper);
+  padding: 6px 12px;
+  margin: 3px;
+}
+button.on {
+  outline: 3px solid var(--leaf);
+}
+.err {
+  color: var(--warn);
+  font-weight: 700;
+}
+.why {
+  color: var(--muted);
+  display: block;
+  font-size: 0.85em;
+}
+.tag {
+  margin-left: 8px;
+  padding: 0 6px;
+  border-radius: 6px;
+  background: #eee2c4;
+  font-size: 0.8em;
+}
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+.row.split {
+  justify-content: space-between;
+}
+.big {
+  font-size: 1.3em;
+  font-weight: 700;
+}
+.blink {
+  animation: blink 0.8s steps(2, start) infinite;
+}
+@keyframes blink {
+  to {
+    visibility: hidden;
+  }
+}
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 140px;
+  transform: translateX(-50%);
+  background: var(--paper);
+  border: 2px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 16px;
+  z-index: 120;
+}
+.paused-badge {
+  position: fixed;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--warn);
+  color: #fff;
+  padding: 6px 18px;
+  border-radius: 10px;
+  z-index: 90;
+  font-weight: 700;
+}
+.credit {
+  margin-top: 24px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+/* ---------- 大画面（BD04 5章。1920×1080 を基準） ---------- */
+.h-start,
+.h-lobby,
+.h-result {
+  font-size: 32px;
+  padding: 32px;
+}
+.h-start label,
+.h-start fieldset {
+  display: block;
+  margin: 12px 0;
+}
+.h-start input,
+.h-start select {
+  font-size: 28px;
+  margin-left: 12px;
+}
+.h-lobby {
+  display: grid;
+  grid-template-columns: 520px 1fr;
+  gap: 32px;
+}
+.h-lobby .people li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 8px 0;
+}
+.h-lobby .people li.off {
+  opacity: 0.5;
+}
+.h-lobby .ctl select,
+.h-lobby .ctl button {
+  font-size: 22px;
+}
+.h-lobby .url {
+  grid-column: 1 / -1;
+  font-size: 20px;
+  color: var(--muted);
+}
+.h-game {
+  display: grid;
+  grid-template-columns: 440px 960px 520px;
+  grid-template-rows: 80px 880px 120px;
+  width: 1920px;
+  height: 1080px;
+  font-size: 28px;
+}
+.h-game .top {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  padding: 0 24px;
+  font-size: 32px;
+  background: #efe3c4;
+}
+.h-game .top .dice,
+.h-game .top .clock {
+  font-size: 48px;
+  font-weight: 700;
+}
+.h-game .top .warn {
+  color: var(--warn);
+  font-weight: 700;
+}
+.h-game .admin-open {
+  margin-left: auto;
+}
+.h-game .players {
+  overflow: hidden;
+}
+.pp {
+  height: 212px;
+  box-sizing: border-box;
+  padding: 8px 12px;
+  border-bottom: 1px solid #d8cbb0;
+  font-size: 24px;
+}
+.pp.turn {
+  border: 6px solid var(--leaf);
+  background: #fffbe9;
+}
+.pp.off {
+  opacity: 0.5;
+}
+.pp .head {
+  font-size: 32px;
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+}
+.pp .pts {
+  font-size: 44px;
+  font-weight: 700;
+  margin-left: auto;
+}
+.pp .plots {
+  display: flex;
+  gap: 6px;
+}
+.pp .plot {
+  border: 1px solid #c9b994;
+  border-radius: 6px;
+  padding: 0 6px;
+}
+.h-game .map svg {
+  width: 960px;
+  height: 880px;
+}
+.h-game .orders {
+  overflow: hidden;
+  padding: 8px;
+}
+.order {
+  background: var(--paper);
+  border: 2px solid #c9b994;
+  border-radius: 10px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+}
+.order.bonus {
+  background: #e6f2ff;
+}
+.order.joint {
+  background: #fff1dd;
+}
+.order .text {
+  margin: 0 0 4px;
+}
+.h-game .order .text {
+  font-size: 28px;
+}
+.order .rows {
+  margin: 0;
+  padding-left: 1.2em;
+  font-size: 24px;
+}
+.h-game .piles {
+  font-size: 20px;
+  color: var(--muted);
+}
+.h-game .band {
+  grid-column: 1 / -1;
+  padding: 8px 24px;
+  background: #efe3c4;
+  overflow: hidden;
+}
+.h-game .band .sentence,
+.h-game .band .result {
+  font-size: 48px;
+  margin: 0;
+}
+.h-game .band .result.ok {
+  color: var(--leaf);
+}
+.h-game .band .result.ng {
+  color: var(--warn);
+}
+.h-game .band .read,
+.h-game .band .trade {
+  font-size: 28px;
+  margin: 0;
+}
+.cover-box.admin {
+  font-size: 28px;
+  white-space: pre-line;
+}
+
+/* ---------- スマホ（BD04 7.2。幅360px を基準） ---------- */
+.p {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 12px 12px calc(140px + env(safe-area-inset-bottom));
+  font-size: 16px;
+}
+.p input {
+  font-size: 18px;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 44px;
+}
+.p-play .p-top {
+  position: sticky;
+  top: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 56px;
+  background: #efe3c4;
+  margin: -12px -12px 8px;
+  padding: 0 8px;
+  z-index: 10;
+}
+.p-play.my-turn .p-top {
+  background: #cfe8b8;
+}
+.p-actions {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(56px + env(safe-area-inset-bottom));
+  height: 64px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: var(--paper);
+  border-top: 1px solid #d8cbb0;
+}
+.p-tabs {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding-bottom: env(safe-area-inset-bottom);
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  background: #efe3c4;
+}
+.p-tabs button {
+  margin: 0;
+  border-radius: 0;
+  height: 56px;
+}
+.p-tabs .badge {
+  background: var(--warn);
+  color: #fff;
+  border-radius: 8px;
+  padding: 0 6px;
+  margin-left: 4px;
+}
+.cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.card {
+  border: 1px solid #b9ab8e;
+  border-radius: 8px;
+  padding: 6px 8px;
+  background: var(--paper);
+}
+.card.zero {
+  opacity: 0.4;
+}
+.acts,
+.pick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.act {
+  display: inline-flex;
+  flex-direction: column;
+}
+.farm {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.farm .plot {
+  border: 1px solid #c9b994;
+  border-radius: 10px;
+  padding: 8px;
+  min-height: 120px;
+  background: var(--paper);
+}
+.sentence-box {
+  border: 2px dashed #b9ab8e;
+  border-radius: 10px;
+  padding: 12px;
+  margin: 12px 0;
+}
+.sentence-box .sentence {
+  font-size: 24px;
+}
+.p-place svg {
+  width: 100%;
+  height: auto;
+  touch-action: pinch-zoom;
+}
+.sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--paper);
+  padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
+  border-top: 2px solid var(--line);
+}
+.counter b {
+  display: inline-block;
+  min-width: 2em;
+  text-align: center;
+}
+.offer-side .row {
+  justify-content: space-between;
+}
+@media (orientation: landscape) and (max-height: 500px) {
+  .p::before {
+    content: "縦向きにしてください";
+    position: fixed;
+    inset: 0;
+    background: var(--paper);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+    font-size: 20px;
+  }
+}

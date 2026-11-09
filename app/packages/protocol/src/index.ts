@@ -84,7 +84,8 @@ export const adminOpSchema = z.discriminatedUnion("k", [
   z.strictObject({ k: z.literal("pause") }),
   z.strictObject({ k: z.literal("resume") }),
   z.strictObject({ k: z.literal("undoLast"), seq: z.number().int().min(0) }),
-  z.strictObject({ k: z.literal("answerFor"), promptId: z.string().max(64), answer: promptAnswer }),
+  // answer を省くと、サーバーが既定の答え（種類は既定か最初の選択肢、捨て札は多く持つ種類から）を作る（BD04 2.5）
+  z.strictObject({ k: z.literal("answerFor"), promptId: z.string().max(64), answer: promptAnswer.optional() }),
   z.strictObject({ k: z.literal("endTurnFor"), turnSerial: z.number().int().min(0) }),
   z.strictObject({ k: z.literal("reissueSeat"), seat: smallInt }),
   z.strictObject({ k: z.literal("approveClaim"), seat: smallInt, approve: z.boolean() }),

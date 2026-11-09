@@ -1,7 +1,10 @@
-// 産地マップの描画（BD04、アプリ設計書 4章「盤面の描画は SVG」）。
-// 位置と数字は盤面データ（@word-farm/engine の board）から、種類と拠点はゲームの状態から受け取る。
-// M0 では図形と文字だけで描く。絵は M7 で差し替える。
+// 産地マップの描画（BD04 2.4、3.3、5.1。アプリ設計書 4章「盤面の描画は SVG」）。
+// 位置は盤面データ（@word-farm/engine の board）から、種類、数字、拠点、港はゲームの状態から受け取る。
+// タイルの絵は art/final から書き出した public/art/tile-*.webp を六角に切り抜いて描く（素材仕様書 1章）。
+// タイルの中の配置は、絵が上部、数字のトークンが中央、種類の単語が下部（素材仕様書 1章）。
 import { board } from "@word-farm/engine";
+import type { Color } from "@word-farm/engine";
+import { COLOR_INFO } from "./ui/common.tsx";
 
 export type TileKind = "grow" | "buy" | "feed" | "sell" | "seed" | "animal";
 export type HarborKind = "any" | TileKind;
@@ -11,18 +14,28 @@ export interface BoardMapProps {
   tileKinds?: Partial<Record<number, TileKind>>;
   /** 港の交点 → 種類。省略した専門港は「2:1」だけ描く */
   harborKinds?: Partial<Record<number, HarborKind>>;
-  /** 交点 → 席の番号 */
-  houses?: Partial<Record<number, number>>;
+  /** 交点 → 拠点の持ち主の色 */
+  houses?: Partial<Record<number, Color>>;
+  /** 置ける交点（拠点の配置の画面で丸を出す） */
+  candidates?: number[];
+  /** 選んでいる交点（点滅させる） */
+  selected?: number | null;
+  /** 選んでいる人の色（大画面で、スマホで選んでいる交点を光らせるとき） */
+  selectedColor?: Color | null;
+  /** 光らせるタイル（出目のタイル） */
+  litTiles?: number[];
+  /** 交点を選んだとき。タップした位置に最も近い置ける交点を返す（BD04 3.3） */
+  onSelect?: (vertex: number) => void;
   /** 確認用に交点の番号を出す */
   showVertexIds?: boolean;
+  /** 絵を使わず図形と文字で描く（M0 の確認用） */
+  plain?: boolean;
 }
 
 // 中段の5枚が幅960pxに収まるよう、六角の幅を180pxにする（BD04 5.1）。座標の単位は外接円の半径
 const R = 180 / Math.sqrt(3);
 const PIER = 0.85; // 桟橋の長さ（外接円の半径に対する比。ルールブックの図と同じ）
 const PAD = 60;
-
-const SEAT_COLOR = ["#d9534f", "#3a7bd5", "#e0a020", "#3c9d5d"];
 
 const vertexById = new Map(board.vertices.map((v) => [v.id, v]));
 const vtx = (id: number) => {
@@ -46,9 +59,50 @@ const isRed = (n: number) => n === 6 || n === 8;
 /** 数字の出やすさを点の数で示す（2と12が1つ、6と8が5つ） */
 const pips = (n: number) => 6 - Math.abs(7 - n);
 
-export function BoardMap({ tileKinds = {}, harborKinds = {}, houses = {}, showVertexIds = false }: BoardMapProps) {
+function hexPoints(ids: number[]): string {
+  return ids.map((id) => `${px(vtx(id).x).toFixed(1)},${py(vtx(id).y).toFixed(1)}`).join(" ");
+}
+
+export function BoardMap({
+  tileKinds = {},
+  harborKinds = {},
+  houses = {},
+  candidates = [],
+  selected = null,
+  selectedColor = null,
+  litTiles = [],
+  onSelect,
+  showVertexIds = false,
+  plain = false,
+}: BoardMapProps) {
+  const pick = (e: React.MouseEvent<SVGSVGElement>) => {
+    if (!onSelect || candidates.length === 0) return;
+    const svg = e.currentTarget;
+    const pt = svg.createSVGPoint();
+    pt.x = e.clientX;
+    pt.y = e.clientY;
+    const p = pt.matrixTransform(svg.getScreenCTM()!.inverse());
+    let best = candidates[0]!;
+    let bd = Infinity;
+    for (const id of candidates) {
+      const v = vtx(id);
+      const d = (px(v.x) - p.x) ** 2 + (py(v.y) - p.y) ** 2;
+      if (d < bd) {
+        bd = d;
+        best = id;
+      }
+    }
+    onSelect(best);
+  };
   return (
-    <svg className="board-map" viewBox={`0 0 ${W.toFixed(0)} ${H.toFixed(0)}`} role="img" aria-label="産地マップ">
+    <svg className="board-map" viewBox={`0 0 ${W.toFixed(0)} ${H.toFixed(0)}`} role="img" aria-label="産地マップ" onClick={pick}>
+      <defs>
+        {board.tiles.map((t) => (
+          <clipPath key={t.id} id={`clip-t${t.id}`}>
+            <polygon points={hexPoints(t.vertices)} />
+          </clipPath>
+        ))}
+      </defs>
       <rect x={0} y={0} width={W} height={H} rx={24} fill="var(--sea)" />
 
       {board.harbors.map((h) => {
@@ -83,70 +137,86 @@ export function BoardMap({ tileKinds = {}, harborKinds = {}, houses = {}, showVe
       })}
 
       {board.tiles.map((t) => {
-        const pts = t.vertices
-          .map((id) => {
-            const v = vtx(id);
-            return `${px(v.x).toFixed(1)},${py(v.y).toFixed(1)}`;
-          })
-          .join(" ");
+        const pts = hexPoints(t.vertices);
         const cx = px(t.center[0]);
         const cy = py(t.center[1]);
-        if (t.number === null) {
+        const kind = t.number === null ? "market" : tileKinds[t.id];
+        // 絵は、六角の外接する正方形（幅 2R）に置いて切り抜く。素材の正方形の中央に、先端が上の六角を当てている
+        const art = !plain && kind ? (
+          <image href={`/art/tile-${kind}.webp`} x={cx - R} y={cy - R} width={2 * R} height={2 * R} clipPath={`url(#clip-t${t.id})`} preserveAspectRatio="xMidYMid slice" />
+        ) : null;
+        const lit = litTiles.includes(t.id);
+        const label = (text: string) => {
+          const w = text.length * 15 + 16;
           return (
-            <g key={`t${t.id}`} data-tile={t.id}>
-              <polygon points={pts} fill="var(--wheat)" stroke="var(--line)" strokeWidth={3} />
-              <text x={cx} y={cy} textAnchor="middle" fontSize={30} fontWeight={700} style={{ fill: "var(--wheat-ink)" }}>
-                Market
-              </text>
-              <text x={cx} y={cy + 30} textAnchor="middle" fontSize={18} style={{ fill: "var(--wheat-ink)" }}>
-                7＝全員1枚
+            <g>
+              <rect x={cx - w / 2} y={cy + 49} width={w} height={28} rx={7} fill="rgba(255,250,235,0.9)" />
+              <text x={cx} y={cy + 70} textAnchor="middle" fontSize={22} fontWeight={700} style={{ fill: "#46301a" }}>
+                {text}
               </text>
             </g>
           );
+        };
+        if (t.number === null) {
+          return (
+            <g key={`t${t.id}`} data-tile={t.id}>
+              <polygon points={pts} fill="var(--wheat)" />
+              {art}
+              <polygon points={pts} fill="none" stroke="var(--line)" strokeWidth={3} />
+              {label("Market")}
+            </g>
+          );
         }
-        const kind = tileKinds[t.id];
         const n = t.number;
         const k = pips(n);
         return (
-          <g key={`t${t.id}`} data-tile={t.id}>
-            <polygon points={pts} fill="var(--paper)" stroke="var(--leaf)" strokeWidth={4} />
-            {kind && (
-              <text x={cx} y={cy - 22} textAnchor="middle" fontSize={28} fontWeight={700}>
-                {kind}
-              </text>
-            )}
-            <circle cx={cx} cy={cy + 18} r={27} fill="var(--wheat)" stroke="var(--line)" strokeWidth={2} />
-            <text
-              x={cx}
-              y={cy + 28}
-              textAnchor="middle"
-              fontSize={28}
-              fontWeight={700}
-              style={{ fill: isRed(n) ? "var(--warn)" : "var(--wheat-ink)" }}
-            >
+          <g key={`t${t.id}`} data-tile={t.id} data-kind={kind}>
+            <polygon points={pts} fill="var(--paper)" />
+            {art}
+            <polygon points={pts} fill="none" stroke={lit ? "#ffd84a" : "var(--line)"} strokeWidth={lit ? 10 : 3} />
+            <circle cx={cx} cy={cy + 10} r={27} fill="var(--wheat)" stroke="var(--line)" strokeWidth={2} />
+            <text x={cx} y={cy + 20} textAnchor="middle" fontSize={28} fontWeight={700} style={{ fill: isRed(n) ? "var(--warn)" : "var(--wheat-ink)" }}>
               {n}
             </text>
             {Array.from({ length: k }, (_, i) => (
-              <circle key={i} cx={cx - (k - 1) * 5 + i * 10} cy={cy + 58} r={3.2} fill="var(--muted)" />
+              <circle key={i} cx={cx - (k - 1) * 4 + i * 8} cy={cy + 31} r={2.4} fill="var(--muted)" />
             ))}
+            {kind && label(kind)}
           </g>
         );
       })}
 
-      {Object.entries(houses).map(([vid, seat]) => {
-        if (seat === undefined) return null;
+      {candidates.map((id) => {
+        const v = vtx(id);
+        return <circle key={`c${id}`} data-candidate={id} cx={px(v.x)} cy={py(v.y)} r={11} fill="rgba(255,255,255,0.85)" stroke="var(--line)" strokeWidth={2} />;
+      })}
+
+      {Object.entries(houses).map(([vid, color]) => {
+        if (!color) return null;
         const v = vtx(Number(vid));
+        const c = COLOR_INFO[color];
         return (
-          <path
-            key={`b${vid}`}
-            transform={`translate(${px(v.x).toFixed(1)} ${py(v.y).toFixed(1)})`}
-            d="M-16 8 L-16 -7 L0 -20 L16 -7 L16 8 Z"
-            fill={SEAT_COLOR[seat] ?? "#888"}
-            stroke="var(--line)"
-            strokeWidth={3}
-          />
+          <g key={`b${vid}`} data-house={vid} transform={`translate(${px(v.x).toFixed(1)} ${py(v.y).toFixed(1)})`}>
+            <path d="M-19 10 L-19 -8 L0 -24 L19 -8 L19 10 Z" fill={c.hex} stroke="var(--line)" strokeWidth={3} />
+            <text x={0} y={7} textAnchor="middle" fontSize={16} style={{ fill: "#fff" }}>
+              {c.mark}
+            </text>
+          </g>
         );
       })}
+
+      {selected !== null && (
+        <circle
+          className="blink"
+          data-selected={selected}
+          cx={px(vtx(selected).x)}
+          cy={py(vtx(selected).y)}
+          r={24}
+          fill="none"
+          stroke={selectedColor ? COLOR_INFO[selectedColor].hex : "#ffd84a"}
+          strokeWidth={7}
+        />
+      )}
 
       {showVertexIds &&
         board.vertices.map((v) => (

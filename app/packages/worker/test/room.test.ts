@@ -666,6 +666,39 @@ describe("ロビー（BD03 3.4）", () => {
   });
 });
 
+describe("代わりに答える（BD04 2.5）", () => {
+  it("answer を省いた answerFor は、サーバーが既定の答えを作って答える", async () => {
+    const t = await startTable();
+    for (let g = 0; g < 30; g++) {
+      const s = state(t);
+      const p = s.prompts.find((x) => !s.answers[x.id]);
+      if (p) {
+        const id = await t.srv.admin(t.board, { k: "answerFor", promptId: p.id });
+        expect(t.board.all("ack").some((a) => a.id === id)).toBe(true);
+        expect(state(t).answers[p.id] ?? state(t).prompts.every((x) => x.id !== p.id)).toBeTruthy();
+        return;
+      }
+      if (s.phase.k === "setupPlace") {
+        const step = s.phase.step;
+        const seat = step < s.n ? step : 2 * s.n - 1 - step;
+        const { legalActions } = await import("@word-farm/engine");
+        await t.srv.cmd(t.seats[seat]!, { t: "placeHouse", vertex: legalActions(s, seat).placeHouse!.vertices[0]! });
+      }
+    }
+    throw new Error("問いが出なかった");
+  });
+
+  it("捨て札の既定の答えは、ちょうどの枚数を多く持つ種類から選ぶ", async () => {
+    const { defaultAnswer } = await import("../src/room.ts");
+    const t = await startTable();
+    const s = structuredClone(state(t));
+    s.players[0]!.hand = { grow: 5, sell: 2, feed: 1 };
+    s.prompts = [{ id: "p", k: "discard", seat: 0, count: 4 }];
+    expect(defaultAnswer(s, "p")).toEqual({ k: "discard", cards: { grow: 2, sell: 1, feed: 1 } });
+    expect(defaultAnswer(s, "none")).toBeNull();
+  });
+});
+
 describe("pointer（BD03 3.2）", () => {
   it("拠点を置く番の人の pointer だけを大画面に転送する", async () => {
     const t = await startTable();

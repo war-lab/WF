@@ -11,6 +11,8 @@ import {
   type Command,
   type EngineEvent,
   type GameState,
+  type PromptAnswer,
+  type WordCard,
   type RejectCode,
   type RuleConfig,
   type Seat,
@@ -127,6 +129,28 @@ export function safeEqual(a: string, b: string): boolean {
   let diff = a.length ^ b.length;
   for (let i = 0; i < n; i++) diff |= (a.charCodeAt(i % Math.max(a.length, 1)) || 0) ^ (b.charCodeAt(i % Math.max(b.length, 1)) || 0);
   return diff === 0 && a.length > 0;
+}
+
+/** 代わりに答えるときの既定の答え（BD04 2.5）。種類の選択は既定の種類か最初の選択肢、捨て札は多く持つ種類から */
+export function defaultAnswer(s: GameState, promptId: string): PromptAnswer | null {
+  const p = s.prompts.find((x) => x.id === promptId);
+  if (!p) return null;
+  if (p.k === "chooseKind") return { k: "chooseKind", kinds: Array<WordCard>(p.count).fill(p.preset ?? p.options[0]!) };
+  const hand = Object.entries(s.players[p.seat]!.hand).sort((a, b) => (b[1] ?? 0) - (a[1] ?? 0));
+  const cards: Partial<Record<WordCard, number>> = {};
+  let left = p.count;
+  for (let progress = true; left > 0 && progress; ) {
+    progress = false;
+    for (const [k, v] of hand) {
+      const have = (v ?? 0) - (cards[k as WordCard] ?? 0);
+      if (left > 0 && have > 0) {
+        cards[k as WordCard] = (cards[k as WordCard] ?? 0) + 1;
+        left -= 1;
+        progress = true;
+      }
+    }
+  }
+  return { k: "discard", cards };
 }
 
 /** 準備の拠点の配置で、今置く席（BD01 6.2。蛇の順） */
@@ -685,8 +709,13 @@ export class RoomCore {
       case "abortGame": {
         if (!this.state || this.room.phase === "lobby") return this.reject(c, id, "WRONG_PHASE");
         if (this.replay(c, id)) return;
+        let answer: PromptAnswer | null = null;
+        if (op.k === "answerFor") {
+          answer = op.answer ?? defaultAnswer(this.state, op.promptId);
+          if (!answer) return this.reject(c, id, "NOT_PROMPTED");
+        }
         const cmd = (op.k === "answerFor"
-          ? { t: "answerFor", promptId: op.promptId, answer: op.answer }
+          ? { t: "answerFor", promptId: op.promptId, answer }
           : op.k === "endTurnFor"
             ? { t: "endTurnFor", turnSerial: op.turnSerial }
             : { t: op.k }) as Command;

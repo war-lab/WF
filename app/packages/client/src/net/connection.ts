@@ -5,6 +5,7 @@ import {
   type AdminOp,
   type BoardView,
   type ClientMsg,
+  type GameEvent,
   type LobbyView,
   type PlayerView,
   type ServerMsg,
@@ -43,6 +44,8 @@ export interface NetState {
   welcome: Extract<ServerMsg, { t: "welcome" }> | null;
   lobby: LobbyView | null;
   view: BoardView | PlayerView | null;
+  /** 直近の出来事（最大30件。BD03 3.3 の recent） */
+  recent: GameEvent[];
   rev: number;
   /** ack も reject も受け取っていないコマンドの id */
   pending: string[];
@@ -55,10 +58,10 @@ const PING_MS = 10_000;
 const PONG_WAIT_MS = 10_000;
 const VISIBLE_PONG_WAIT_MS = 3000;
 
-type Pending = { t: "cmd"; id: string; cmd: Command } | { t: "admin"; id: string; op: AdminOp };
+type Pending = { t: "cmd"; id: string; cmd: Command; meta?: { sentenceShown: boolean } } | { t: "admin"; id: string; op: AdminOp };
 
 export class Connection {
-  readonly state: NetState = { status: "connecting", welcome: null, lobby: null, view: null, rev: -1, pending: [], lastError: null };
+  readonly state: NetState = { status: "connecting", welcome: null, lobby: null, view: null, recent: [], rev: -1, pending: [], lastError: null };
   private ws: SocketLike | null = null;
   private tries = 0;
   private firstViewAfterWelcome = false;
@@ -170,6 +173,7 @@ export class Connection {
       case "view":
         if (this.firstViewAfterWelcome || m.view.rev >= this.state.rev) {
           this.state.view = m.view;
+          this.state.recent = m.recent;
           this.state.rev = m.view.rev;
           this.state.lobby = null;
           this.firstViewAfterWelcome = false;
@@ -244,6 +248,11 @@ export class Connection {
   /** ゲームのコマンドを送る。返した id の ack か reject が届くまで、ボタンを「処理中」にする */
   command(cmd: Command): string {
     return this.sendPending({ t: "cmd", id: this.d.randomHex(), cmd });
+  }
+
+  /** 宣言のコマンド。meta はエンジンに渡さず記録だけに残す（BD03 3.2、BD04 3.5 の「英文を見る」） */
+  commandWithMeta(cmd: Command, meta: { sentenceShown: boolean }): string {
+    return this.sendPending({ t: "cmd", id: this.d.randomHex(), cmd, meta });
   }
 
   admin(op: AdminOp): string {
