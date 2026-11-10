@@ -142,12 +142,29 @@ function Lobby({ net, lobby }: { net: Net; lobby: LobbyView }) {
     // QRコードは大画面のブラウザで作る。部屋の ID を外部のサービスに送らない（BD05 4.6）
     void QRCode.toDataURL(joinUrl, { width: 440, margin: 1 }).then(setQr);
   }, [joinUrl]);
-  const ps = [...lobby.participants].sort((a, b) => a.order - b.order);
+  const server = [...lobby.participants].sort((a, b) => a.order - b.order);
+  // 並べ替えは押した結果をすぐ手元の並びに出し、続けて押したときもその並びから計算する。
+  // サーバーの並びから計算すると、返事が届く前に押した2回目以降が同じ入れ替えを送り、押した回数より少なくしか動かない
+  // （2026-11-10、本番の E2E-01 で ▲3回が1〜2回分しか動かなかった）
+  const [local, setLocal] = useState<string[] | null>(null);
+  const serverIds = server.map((p) => p.id).join(",");
+  useEffect(() => {
+    if (local && local.join(",") === serverIds) setLocal(null);
+  }, [serverIds, local]);
+  useEffect(() => {
+    // 拒否などでサーバーの並びが追いつかないときは、3秒で手元の並びを捨ててサーバーに合わせる
+    if (!local) return;
+    const id = window.setTimeout(() => setLocal(null), 3000);
+    return () => window.clearTimeout(id);
+  }, [local]);
+  const usable = local !== null && local.length === server.length && local.every((id) => server.some((p) => p.id === id));
+  const ps = usable ? local.map((id) => server.find((p) => p.id === id)!) : server;
   const move = (i: number, d: number) => {
     const ids = ps.map((p) => p.id);
     const j = i + d;
     if (j < 0 || j >= ids.length) return;
     [ids[i], ids[j]] = [ids[j]!, ids[i]!];
+    setLocal(ids);
     net.conn.admin({ k: "reorder", participantIds: ids });
   };
   const opts = loadOpts();
