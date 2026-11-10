@@ -77,9 +77,14 @@ export async function completeSetup(t: Table): Promise<void> {
     let acted = false;
     for (const p of t.phones) {
       if (await p.getByText("拠点を置く交点を選んでください").isVisible()) {
-        await p.locator("circle[data-candidate]").first().click({ force: true });
-        await p.getByRole("button", { name: "ここに置く" }).click();
-        await p.getByRole("button", { name: "置く", exact: true }).click();
+        // 見出しを確かめてから押すまでの間に、画面が次の段階へ切り替わることがある。そのときは次の繰り返しでやり直す
+        try {
+          await p.locator("circle[data-candidate]").first().click({ force: true, timeout: 2000 });
+          await p.getByRole("button", { name: "ここに置く" }).click({ timeout: 2000 });
+          await p.getByRole("button", { name: "置く", exact: true }).click({ timeout: 2000 });
+        } catch {
+          continue;
+        }
         acted = true;
         break;
       }
@@ -99,38 +104,42 @@ export async function completeSetup(t: Table): Promise<void> {
   throw new Error("準備が終わらない");
 }
 
+/** 1台のスマホに出ている問いに、最初の選択肢で答える。答えたら true */
+export async function answerPromptOn(p: Page): Promise<boolean> {
+  const choice = p.locator(".choices button[data-kind]:not([disabled])");
+  const decide = p.getByRole("button", { name: "決める" });
+  if (await decide.count()) {
+    // 収入の問いは、前回の種類を選んだ状態で出る（BD04 3.6.1）。そのときはすぐに決められる
+    for (let k = 0; k < 6 && (await decide.isDisabled({ timeout: 500 }).catch(() => false)); k++) {
+      if (!(await choice.count())) break;
+      await choice.first().click();
+      // 遅い端末（WebKit）では、押してから選んだものの表示が変わるまで間がある
+      await expect(p.getByText("選んだもの：なし")).toHaveCount(0, { timeout: 3000 }).catch(() => undefined);
+    }
+    if (await decide.isDisabled({ timeout: 500 }).catch(() => false)) {
+      await p.screenshot({ path: "e2e/.out/prompt-stuck.png" });
+      throw new Error("問いに答えられない");
+    }
+    // 押す直前に問いが閉じることがある（ほかの人の答えで処理が進んだとき）
+    await decide.click({ timeout: 2000 }).catch(() => undefined);
+    return true;
+  }
+  const plus = p.locator(".discard button", { hasText: "＋" });
+  if (await plus.count()) {
+    while (await p.getByRole("button", { name: "捨てる" }).isDisabled()) {
+      const btn = p.locator(".discard button:not([disabled])", { hasText: "＋" }).first();
+      await btn.click();
+    }
+    await p.getByRole("button", { name: "捨てる" }).click();
+    await p.getByRole("button", { name: "捨てる" }).click();
+    return true;
+  }
+  return false;
+}
+
 /** 開いている問いに、どのスマホでも最初の選択肢で答える。答えたら true */
 export async function answerAnyPrompt(t: Table): Promise<boolean> {
-  for (const p of t.phones) {
-    const choice = p.locator(".choices button[data-kind]:not([disabled])");
-    const decide = p.getByRole("button", { name: "決める" });
-    if (await decide.count()) {
-      // 収入の問いは、前回の種類を選んだ状態で出る（BD04 3.6.1）。そのときはすぐに決められる
-      for (let k = 0; k < 6 && (await decide.isDisabled({ timeout: 500 }).catch(() => false)); k++) {
-        if (!(await choice.count())) break;
-        await choice.first().click();
-        // 遅い端末（WebKit）では、押してから選んだものの表示が変わるまで間がある
-        await expect(p.getByText("選んだもの：なし")).toHaveCount(0, { timeout: 3000 }).catch(() => undefined);
-      }
-      if (await decide.isDisabled({ timeout: 500 }).catch(() => false)) {
-        await p.screenshot({ path: "e2e/.out/prompt-stuck.png" });
-        throw new Error("問いに答えられない");
-      }
-      // 押す直前に問いが閉じることがある（ほかの人の答えで処理が進んだとき）
-      await decide.click({ timeout: 2000 }).catch(() => undefined);
-      return true;
-    }
-    const plus = p.locator(".discard button", { hasText: "＋" });
-    if (await plus.count()) {
-      while (await p.getByRole("button", { name: "捨てる" }).isDisabled()) {
-        const btn = p.locator(".discard button:not([disabled])", { hasText: "＋" }).first();
-        await btn.click();
-      }
-      await p.getByRole("button", { name: "捨てる" }).click();
-      await p.getByRole("button", { name: "捨てる" }).click();
-      return true;
-    }
-  }
+  for (const p of t.phones) if (await answerPromptOn(p)) return true;
   return false;
 }
 

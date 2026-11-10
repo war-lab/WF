@@ -109,7 +109,7 @@ test("E2E-21 席の再発行のQRを別の端末で読んでも、ホストが�
   await startFast(t);
   const name = t.names[1]!;
   await openAdmin(t.board);
-  await t.board.locator(".cover-box.admin span", { hasText: "席の再発行" }).getByRole("button", { name }).click();
+  await t.board.locator(".admin-groups section", { hasText: "席の再発行" }).getByRole("button", { name }).click();
   await t.board.getByRole("button", { name: "実行" }).click();
   const url = await decodeQr(t.board.getByAltText("席の再発行のQRコード"));
   expect(url).toMatch(/\/p\?room=[0-9a-f]{32}&claim=[0-9a-f]{32}$/);

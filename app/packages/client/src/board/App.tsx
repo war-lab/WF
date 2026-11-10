@@ -63,7 +63,10 @@ function Start() {
   };
   return (
     <main className="h-start">
-      <h1>WORD FARM</h1>
+      <div className="start-card">
+      <h1>
+        <img src="/art/tile-grow.webp" alt="" width={72} height={72} /> WORD FARM
+      </h1>
       <label>
         ホストの鍵
         <input type="password" value={key} onChange={(e) => setKey(e.target.value)} autoComplete="off" />
@@ -99,6 +102,7 @@ function Start() {
             続きを開く
           </button>
         )}
+      </div>
       </div>
       <footer className="credit">{CREDIT}</footer>
     </main>

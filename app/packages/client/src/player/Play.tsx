@@ -44,7 +44,8 @@ interface Pending {
 
 type Tab = "hand" | "farm" | "orders" | "trade";
 
-const why = (reason?: string) => (reason ? rejectText(reason) : "");
+// 「自分の手番ではありません」は各ボタンに繰り返さず、タブの上に1回だけ出す
+const why = (reason?: string) => (reason && reason !== "NOT_YOUR_TURN" ? rejectText(reason) : "");
 const bagText = (b: Bag<string>) =>
   Object.entries(b)
     .filter(([, n]) => n)
@@ -116,6 +117,7 @@ export function Play({ net, view }: { net: Net; view: PlayerView }) {
       </header>
 
       <section className="p-body">
+        {!myTurn && (tab === "hand" || tab === "farm" || tab === "orders") && <p className="not-turn">自分の手番ではありません。行動は自分の手番にできます</p>}
         {tab === "hand" && <HandTab view={view} busy={busy} setPending={setPending} onBuild={() => setBuild(true)} />}
         {tab === "farm" && <FarmTab view={view} busy={busy} setPending={setPending} />}
         {tab === "orders" && <OrdersTab view={view} busy={busy} setPending={setPending} />}
@@ -198,8 +200,9 @@ function HandTab({ view, busy, setPending, onBuild }: { view: PlayerView; busy: 
   const anyAnimal = L.buyAnimal.find((h) => h.enabled);
   return (
     <div>
+      <h4 className="group">単語カード</h4>
       {CARDS.map((row, i) => (
-        <div key={i} className="cards">
+        <div key={i} className={`cards ${["action", "crop", "animal"][i]}`}>
           {row.map((k) => {
             const n = view.me.hand[k] ?? 0;
             return (
@@ -210,10 +213,16 @@ function HandTab({ view, busy, setPending, onBuild }: { view: PlayerView; busy: 
           })}
         </div>
       ))}
-      <p>
-        産物：{PRODUCTS.map((p) => `${p} ${me.products[p] ?? 0}`).join("　")}
-        <br />
-        コイン {me.coins}　無料券 {me.freeTickets}　{me.halfPoints / 2}点
+      <h4 className="group">産物</h4>
+      <div className="cards products">
+        {PRODUCTS.map((p) => (
+          <span key={p} className={`card${me.products[p] ? "" : " zero"}`} data-product={p}>
+            {p} <b>{me.products[p] ?? 0}</b>
+          </span>
+        ))}
+      </div>
+      <p className="money">
+        コイン <b>{me.coins}</b>　無料券 <b>{me.freeTickets}</b>　<b>{me.halfPoints / 2}</b>点
       </p>
       <div className="acts">
         <Act label="植える" ok={!!anyPlant && !busy} reason={anyPlant ? "" : why(L.plant[0]?.reason)} onClick={() => setMode("plant")} />
@@ -362,13 +371,13 @@ function OrdersTab({ view, busy, setPending }: { view: PlayerView; busy: boolean
         return (
           <div key={j.id} className="order joint" data-joint={j.id}>
             <p className="text">{j.text}</p>
-            <p>
+            <ol className="rows">
               {j.rows.map((r, i) => (
-                <span key={i}>
-                  {j.rowPoints[i]! / 2}点 {r ? <Mark color={view.players[r.seat]!.color} /> : "空き"}
-                </span>
+                <li key={i}>
+                  {j.rowPoints[i]! / 2}点　{r ? <><Mark color={view.players[r.seat]!.color} /> {view.players[r.seat]!.name}</> : "空き"}
+                </li>
               ))}
-            </p>
+            </ol>
             <Act label="出す" ok={!!h?.enabled && !busy} reason={why(h?.reason)} onClick={() => setDeliver({ id: j.id, kind: "joint" })} />
           </div>
         );
@@ -541,12 +550,14 @@ function OfferForm({ net, view, onClose }: { net: Net; view: PlayerView; onClose
   const count = (g: Goods) => Object.values(g.cards).reduce((a, b) => a + (b ?? 0), 0) + Object.values(g.products).reduce((a, b) => a + (b ?? 0), 0) + g.coins;
   const side = (g: Goods, set: (g: Goods) => void, mine: boolean) => (
     <div className="offer-side">
+      <span className="sub">カード</span>
       {ALL_CARDS.filter((k) => !mine || (view.me.hand[k] ?? 0) > 0).map((k) => (
         <span key={k} className="row">
           {k}
           <Counter n={g.cards[k] ?? 0} min={0} max={mine ? (view.me.hand[k] ?? 0) : 9} set={(v) => set({ ...g, cards: { ...g.cards, [k]: v } })} />
         </span>
       ))}
+      <span className="sub">産物とコイン</span>
       {PRODUCTS.filter((p) => !mine || (me.products[p] ?? 0) > 0).map((p) => (
         <span key={p} className="row">
           {p}
@@ -579,10 +590,11 @@ function OfferForm({ net, view, onClose }: { net: Net; view: PlayerView; onClose
         </div>
       )}
       {to !== null && <p>相手：{view.players[to]!.name}</p>}
-      <h4>渡す</h4>
+      <h4>渡す（持っている物だけ）</h4>
       {side(give, setGive, true)}
       <h4>欲しい</h4>
       {side(get, setGet, false)}
+      <div className="offer-bar">
       <button onClick={onClose}>やめる</button>
       <button
         className="primary"
@@ -594,6 +606,7 @@ function OfferForm({ net, view, onClose }: { net: Net; view: PlayerView; onClose
       >
         送る
       </button>
+      </div>
     </div>
   );
 }

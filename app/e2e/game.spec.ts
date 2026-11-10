@@ -29,9 +29,12 @@ test("E2E-23、16、19 ロビーから結果と書き出しまで1局を通す�
   await expect(t.board.locator(".h-result")).toBeVisible();
   await expect(t.board.getByText("終わり方：最終ラウンドの宣言")).toBeVisible();
   await expect(t.board.locator("tr[data-rank]")).toHaveCount(4);
-  for (const p of t.phones) await expect(p.getByText(/^\d位/)).toBeVisible();
+  for (const p of t.phones) await expect(p.locator(".my-rank")).toContainText("位");
   await t.board.screenshot({ path: "e2e/.out/h07-result.png" });
   // 記録を保存すると zip がダウンロードされ、方式設計10章の項目がある（E2E-19）
+  await t.board.getByRole("button", { name: "記録の書き出し" }).click();
+  // H08 の集計の表（BD04 2.8）
+  await expect(t.board.locator(".export .stats")).toContainText("手番の時間の平均");
   const [dl] = await Promise.all([t.board.waitForEvent("download"), t.board.getByRole("button", { name: "記録を保存" }).click()]);
   expect(dl.suggestedFilename()).toMatch(/^wordfarm_\d{8}T\d{4}\.zip$/);
   const files = unzipSync(readFileSync((await dl.path())!));

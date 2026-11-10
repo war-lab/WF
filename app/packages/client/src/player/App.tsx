@@ -6,7 +6,7 @@ import { board, type Prompt, type PromptSource, type WordCard } from "@word-farm
 import { BoardMap, type HarborKind, type TileKind } from "../BoardMap.tsx";
 import { durable } from "../net/browser.ts";
 import { useNet, type Net } from "../net/useNet.ts";
-import { Cover, Mark, NetCover } from "../ui/common.tsx";
+import { Cover, Mark, NetCover, ledgerSummary } from "../ui/common.tsx";
 import { rejectText } from "../ui/messages.ts";
 import { Play } from "./Play.tsx";
 
@@ -341,32 +341,37 @@ function Waiting({ net, view, prompt }: { net: Net; view: PlayerView; prompt: Pr
   );
 }
 
-/** P07 結果（BD04 3.7） */
+/** P07 結果（BD04 3.7）。全員の順位は大画面を見る前提で、自分の行を強調した短い表にする */
 function Result({ view }: { view: PlayerView }) {
   const r = view.result!;
   const mine = r.ranking.find((x) => x.seat === view.me.seat)!;
+  const sum = ledgerSummary(view.players[view.me.seat]!.ledger);
   return (
-    <main className="p">
-      <p className="big">
-        {mine.rank}位　{mine.halfPoints / 2}点
+    <main className="p p-result">
+      <p className="my-rank">
+        <b>{mine.rank}位</b>　{mine.halfPoints / 2}点
       </p>
-      <table>
+      <table className="result-table">
         <tbody>
           {r.ranking.map((x) => (
             <tr key={x.seat} className={x.seat === view.me.seat ? "me" : ""}>
-              <td>{x.rank}</td>
-              <td>{view.players[x.seat]!.name}</td>
+              <td>{x.rank}位</td>
+              <td>
+                <Mark color={view.players[x.seat]!.color} /> {view.players[x.seat]!.name}
+              </td>
               <td>{x.halfPoints / 2}点</td>
             </tr>
           ))}
         </tbody>
       </table>
-      <ul>
-        {view.players[view.me.seat]!.ledger.map((e, i) => (
-          <li key={i}>
-            {e.src} {e.hp / 2}点
+      <h3>あなたの点の内訳</h3>
+      <ul className="ledger">
+        {sum.map((l) => (
+          <li key={l.label}>
+            {l.label}　{l.points}点（{l.count}回）
           </li>
         ))}
+        {sum.length === 0 && <li>なし</li>}
       </ul>
     </main>
   );

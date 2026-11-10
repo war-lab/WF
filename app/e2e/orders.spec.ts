@@ -102,7 +102,7 @@ test("E2E-17 8点での勝ち：注文の成立で目標の点に届くと、そ
     await expect(t.board.locator(".band .result.ok").or(t.board.locator(".h-result"))).toBeVisible({ timeout: 6000 });
   }
   await expect(t.board.locator(".h-result")).toBeVisible();
-  await expect(t.board.locator("h1")).toContainText("の勝ち");
+  await expect(t.board.locator(".result-head .winner")).toContainText("の勝ち");
   await expect(t.board.getByText("終わり方：8点到達")).toBeVisible();
   await closeTable(t);
 });

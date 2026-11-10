@@ -8,11 +8,11 @@ import type { Color, Product } from "@word-farm/engine";
 import { BoardMap, type HarborKind, type TileKind } from "../BoardMap.tsx";
 import { durable } from "../net/browser.ts";
 import type { Net } from "../net/useNet.ts";
-import { Mark } from "../ui/common.tsx";
+import { Mark, ledgerSummary } from "../ui/common.tsx";
 import { eventText } from "../ui/events.ts";
 import { rejectText } from "../ui/messages.ts";
 import { useSounds } from "./sound.ts";
-import { useBoardFx, useCountUp, type Fx } from "./effects.ts";
+import { condText, useBoardFx, useCountUp, type Fx } from "./effects.ts";
 
 const PRODUCTS: Product[] = ["carrot", "potato", "wheat", "egg", "milk"];
 const CREDIT = "音楽：魔王魂（https://maou.audio/）　効果音：効果音ラボ、Pixabay";
@@ -210,12 +210,16 @@ function BoardGameView({ net, view }: { net: Net; view: BoardView }) {
           view.orders.faceUp.map((o) => (
             <div key={o.id} className={`order${o.isBonus ? " bonus" : ""}${fx.flipIn.includes(o.id) ? " flip-in" : ""}${fx.declared?.orderId === o.id ? " declared" : ""}`} data-order={o.id}>
               <p className="text">{o.text}</p>
-              {o.picture && <span className="pic">{o.picture}</span>}
-              <span className="left">
-                {Array.from({ length: o.remaining }, (_, i) => (
-                  <Mark key={i} color={colorOf(o.counterSeat)} />
-                ))}
-              </span>
+              <div className="order-foot">
+                {/* 易の注文の絵。MVP は産物の名前の札で代える（BD04 2.4） */}
+                {o.picture && <span className="pic">{o.picture}</span>}
+                <span className="left">
+                  残り
+                  {Array.from({ length: o.remaining }, (_, i) => (
+                    <Mark key={i} color={colorOf(o.counterSeat)} />
+                  ))}
+                </span>
+              </div>
             </div>
           ))
         )}
@@ -231,6 +235,7 @@ function BoardGameView({ net, view }: { net: Net; view: BoardView }) {
             </ol>
             {j.counter && (
               <span className="left">
+                残り
                 {Array.from({ length: j.counter.remaining }, (_, i) => (
                   <Mark key={i} color={colorOf(j.counter!.seat)} />
                 ))}
@@ -391,38 +396,46 @@ function AdminPanel({ net, view, onClose, name }: { net: Net; view: BoardView; o
             <button onClick={() => setConfirm(null)}>やめる</button>
           </>
         ) : (
-          <div className="grid">
-            <button onClick={() => net.conn.admin({ k: view.paused ? "resume" : "pause" })}>{view.paused ? "再開" : "一時停止"}</button>
-            <button
-              disabled={!lc}
-              onClick={() =>
-                ask(`次の操作を取り消します。\n${lc!.summary}\nすでに見えた情報（開いた注文の条件など）は、見えたままになります。`, () => net.conn.admin({ k: "undoLast", seq: lc!.seq }))
-              }
-            >
-              1つ取り消す
-            </button>
-            {open.map((p) => (
-              <button key={p.promptId} onClick={() => ask(`${name(p.seat)} の代わりに答えますか？`, () => answerFor(net, p.promptId))}>
-                {name(p.seat)} の代わりに答える
+          <div className="admin-groups">
+            <section>
+              <h3>進行</h3>
+              <button onClick={() => net.conn.admin({ k: view.paused ? "resume" : "pause" })}>{view.paused ? "再開" : "一時停止"}</button>
+              <button
+                disabled={!lc}
+                onClick={() =>
+                  ask(`次の操作を取り消します。\n${lc!.summary}\nすでに見えた情報（開いた注文の条件など）は、見えたままになります。`, () => net.conn.admin({ k: "undoLast", seq: lc!.seq }))
+                }
+              >
+                1つ取り消す
               </button>
-            ))}
-            {view.turn && view.phase.k === "main" && (
-              <button onClick={() => ask(`${name(view.turn!.seat)} の手番を終えますか？`, () => net.conn.admin({ k: "endTurnFor", turnSerial: view.turn!.serial }))}>
-                手番を終える
-              </button>
-            )}
-            <span>
-              席の再発行：
-              {view.players.map((p) => (
-                <button key={p.seat} onClick={() => ask(`${p.name} の席を作り直しますか？`, () => (setClaimFor(p.seat), net.conn.admin({ k: "reissueSeat", seat: p.seat })))}>
-                  {p.name}
+              {view.turn && view.phase.k === "main" && (
+                <button onClick={() => ask(`${name(view.turn!.seat)} の手番を終えますか？`, () => net.conn.admin({ k: "endTurnFor", turnSerial: view.turn!.serial }))}>
+                  手番を終える
+                </button>
+              )}
+              {open.map((p) => (
+                <button key={p.promptId} onClick={() => ask(`${name(p.seat)} の代わりに答えますか？`, () => answerFor(net, p.promptId))}>
+                  {name(p.seat)} の代わりに答える
                 </button>
               ))}
-            </span>
-            <button disabled={view.endFlag !== null} onClick={() => ask("最終ラウンドにしますか？", () => net.conn.admin({ k: "callLastRound" }))}>
-              最終ラウンドにする
-            </button>
-            <button onClick={() => ask("ゲームを打ち切りますか？", () => net.conn.admin({ k: "abortGame" }), true)}>ゲームを打ち切る</button>
+            </section>
+            <section>
+              <h3>席の再発行</h3>
+              {view.players.map((p) => (
+                <button key={p.seat} onClick={() => ask(`${p.name} の席を作り直しますか？`, () => (setClaimFor(p.seat), net.conn.admin({ k: "reissueSeat", seat: p.seat })))}>
+                  <Mark color={p.color} /> {p.name}
+                </button>
+              ))}
+            </section>
+            <section>
+              <h3>終わり</h3>
+              <button disabled={view.endFlag !== null} onClick={() => ask("最終ラウンドにしますか？", () => net.conn.admin({ k: "callLastRound" }))}>
+                最終ラウンドにする
+              </button>
+              <button className="danger" onClick={() => ask("ゲームを打ち切りますか？", () => net.conn.admin({ k: "abortGame" }), true)}>
+                ゲームを打ち切る
+              </button>
+            </section>
           </div>
         )}
         {claimFor !== null && claimCode && <ClaimQr code={claimCode.code} roomId={new URLSearchParams(location.search).get("room")!} />}
@@ -460,17 +473,92 @@ function ClaimQr({ code, roomId }: { code: string; roomId: string }) {
 function Result({ net, view, admin }: { net: Net; view: BoardView; admin: boolean }) {
   const r = view.result!;
   const name = (seat: number) => view.players[seat]?.name ?? `席${seat}`;
-  const [msg, setMsg] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const reason = { target: "8点到達", orders: "注文切れ", host: "最終ラウンドの宣言", aborted: "打ち切り" }[r.reason];
   const top = r.ranking.filter((x) => x.rank === 1).map((x) => name(x.seat));
-  const save = async () => {
-    const roomId = new URLSearchParams(location.search).get("room")!;
-    const key = durable.get("wf:hostKey") ?? "";
-    const res = await fetch(`/api/rooms/${roomId}/record`, { headers: { Authorization: `Bearer ${key}` } });
-    if (!res.ok) return setMsg("記録を取り出せませんでした");
-    const rec = (await res.json()) as RecordFile;
-    const files = buildExport(rec);
+  void net;
+  return (
+    <main className="h-result">
+      <header className="result-head">
+        <p className="winner">{r.reason === "target" ? `${name(r.winnerSeat!)} の勝ち` : `1位：${top.join("、")}`}</p>
+        <p className="reason">終わり方：{reason}</p>
+      </header>
+      <table className="result-table">
+        <thead>
+          <tr>
+            <th>順位</th>
+            <th>名前</th>
+            <th>点</th>
+            <th>コイン</th>
+            <th>点の内訳</th>
+          </tr>
+        </thead>
+        <tbody>
+          {r.ranking.map((x) => (
+            <tr key={x.seat} data-rank={x.rank} className={x.rank === 1 ? "first" : ""}>
+              <td className="rank">{x.rank}</td>
+              <td>
+                <Mark color={view.players[x.seat]!.color} /> {name(x.seat)}
+              </td>
+              <td className="num">{x.halfPoints / 2}</td>
+              <td className="num">{x.coins}</td>
+              <td className="ledger">
+                {ledgerSummary(view.players[x.seat]!.ledger).map((l) => (
+                  <span key={l.label}>
+                    {l.label} {l.points}点（{l.count}）
+                  </span>
+                ))}
+                {view.players[x.seat]!.ledger.length === 0 && <span>なし</span>}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {view.finalReveal && (
+        <details className="reveal">
+          <summary>注文の条件をすべて見る</summary>
+          <ul>
+            {view.finalReveal.orders.map((o) => (
+              <li key={o.id}>
+                <span className="text">{o.text}</span>
+                <span className="cond">
+                  {condText(o.cond)}（{o.hp === null ? "ボーナス" : `${o.hp / 2}点`}）
+                </span>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+      {admin && !exporting && (
+        <div className="row">
+          <button className="primary big" onClick={() => setExporting(true)}>
+            記録の書き出し
+          </button>
+        </div>
+      )}
+      {admin && exporting && <Export onClose={() => setExporting(false)} />}
+      <footer className="credit">{CREDIT}</footer>
+    </main>
+  );
+}
+
+/** H08 記録の書き出し（BD04 2.8）。記録を取り出して集計の表を出し、zip を保存させる */
+function Export({ onClose }: { onClose: () => void }) {
+  const roomId = new URLSearchParams(location.search).get("room")!;
+  const key = durable.get("wf:hostKey") ?? "";
+  const [rec, setRec] = useState<RecordFile | null>(null);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+  useEffect(() => {
+    void fetch(`/api/rooms/${roomId}/record`, { headers: { Authorization: `Bearer ${key}` } }).then(async (res) => {
+      if (!res.ok) return setMsg("記録を取り出せませんでした");
+      setRec((await res.json()) as RecordFile);
+    });
+  }, [roomId, key]);
+  const files = useMemo(() => (rec ? buildExport(rec) : null), [rec]);
+  const stats = useMemo(() => (files ? exportStats(files) : null), [files]);
+  const save = () => {
+    if (!rec || !files) return;
     const zip = zipSync(Object.fromEntries(Object.entries(files).map(([k, v]) => [k, strToU8(v)])));
     const a = document.createElement("a");
     const stamp = rec.meta.createdAt.replace(/[-:]/g, "").slice(0, 13);
@@ -481,67 +569,64 @@ function Result({ net, view, admin }: { net: Net; view: BoardView; admin: boolea
   };
   const del = async () => {
     if (!confirm("部屋を削除しますか？ 記録はサーバーから消え、戻せません") || !confirm("本当に削除しますか？")) return;
-    const roomId = new URLSearchParams(location.search).get("room")!;
-    const key = durable.get("wf:hostKey") ?? "";
     const res = await fetch(`/api/rooms/${roomId}`, { method: "DELETE", headers: { Authorization: `Bearer ${key}` } });
     if (res.ok) {
       durable.remove("wf:boardRoom");
       location.href = "/board";
     } else setMsg("削除できませんでした");
   };
-  void net;
   return (
-    <main className="h-result">
-      <h1>{r.reason === "target" ? `${name(r.winnerSeat!)} の勝ち` : `1位：${top.join("、")}`}</h1>
-      <p className="big">終わり方：{reason}</p>
-      <table>
-        <thead>
-          <tr>
-            <th>順位</th>
-            <th>名前</th>
-            <th>点</th>
-            <th>コイン</th>
-            <th>内訳</th>
-          </tr>
-        </thead>
-        <tbody>
-          {r.ranking.map((x) => (
-            <tr key={x.seat} data-rank={x.rank}>
-              <td>{x.rank}</td>
-              <td>
-                <Mark color={view.players[x.seat]!.color} /> {name(x.seat)}
-              </td>
-              <td>{x.halfPoints / 2}</td>
-              <td>{x.coins}</td>
-              <td>{view.players[x.seat]!.ledger.map((e) => `${e.src} ${e.hp / 2}`).join("、")}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      {view.finalReveal && (
-        <details>
-          <summary>注文の条件をすべて見る</summary>
-          <ul>
-            {view.finalReveal.orders.map((o) => (
-              <li key={o.id}>
-                {o.text}（{o.hp === null ? "ボーナス" : `${o.hp / 2}点`}）
-              </li>
+    <section className="export">
+      <h2>記録の書き出し</h2>
+      {!stats && !msg && <p>記録を取り出しています</p>}
+      {stats && (
+        <table className="stats">
+          <tbody>
+            {stats.map(([k, v]) => (
+              <tr key={k}>
+                <th>{k}</th>
+                <td>{v}</td>
+              </tr>
             ))}
-          </ul>
-        </details>
+          </tbody>
+        </table>
       )}
-      {admin && (
-        <div className="row">
-          <button className="primary" onClick={save}>
-            記録を保存
-          </button>
-          <button disabled={!saved} onClick={del}>
-            部屋を削除
-          </button>
-        </div>
-      )}
+      <div className="row">
+        <button className="primary" disabled={!files} onClick={save}>
+          記録を保存
+        </button>
+        <button disabled={!saved} onClick={del}>
+          部屋を削除
+        </button>
+        <button onClick={onClose}>閉じる</button>
+      </div>
       {msg && <p className="err">{msg}</p>}
-      <footer className="credit">{CREDIT}</footer>
-    </main>
+    </section>
   );
+}
+
+/** 書き出しのファイルから、方式設計10章の集計の一部を表にする（BD04 2.8） */
+function exportStats(files: Record<string, string>): [string, string][] {
+  const rows = (name: string) => {
+    const [head, ...lines] = files[name]!.trim().split("\n");
+    const cols = head!.split(",");
+    return lines.filter(Boolean).map((l) => Object.fromEntries(l.split(",").map((v, i) => [cols[i], v])) as Record<string, string>);
+  };
+  const turns = rows("turns.csv");
+  const actions = rows("actions.csv");
+  const summary = JSON.parse(files["summary.json"]!) as { elapsedMs: number; setupMs: number | null; rounds: number | null };
+  const dur = turns.map((t) => Number(t.durationMs)).filter((n) => Number.isFinite(n));
+  const avg = dur.length ? dur.reduce((a, b) => a + b, 0) / dur.length : 0;
+  const count = (ev: string) => actions.filter((a) => a.event === ev).length;
+  return [
+    ["1局の時間", fmt(summary.elapsedMs)],
+    ["準備の時間", summary.setupMs === null ? "—" : fmt(summary.setupMs)],
+    ["手番の数", `${turns.length}（${summary.rounds ?? "—"}ラウンド）`],
+    ["手番の時間の平均", fmt(avg)],
+    ["手番の時間の最長", fmt(dur.length ? Math.max(...dur) : 0)],
+    ["日本語の支払い", `${count("japanesePaid")}回`],
+    ["注文の成立", `${count("orderSucceeded")}回`],
+    ["注文の不成立", `${count("orderFailed")}回`],
+    ["交換の成立", `${count("tradeAccepted")}回`],
+  ];
 }

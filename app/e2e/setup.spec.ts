@@ -1,6 +1,6 @@
 // E2E-02 拠点の配置、E2E-03 3人戦の準備（BD06 7章）
 import { expect, test } from "@playwright/test";
-import { closeTable, completeSetup, setupTable } from "./helpers.ts";
+import { answerPromptOn, closeTable, completeSetup, setupTable } from "./helpers.ts";
 
 test("E2E-02 スマホで選んだ交点が大画面でも光り、「ここに置く」と確認を押すまで置かれない。2個目のあとにカードの問いが出る", async ({ browser }) => {
   const t = await setupTable(browser, 4, { dice: "manual" });
@@ -37,16 +37,18 @@ test("E2E-03 3人戦では、追加の1枚の問いが3人に同時に出る", a
     let acted = false;
     for (const p of t.phones) {
       if (await p.getByText("拠点を置く交点を選んでください").isVisible()) {
-        await p.locator("circle[data-candidate]").first().click({ force: true });
-        await p.getByRole("button", { name: "ここに置く" }).click();
-        await p.getByRole("button", { name: "置く", exact: true }).click();
+        // 見出しを確かめてから押すまでの間に、画面が次の段階へ切り替わることがある。そのときは次の繰り返しでやり直す
+        try {
+          await p.locator("circle[data-candidate]").first().click({ force: true, timeout: 2000 });
+          await p.getByRole("button", { name: "ここに置く" }).click({ timeout: 2000 });
+          await p.getByRole("button", { name: "置く", exact: true }).click({ timeout: 2000 });
+        } catch {
+          continue;
+        }
         acted = true;
         break;
       }
-      if (!(await p.getByText("好きなカードを1枚もらえます（3人戦）").isVisible()) && (await p.locator(".choices button[data-kind]").count())) {
-        await p.locator(".choices button[data-kind]").first().click();
-        while (await p.getByRole("button", { name: "決める" }).isDisabled()) await p.locator(".choices button[data-kind]").first().click();
-        await p.getByRole("button", { name: "決める" }).click();
+      if (!(await p.getByText("好きなカードを1枚もらえます（3人戦）").isVisible()) && (await answerPromptOn(p))) {
         acted = true;
         break;
       }

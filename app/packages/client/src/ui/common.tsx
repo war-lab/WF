@@ -20,6 +20,29 @@ export function Mark({ color, size }: { color: Color; size?: number }) {
   );
 }
 
+/** 点の内訳の出どころ（BD01 2.3 の PointEntry.src）の日本語 */
+export const SRC_LABEL: Record<string, string> = {
+  order: "注文",
+  bonus: "ボーナス注文",
+  jointRow: "共同注文の行",
+  jointFinish: "共同注文の完成",
+  jointHalf: "共同注文の半分の点",
+};
+
+/** 点の内訳を、出どころごとの合計にまとめる */
+export function ledgerSummary(ledger: { src: string; hp: number }[]): { label: string; points: number; count: number }[] {
+  const m = new Map<string, { points: number; count: number }>();
+  for (const e of ledger) {
+    const x = m.get(e.src) ?? { points: 0, count: 0 };
+    x.points += e.hp / 2;
+    x.count += 1;
+    m.set(e.src, x);
+  }
+  return Object.keys(SRC_LABEL)
+    .filter((k) => m.has(k))
+    .map((k) => ({ label: SRC_LABEL[k]!, ...m.get(k)! }));
+}
+
 /** 画面全体を薄く覆う重ね表示。操作をすべて止める */
 export function Cover({ children }: { children: ReactNode }) {
   return (
