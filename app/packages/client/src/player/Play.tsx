@@ -21,7 +21,7 @@ import {
 } from "@word-farm/engine";
 import { BoardMap } from "../BoardMap.tsx";
 import type { Net } from "../net/useNet.ts";
-import { Cover, Mark } from "../ui/common.tsx";
+import { Cover, Icon, Mark } from "../ui/common.tsx";
 import { rejectText } from "../ui/messages.ts";
 import { Notice, Phrases, useMapProps, vertexInfo } from "./App.tsx";
 
@@ -207,7 +207,7 @@ function HandTab({ view, busy, setPending, onBuild }: { view: PlayerView; busy: 
             const n = view.me.hand[k] ?? 0;
             return (
               <span key={k} className={`card${n ? "" : " zero"}`} data-card={k}>
-                {k} <b>{n}</b>
+                <Icon name={`card-${k}`} size={28} /> {k} <b>{n}</b>
               </span>
             );
           })}
@@ -217,12 +217,12 @@ function HandTab({ view, busy, setPending, onBuild }: { view: PlayerView; busy: 
       <div className="cards products">
         {PRODUCTS.map((p) => (
           <span key={p} className={`card${me.products[p] ? "" : " zero"}`} data-product={p}>
-            {p} <b>{me.products[p] ?? 0}</b>
+            <Icon name={`product-${p}`} size={26} /> {p} <b>{me.products[p] ?? 0}</b>
           </span>
         ))}
       </div>
       <p className="money">
-        コイン <b>{me.coins}</b>　無料券 <b>{me.freeTickets}</b>　<b>{me.halfPoints / 2}</b>点
+        <Icon name="ui-coin" size={22} title="コイン" /> コイン <b>{me.coins}</b>　無料券 <b>{me.freeTickets}</b>　<b>{me.halfPoints / 2}</b>点
       </p>
       <div className="acts">
         <Act label="植える" ok={!!anyPlant && !busy} reason={anyPlant ? "" : why(L.plant[0]?.reason)} onClick={() => setMode("plant")} />
@@ -306,18 +306,22 @@ function FarmTab({ view, busy, setPending }: { view: PlayerView; busy: boolean; 
         const feed = view.legal.feed.find((h) => h.value === i);
         const sell = view.legal.sellAnimal.find((h) => h.value === i);
         return (
-          <div key={i} className="plot" data-plot={i}>
-            {p.t === "empty" && <span>空き</span>}
+          <div key={i} className={`plot ${p.t}`} data-plot={i}>
+            {p.t === "empty" && <span className="plot-label">空き</span>}
             {p.t === "crop" && (
-              <span>
-                {p.crop}
-                <br />
-                次の自分の番に収穫
-              </span>
+              <>
+                <Icon name={`farm-${p.crop}`} size={84} title={p.crop} />
+                <span className="plot-label">
+                  {p.crop}
+                  <br />
+                  次の自分の番に収穫
+                </span>
+              </>
             )}
             {p.t === "animal" && (
               <>
-                <span>{p.animal === "cow" ? "牛" : "ニワトリ"}</span>
+                <Icon name={`farm-${p.animal}`} size={84} title={p.animal} />
+                <span className="plot-label">{p.animal === "cow" ? "牛" : "ニワトリ"}</span>
                 <Act
                   label={`餌をやる（${cfg.feedYield[p.animal].product} ${cfg.feedYield[p.animal].n}）`}
                   ok={!!feed?.enabled && !busy}
@@ -553,14 +557,18 @@ function OfferForm({ net, view, onClose }: { net: Net; view: PlayerView; onClose
       <span className="sub">カード</span>
       {ALL_CARDS.filter((k) => !mine || (view.me.hand[k] ?? 0) > 0).map((k) => (
         <span key={k} className="row">
-          {k}
+          <span>
+            <Icon name={`card-${k}`} size={22} /> {k}
+          </span>
           <Counter n={g.cards[k] ?? 0} min={0} max={mine ? (view.me.hand[k] ?? 0) : 9} set={(v) => set({ ...g, cards: { ...g.cards, [k]: v } })} />
         </span>
       ))}
       <span className="sub">産物とコイン</span>
       {PRODUCTS.filter((p) => !mine || (me.products[p] ?? 0) > 0).map((p) => (
         <span key={p} className="row">
-          {p}
+          <span>
+            <Icon name={`product-${p}`} size={22} /> {p}
+          </span>
           <Counter n={g.products[p] ?? 0} min={0} max={mine ? (me.products[p] ?? 0) : 20} set={(v) => set({ ...g, products: { ...g.products, [p]: v } })} />
         </span>
       ))}

@@ -20,6 +20,14 @@ export function Mark({ color, size }: { color: Color; size?: number }) {
   );
 }
 
+/**
+ * 素材の絵（art/final から書き出した public/art/*.webp）。文字の名前は消さず、横に添えて使う。
+ * 英語の名前は交渉で使う言葉なので、画面からなくさない（BD04 8章）
+ */
+export function Icon({ name, size = 28, title }: { name: string; size?: number; title?: string }) {
+  return <img className="icon" src={`/art/${name}.webp`} alt={title ?? ""} width={size} height={size} draggable={false} />;
+}
+
 /** 点の内訳の出どころ（BD01 2.3 の PointEntry.src）の日本語 */
 export const SRC_LABEL: Record<string, string> = {
   order: "注文",

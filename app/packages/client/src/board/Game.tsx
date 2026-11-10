@@ -8,7 +8,7 @@ import type { Color, Product } from "@word-farm/engine";
 import { BoardMap, type HarborKind, type TileKind } from "../BoardMap.tsx";
 import { durable } from "../net/browser.ts";
 import type { Net } from "../net/useNet.ts";
-import { Mark, ledgerSummary } from "../ui/common.tsx";
+import { Icon, Mark, ledgerSummary } from "../ui/common.tsx";
 import { eventText } from "../ui/events.ts";
 import { rejectText } from "../ui/messages.ts";
 import { useSounds } from "./sound.ts";
@@ -212,7 +212,11 @@ function BoardGameView({ net, view }: { net: Net; view: BoardView }) {
               <p className="text">{o.text}</p>
               <div className="order-foot">
                 {/* 易の注文の絵。MVP は産物の名前の札で代える（BD04 2.4） */}
-                {o.picture && <span className="pic">{o.picture}</span>}
+                {o.picture && (
+                  <span className="pic">
+                    <Icon name={`product-${o.picture}`} size={52} title={o.picture} />
+                  </span>
+                )}
                 <span className="left">
                   残り
                   {Array.from({ length: o.remaining }, (_, i) => (
@@ -348,18 +352,27 @@ function PlayerPanel({ p, turn, choosing, fx }: { p: PublicPlayerView; turn: boo
       <div className="head">
         <Mark color={p.color} size={32} /> <span className="name">{p.name}</span>
         <span className="pts">{p.halfPoints / 2}点</span>
-        <span className={`coins${coins !== p.coins ? " counting" : ""}`}>コイン {coins}</span>
+        <span className={`coins${coins !== p.coins ? " counting" : ""}`}>
+          <Icon name="ui-coin" size={30} title="コイン" /> {coins}
+        </span>
       </div>
       <div>
         <span className={fx.glowHand.includes(p.seat) ? "glow" : ""}>手札 {p.handCount}枚</span>　無料券 {p.freeTickets}　拠点 {p.houses.length}
         {choosing && <span className="tag">選択中</span>}
         {!p.connected && <span className="tag">切断中</span>}
       </div>
-      <div className="prod">{PRODUCTS.map((k) => `${k} ${p.products[k] ?? 0}`).join("  ")}</div>
+      <div className="prod">
+        {PRODUCTS.map((k) => (
+          <span key={k} className={p.products[k] ? "" : "zero"}>
+            <Icon name={`product-${k}`} size={30} title={k} />
+            {p.products[k] ?? 0}
+          </span>
+        ))}
+      </div>
       <div className="plots">
         {p.plots.map((x, i) => (
-          <span key={i} className={`plot${flash.includes(i) ? " flash" : ""}`}>
-            {x.t === "empty" ? "空き" : x.t === "crop" ? x.crop : x.animal}
+          <span key={i} className={`plot ${x.t}${flash.includes(i) ? " flash" : ""}`} title={x.t === "empty" ? "空き" : x.t === "crop" ? x.crop : x.animal}>
+            {x.t !== "empty" && <Icon name={`farm-${x.t === "crop" ? x.crop : x.animal}`} size={38} title={x.t === "crop" ? x.crop : x.animal} />}
           </span>
         ))}
       </div>

@@ -21,6 +21,15 @@ test("tour", async ({ browser }) => {
   await t.board.waitForTimeout(800);
   await s(t.board, "h04");
   await s(p, "p04-hand");
+  await give(t, seat, { cards: { grow: 1, potato: 1, buy: 1, chicken: 1 }, coins: 2 });
+  await p.getByRole("button", { name: "植える" }).click();
+  await p.locator(".pick button", { hasText: "potato" }).click();
+  await p.getByRole("button", { name: "宣言" }).click();
+  await p.getByRole("button", { name: "動物を買う" }).click();
+  await p.locator(".pick button", { hasText: "chicken" }).click();
+  await p.getByRole("button", { name: "宣言" }).click();
+  await t.board.waitForTimeout(1500);
+  await s(t.board, "h04-farm");
   await p.getByRole("button", { name: "農場" }).click();
   await s(p, "p04-farm");
   await p.getByRole("button", { name: "注文" }).click();

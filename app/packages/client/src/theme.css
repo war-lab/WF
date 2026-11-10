@@ -43,6 +43,10 @@ button:disabled {
   border-radius: 12px;
   padding: 24px 28px;
   max-width: 80%;
+  /* 内容が画面より高いと上下が切れて押せなくなるため、枠の中でスクロールさせる（手札9種類の捨て札など） */
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  box-sizing: border-box;
   text-align: center;
   font-size: 1.2em;
 }
@@ -972,4 +976,79 @@ button.danger {
   font-size: 13px;
   color: var(--muted);
   margin-top: 4px;
+}
+
+/* ---------- 素材の絵 ---------- */
+img.icon {
+  vertical-align: middle;
+  display: inline-block;
+}
+.order .pic {
+  background: none;
+  border: 0;
+  padding: 0;
+}
+.pp .prod {
+  display: flex;
+  gap: 10px;
+  font-size: 22px;
+  font-weight: 700;
+}
+.pp .prod span {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+.pp .prod .zero {
+  opacity: 0.35;
+}
+.pp .coins {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.cards .card {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.choices button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.farm .plot {
+  background: url(/art/farm-ground.webp) center / cover;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  text-align: center;
+}
+.farm .plot .plot-label {
+  background: rgba(40, 28, 16, 0.6);
+  border-radius: 6px;
+  padding: 2px 6px;
+  margin: 4px 0;
+}
+.farm .plot .act button {
+  color: var(--ink);
+}
+.farm .plot .why {
+  color: #fff;
+  text-shadow: 0 1px 2px #000;
+}
+.pp .plots .plot {
+  width: 46px;
+  height: 46px;
+  box-sizing: border-box;
+  padding: 2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: url(/art/farm-ground.webp) center / cover;
+  border-radius: 8px;
 }

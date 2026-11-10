@@ -100,6 +100,14 @@ export function BoardMap({
   return (
     <svg className="board-map" viewBox={`0 0 ${W.toFixed(0)} ${H.toFixed(0)}`} role="img" aria-label="産地マップ" onClick={pick}>
       <defs>
+        {/* 拠点の駒の絵（白）を、持ち主の色で染める（乗算）。色だけで人を見分けさせず、形の記号を重ねる（BD04 7.3） */}
+        {Object.entries(COLOR_INFO).map(([k, c]) => (
+          <filter key={k} id={`tint-${k}`} colorInterpolationFilters="sRGB">
+            <feFlood floodColor={c.hex} result="f" />
+            <feComposite in="f" in2="SourceAlpha" operator="in" result="c" />
+            <feBlend in="SourceGraphic" in2="c" mode="multiply" />
+          </filter>
+        ))}
         {board.tiles.map((t) => (
           <clipPath key={t.id} id={`clip-t${t.id}`}>
             <polygon points={hexPoints(t.vertices)} />
@@ -201,8 +209,12 @@ export function BoardMap({
         return (
           <g key={`b${vid}`} data-house={vid} transform={`translate(${px(v.x).toFixed(1)} ${py(v.y).toFixed(1)})`}>
             <g className={Number(vid) === bounce ? "bounce" : undefined}>
-              <path d="M-19 10 L-19 -8 L0 -24 L19 -8 L19 10 Z" fill={c.hex} stroke="var(--line)" strokeWidth={3} />
-              <text x={0} y={7} textAnchor="middle" fontSize={16} style={{ fill: "#fff" }}>
+              {plain ? (
+                <path d="M-19 10 L-19 -8 L0 -24 L19 -8 L19 10 Z" fill={c.hex} stroke="var(--line)" strokeWidth={3} />
+              ) : (
+                <image href="/art/piece-house.webp" x={-26} y={-34} width={52} height={52} filter={`url(#tint-${color})`} />
+              )}
+              <text x={0} y={plain ? 7 : 8} textAnchor="middle" fontSize={plain ? 16 : 18} fontWeight={700} style={{ fill: "#fff", paintOrder: "stroke", stroke: "#3a2a18", strokeWidth: 3 }}>
                 {c.mark}
               </text>
             </g>

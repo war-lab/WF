@@ -6,7 +6,7 @@ import { board, type Prompt, type PromptSource, type WordCard } from "@word-farm
 import { BoardMap, type HarborKind, type TileKind } from "../BoardMap.tsx";
 import { durable } from "../net/browser.ts";
 import { useNet, type Net } from "../net/useNet.ts";
-import { Cover, Mark, NetCover, ledgerSummary } from "../ui/common.tsx";
+import { Cover, Icon, Mark, NetCover, ledgerSummary } from "../ui/common.tsx";
 import { rejectText } from "../ui/messages.ts";
 import { Play } from "./Play.tsx";
 
@@ -272,7 +272,7 @@ function Ask({ net, view, prompt }: { net: Net; view: PlayerView; prompt: Prompt
         <div className="choices">
           {prompt.options.map((k) => (
             <button key={k} disabled={left <= 0} onClick={() => setPicked([...picked, k])} data-kind={k}>
-              {k}（残り {view.piles[k]}）
+              <Icon name={`card-${k}`} size={30} /> {k}（残り {view.piles[k]}）
             </button>
           ))}
         </div>
@@ -298,7 +298,7 @@ function Ask({ net, view, prompt }: { net: Net; view: PlayerView; prompt: Prompt
           const n = disc[k as WordCard] ?? 0;
           return (
             <li key={k}>
-              {k} {have}枚　捨てる {n}
+              <Icon name={`card-${k}`} size={26} /> {k} {have}枚　捨てる {n}
               <button disabled={n <= 0} onClick={() => setDisc({ ...disc, [k]: n - 1 })}>
                 −
               </button>
