@@ -2,7 +2,7 @@
 import { unzipSync, strFromU8 } from "fflate";
 import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
-import { closeTable, completeSetup, playEmptyTurn, setupTable } from "./helpers.ts";
+import { HOST_KEY, closeTable, completeSetup, playEmptyTurn, setupTable } from "./helpers.ts";
 
 test("E2E-23、16、19 ロビーから結果と書き出しまで1局を通す。最終ラウンドの宣言でラウンドの最後の人の手番の終わりに終わる", async ({ browser }) => {
   const t = await setupTable(browser, 4, { dice: "manual" });
@@ -15,7 +15,7 @@ test("E2E-23、16、19 ロビーから結果と書き出しまで1局を通す�
   await expect(t.board.locator(".orders .order:not(.joint)")).toHaveCount(3);
   // 記録の書き出しは、ゲームの途中ではできない（E2E-19）
   const roomId = t.roomId;
-  const early = await t.board.request.get(`/api/rooms/${roomId}/record`, { headers: { Authorization: "Bearer local-dev-host-key" } });
+  const early = await t.board.request.get(`/api/rooms/${roomId}/record`, { headers: { Authorization: `Bearer ${HOST_KEY}` } });
   expect(early.status()).toBe(409);
   // 席0の手番中にホストが最終ラウンドにする → 席3の手番の終わりで終わる（E2E-16）
   await t.board.getByRole("button", { name: "管理" }).click();

@@ -1,7 +1,7 @@
 // E2E-07 注文の成立、E2E-08 注文の不成立、E2E-10 日本語の支払い、E2E-17 8点での勝ち（BD06 7章）
 // 試験用の口（TEST_HOOKS=1）で産物とカードを渡し、伏せた注文の条件を読んで、届ける物を決める
 import { expect, test } from "@playwright/test";
-import { closeTable, setupTable } from "./helpers.ts";
+import { HOST_KEY, closeTable, setupTable } from "./helpers.ts";
 import { adminOp, deliverOrder, give, readState, rollToMain, startAndReachRound3, startFast } from "./hooks.ts";
 
 test("E2E-07 注文の成立：英文は伏せてあり、「英文を見る」で開く。大画面は英文を先に出し、約3秒後に成立を出す。補充と読み上げの促しが出る", async ({ browser }) => {
@@ -37,7 +37,7 @@ test("E2E-07 注文の成立：英文は伏せてあり、「英文を見る」�
   expect(after.players[seat]!.halfPoints).toBe(f.order.hp);
   // sentenceShown が記録に残る（ゲームを打ち切ってから記録を取り出す）
   await adminOp(t, "ゲームを打ち切る", true);
-  const rec = (await (await t.board.request.get(`/api/rooms/${t.roomId}/record`, { headers: { Authorization: "Bearer local-dev-host-key" } })).json()) as {
+  const rec = (await (await t.board.request.get(`/api/rooms/${t.roomId}/record`, { headers: { Authorization: `Bearer ${HOST_KEY}` } })).json()) as {
     commands: { cmd: { t: string }; meta: { sentenceShown?: boolean } | null }[];
   };
   expect(rec.commands.find((r) => r.cmd.t === "deliverOrder")!.meta).toEqual({ sentenceShown: true });
