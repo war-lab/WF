@@ -190,11 +190,7 @@ function BoardGameView({ net, view }: { net: Net; view: BoardView }) {
           selectedColor={pointer ? colorOf(pointer.seat) : null}
           bounce={fx.bounceVertex}
         />
-        {/* 単語カードの山。山から配るカードは、ここから生まれて飛ぶ（ui/fly.ts） */}
-        <div className="deck" data-deck>
-          <CardBack n={Object.values(view.piles).reduce((a, b) => a + b, 0)} w={58} />
-          <span>山</span>
-        </div>
+
         {fx.dice && (
           <div className={`fx-dice${fx.dice.spin ? " spin" : ""}`} aria-hidden>
             <Die n={fx.dice.a} spin={fx.dice.spin} />
@@ -253,7 +249,13 @@ function BoardGameView({ net, view }: { net: Net; view: BoardView }) {
             )}
           </div>
         ))}
-        <p className="piles">山：{Object.entries(view.piles).map(([k, v]) => `${k} ${v}`).join("　")}</p>
+        <div className="pile-row">
+          {/* 単語カードの山。山から配るカードは、ここから生まれて飛ぶ（ui/fly.ts） */}
+          <div className="deck" data-deck>
+            <CardBack n={Object.values(view.piles).reduce((a, b) => a + b, 0)} w={34} />
+          </div>
+          <p className="piles">山：{Object.entries(view.piles).map(([k, v]) => `${k} ${v}`).join("　")}</p>
+        </div>
       </aside>
 
       <footer className="band">

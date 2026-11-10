@@ -1390,16 +1390,46 @@ button:not(:disabled):active {
 .h-game .map {
   position: relative;
 }
-/* 左上の海は港の看板と重ならない（左下と右下には港がある） */
-.h-game .deck {
+/* 山は右下の山の一覧の横に置き、注文の列の下端に固定する（注文が長くても隠れないように） */
+.h-game .orders {
+  position: relative;
+  padding-bottom: 60px;
+}
+.h-game .pile-row {
   position: absolute;
-  left: 18px;
-  top: 16px;
+  left: 8px;
+  right: 8px;
+  bottom: 0;
+  height: 60px;
+  background: #f4efe2;
   display: flex;
-  flex-direction: row;
   align-items: center;
-  gap: 4px;
-  font-weight: 800;
-  color: #fff;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  gap: 10px;
+}
+.h-game .pile-row .piles {
+  margin: 0;
+}
+.h-game .deck {
+  flex: none;
+  padding: 4px 8px 0 0;
+}
+/* 大画面の共同注文の行は横に並べる。縦に3行並べると、注文の列が画面の高さに収まらない */
+.h-game .order .rows {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 18px;
+  list-style: none;
+  padding-left: 0;
+  font-size: 22px;
+  counter-reset: row;
+}
+.h-game .order .rows li {
+  counter-increment: row;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 6px;
+  padding: 0 6px;
+}
+.h-game .order .rows li::before {
+  content: counter(row) ". ";
+  color: var(--muted);
 }
