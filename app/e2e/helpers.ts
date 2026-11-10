@@ -1,5 +1,5 @@
 // E2E の補助。大画面1つとスマホ n 台を、記憶を分けたブラウザのコンテキストで開く
-import { expect, type Browser, type BrowserContext, type Page, devices } from "@playwright/test";
+import { expect, test, webkit, type Browser, type BrowserContext, type Page, devices } from "@playwright/test";
 
 export const HOST_KEY = process.env.E2E_HOST_KEY ?? "local-dev-host-key";
 
@@ -26,9 +26,25 @@ export async function openBoard(browser: Browser, opts: { dice?: "server" | "man
   return { page, ctx, roomId };
 }
 
+let webkitBrowser: Promise<Browser> | null = null;
+
+/**
+ * スマホのブラウザ。構成 mixed では、実際の端末に合わせて iPhone 役（偶数番目）を WebKit で開く（BD06 7章）。
+ * 大画面と Android 役は Chromium のまま（ホストPCは Chrome か Edge）
+ */
+async function phoneBrowser(browser: Browser, i: number): Promise<Browser> {
+  if (test.info().project.name !== "mixed" || i % 2 !== 0) return browser;
+  webkitBrowser ??= webkit.launch();
+  return webkitBrowser;
+}
+
 export async function joinPhone(browser: Browser, roomId: string, name: string, i: number): Promise<{ page: Page; ctx: BrowserContext }> {
   const dev = i % 2 === 0 ? devices["iPhone 13"] : devices["Pixel 7"];
-  const ctx = await browser.newContext({ ...dev, defaultBrowserType: undefined } as never);
+  const b = await phoneBrowser(browser, i);
+  const { defaultBrowserType: _d, ...devOpts } = dev;
+  // WebKit は isMobile に対応しない端末の設定があるため、Chromium 以外では外す
+  const opts = b === browser ? devOpts : { ...devOpts, isMobile: false };
+  const ctx = await b.newContext(opts);
   const page = await ctx.newPage();
   await page.goto(`/p?room=${roomId}`);
   await page.getByLabel("名前").fill(name);
@@ -91,8 +107,10 @@ export async function answerAnyPrompt(t: Table): Promise<boolean> {
     if (await decide.count()) {
       // 収入の問いは、前回の種類を選んだ状態で出る（BD04 3.6.1）。そのときはすぐに決められる
       for (let k = 0; k < 6 && (await decide.isDisabled({ timeout: 500 }).catch(() => false)); k++) {
-        if (await choice.count()) await choice.first().click();
-        else break;
+        if (!(await choice.count())) break;
+        await choice.first().click();
+        // 遅い端末（WebKit）では、押してから選んだものの表示が変わるまで間がある
+        await expect(p.getByText("選んだもの：なし")).toHaveCount(0, { timeout: 3000 }).catch(() => undefined);
       }
       if (await decide.isDisabled({ timeout: 500 }).catch(() => false)) {
         await p.screenshot({ path: "e2e/.out/prompt-stuck.png" });

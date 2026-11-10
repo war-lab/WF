@@ -232,7 +232,7 @@ describe("Durable Object での結合（TC-SRV）", () => {
     const mf = await start(false, join(work, "f"));
     try {
       const roomId = await createRoom(mf);
-      for (const p of ["state", "crashNext", "version", "restart", "tables", "give"]) {
+      for (const p of ["state", "crashNext", "version", "restart", "tables", "give", "advance"]) {
         expect((await mf.dispatchFetch(`http://x/api/rooms/${roomId}/test/${p}`)).status).toBe(404);
       }
     } finally {

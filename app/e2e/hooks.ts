@@ -1,7 +1,7 @@
 // E2E の補助のうち、試験用の口（TEST_HOOKS=1 の wrangler dev だけ）を使うものと、対戦中の操作。
 import { expect, type Page } from "@playwright/test";
 import type { GameState } from "@word-farm/engine";
-import { answerAnyPrompt, completeSetup, playEmptyTurn, turnPhone, type Table } from "./helpers.ts";
+import { answerAnyPrompt, turnPhone, type Table } from "./helpers.ts";
 
 /** 今の状態を読む（伏せた注文の条件を含む） */
 export async function readState(t: Table): Promise<GameState> {
@@ -22,12 +22,27 @@ export async function phoneOfSeat(t: Table, seat: number): Promise<Page> {
   return t.phones[t.names.indexOf(name.trim())]!;
 }
 
-/** ゲームを始めて準備を終え、ラウンド3の初め（注文が表になる）まで回す */
-export async function startAndReachRound3(t: Table): Promise<void> {
+/**
+ * 前置きを、画面を通さずに試験用の口で進める。準備（setup）か、n 手番（turns）。
+ * 画面の流れそのものは E2E-01、02、23 が確かめる。ここはほかのテストの待ち時間を減らすためのもの
+ */
+export async function advance(t: Table, kind: "setup" | "turns", n = 0, dice: [number, number][] = []): Promise<void> {
+  const r = await t.board.request.post(`/api/rooms/${t.roomId}/test/advance`, { data: { kind, n, dice } });
+  expect(r.status(), await r.text()).toBe(200);
+}
+
+/** ゲームを始め、準備を API で終える */
+export async function startFast(t: Table): Promise<void> {
   await t.board.getByRole("button", { name: "ゲームを始める" }).click();
-  await completeSetup(t);
-  const rolls: [number, number][] = [[2, 3], [4, 4], [5, 1], [3, 3], [6, 4], [2, 2], [5, 3], [6, 6]];
-  for (const d of rolls.slice(0, t.names.length * 2)) await playEmptyTurn(t, d);
+  await expect(t.board.locator(".h-game")).toBeVisible();
+  await advance(t, "setup");
+  await expect(t.board.locator(".h-game .top .who")).toContainText("の手番");
+}
+
+/** ゲームを始め、ラウンド3の初め（注文が表になる）まで API で進める */
+export async function startAndReachRound3(t: Table): Promise<void> {
+  await startFast(t);
+  await advance(t, "turns", t.names.length * 2, [[2, 3], [4, 4], [5, 1], [3, 3]]);
   await expect(t.board.locator(".orders .order:not(.joint)")).toHaveCount(3);
 }
 

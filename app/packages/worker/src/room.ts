@@ -5,6 +5,7 @@ import {
   apply,
   createGame,
   defaultConfig,
+  legalActions,
   viewFor,
   type Actor,
   type Color,
@@ -646,11 +647,12 @@ export class RoomCore {
     this.applyAndCommit(c, id, { k: "seat", seat }, cmd, meta);
   }
 
-  private applyAndCommit(c: Conn, id: string, actor: Actor, cmd: Command, meta: { sentenceShown?: boolean | undefined } | null): void {
+  private applyAndCommit(c: Conn | null, id: string, actor: Actor, cmd: Command, meta: { sentenceShown?: boolean | undefined } | null): RejectCode | null {
     const r = apply(this.state!, actor, cmd);
     if (!r.ok) {
       this.rejects.set(id, { code: r.code });
-      return this.reject(c, id, r.code);
+      if (c) this.reject(c, id, r.code);
+      return r.code;
     }
     const now = this.d.now();
     const wasStarted = this.room.startedAt !== null;
@@ -661,8 +663,9 @@ export class RoomCore {
     const events = this.stamp(r.events as EngineEvent[], now);
     this.writeRow(now, id, actor, cmd, meta, null, r.state);
     this.d.afterCommit?.();
-    this.send(c, { t: "ack", id, rev: this.room.rev });
+    if (c) this.send(c, { t: "ack", id, rev: this.room.rev });
     this.broadcast(events);
+    return null;
   }
 
   /** 記録の1行と room の表を、1つのトランザクションで書く（BD05 1.3 の手順5） */
@@ -727,7 +730,8 @@ export class RoomCore {
           : op.k === "endTurnFor"
             ? { t: "endTurnFor", turnSerial: op.turnSerial }
             : { t: op.k }) as Command;
-        return this.applyAndCommit(c, id, { k: "admin" }, cmd, null);
+        this.applyAndCommit(c, id, { k: "admin" }, cmd, null);
+        return;
       }
     }
   }
@@ -1000,6 +1004,48 @@ export class RoomCore {
       this.saveRoom();
     });
     this.broadcast([]);
+    return null;
+  }
+
+  /**
+   * 試験用：E2E の前置きを、画面を通さずに進める（本番では呼ばない。BD06 TC-SRV-17）。
+   * エンジンのコマンドを通常どおり適用し、記録の行も書く。画面の流れそのものは E2E-01、02、23 が確かめる。
+   * setup：準備を最後まで（最初の置ける交点に置き、問いには既定の答え）。turns：n 手番を回す（出目は dice の順に使い、問いには既定の答え）
+   */
+  debugAdvance(kind: "setup" | "turns", n = 0, dice: [number, number][] = []): string | null {
+    if (!this.state) return "NO_GAME";
+    const step = (actor: Actor, cmd: Command): string | null => this.applyAndCommit(null, this.d.randomHex(), actor, cmd, null);
+    const answerAll = (): string | null => {
+      for (let g = 0; g < 50; g++) {
+        const p = this.state!.prompts.find((x) => !this.state!.answers[x.id]);
+        if (!p) return null;
+        const err = step({ k: "seat", seat: p.seat }, { t: "answerPrompt", promptId: p.id, answer: defaultAnswer(this.state!, p.id)! });
+        if (err) return err;
+      }
+      return "PROMPT_LOOP";
+    };
+    if (kind === "setup") {
+      for (let g = 0; g < 100 && this.state.turn === null; g++) {
+        const err = answerAll();
+        if (err) return err;
+        if (this.state.turn !== null) break;
+        const seat = setupSeat(this.state);
+        if (seat === null) continue;
+        const v = legalActions(this.state, seat).placeHouse!.vertices[0]!;
+        const e2 = step({ k: "seat", seat }, { t: "placeHouse", vertex: v });
+        if (e2) return e2;
+      }
+      return this.state.turn === null ? "SETUP_NOT_DONE" : null;
+    }
+    for (let i = 0; i < n; i++) {
+      const t = this.state.turn;
+      if (!t || this.state.phase.k !== "roll") return "NOT_ROLL";
+      const [a, b] = dice[i % Math.max(dice.length, 1)] ?? [2, 3];
+      const seat = { k: "seat" as const, seat: t.seat };
+      const cmd: Command = this.state.config.dice === "manual" ? { t: "inputDice", a, b } : { t: "rollDice" };
+      const err = step(seat, cmd) ?? answerAll() ?? step(seat, { t: "endTurn" });
+      if (err) return err;
+    }
     return null;
   }
 

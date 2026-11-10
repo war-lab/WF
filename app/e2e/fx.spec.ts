@@ -1,7 +1,7 @@
 // 大画面の演出（BD04 6章）。演出が出て、決めた時間のうちに消えることを確かめ、見え方をスクリーンショットに残す
 import { expect, test } from "@playwright/test";
-import { closeTable, completeSetup, setupTable, turnPhone } from "./helpers.ts";
-import { deliverOrder, give, readState, rollToMain, startAndReachRound3 } from "./hooks.ts";
+import { closeTable, setupTable, turnPhone } from "./helpers.ts";
+import { advance, deliverOrder, give, readState, rollToMain, startAndReachRound3 } from "./hooks.ts";
 
 test("演出：開始プレイヤーの名前、サイコロ、カードの受け取りが出て消える", async ({ browser }) => {
   const t = await setupTable(browser, 3, { dice: "manual" });
@@ -10,7 +10,7 @@ test("演出：開始プレイヤーの名前、サイコロ、カードの受�
   await t.board.waitForTimeout(500);
   await t.board.screenshot({ path: "e2e/.out/fx-start.png" });
   await expect(t.board.locator(".fx-banner")).toHaveCount(0, { timeout: 4000 });
-  await completeSetup(t);
+  await advance(t, "setup");
   const p = await turnPhone(t);
   const sel = p.locator(".dice-input select");
   await sel.nth(0).selectOption("5");

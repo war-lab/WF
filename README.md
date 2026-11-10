@@ -89,7 +89,7 @@ npm run bench -w @word-farm/engine          # 処理時間と記録の大きさ�
 npm run verify -w @word-farm/protocol -- record.json   # 写しを含めて取り出した記録を再適用し、各行の写しと比べる（BD05 5.4）
 ```
 
-手元で `npm run dev` を使う前に、`app/packages/worker/.dev.vars` に `HOST_KEY=<ホストの鍵>` を書く（git の対象外）。デプロイした版の鍵は `npx wrangler secret put HOST_KEY` で設定する（BD05 4.3）。
+手元で `npm run dev` を使う前に、`app/packages/worker/.dev.vars` に `HOST_KEY=<ホストの鍵>` を書く（git の対象外）。E2E を流すときは、同じファイルに `HOST_KEY=local-dev-host-key` と `TEST_HOOKS=1` を書いて `wrangler dev` を起動しておき、`npm run e2e`（すべて Chromium、約2分）か `npm run e2e:mixed`（iPhone 役のスマホを WebKit、約3分）を流す。初回は `npx playwright install chromium webkit` が要る。デプロイした版の鍵は `npx wrangler secret put HOST_KEY` で設定する（BD05 4.3）。
 
 盤面の数字や港を変えたら、`sim/fixed_layout.json` を直してから `python sim/export_board.py` で `app/packages/engine/src/data/board.json` を書き出し直す。`board.json` は手で直さない。大画面に `?sample=rulebook` を付けると、ルールブックの図と同じ種類で盤面を描き、`?ids` で交点の番号を出す。
 

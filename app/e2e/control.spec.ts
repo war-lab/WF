@@ -3,8 +3,8 @@
 import jsQR from "jsqr";
 import { PNG } from "pngjs";
 import { expect, test, type Page } from "@playwright/test";
-import { HOST_KEY, closeTable, completeSetup, setupTable, turnPhone } from "./helpers.ts";
-import { give, phoneOfSeat, readState, rollToMain } from "./hooks.ts";
+import { HOST_KEY, closeTable, setupTable, turnPhone } from "./helpers.ts";
+import { give, phoneOfSeat, readState, rollToMain, startFast } from "./hooks.ts";
 
 async function openAdmin(board: Page): Promise<void> {
   await board.getByRole("button", { name: "管理" }).click();
@@ -25,8 +25,7 @@ test("E2E-24、11、12 QRコードと全リクエストに鍵が出ない。閉�
   const qr = await decodeQr(t.board.getByAltText("参加のQRコード"));
   expect(qr).toBe(`http://127.0.0.1:8787/p?room=${t.roomId}`);
   expect(qr).not.toContain(HOST_KEY);
-  await t.board.getByRole("button", { name: "ゲームを始める" }).click();
-  await completeSetup(t);
+  await startFast(t);
   await rollToMain(t, [2, 3]);
   // 11：手番の人のコンテキストを閉じ、保存した記憶で開き直すと、同じ席に戻り、手番を続けられる
   const st = await readState(t);
@@ -55,8 +54,7 @@ test("E2E-24、11、12 QRコードと全リクエストに鍵が出ない。閉�
 
 test("E2E-14、18 取り消しの確認に最後の操作が出る。続けて押すと1つ前が出る。一時停止中はスマホの操作が止まり、ホストは取り消せる", async ({ browser }) => {
   const t = await setupTable(browser, 3, { dice: "manual" });
-  await t.board.getByRole("button", { name: "ゲームを始める" }).click();
-  await completeSetup(t);
+  await startFast(t);
   const p = await rollToMain(t, [2, 3]);
   const seat = (await readState(t)).turn!.seat;
   await give(t, seat, { cards: { sell: 1 }, products: { egg: 2 } });
@@ -91,8 +89,7 @@ test("E2E-14、18 取り消しの確認に最後の操作が出る。続けて�
 
 test("E2E-22 ホストの確認の間に手番が移ると、STALE_TARGET の文言が出て、次の人の手番は終わらない", async ({ browser }) => {
   const t = await setupTable(browser, 3, { dice: "manual" });
-  await t.board.getByRole("button", { name: "ゲームを始める" }).click();
-  await completeSetup(t);
+  await startFast(t);
   const p = await rollToMain(t, [2, 3]);
   await openAdmin(t.board);
   await t.board.getByRole("button", { name: "手番を終える" }).click();
@@ -109,8 +106,7 @@ test("E2E-22 ホストの確認の間に手番が移ると、STALE_TARGET の文
 
 test("E2E-21 席の再発行のQRを別の端末で読んでも、ホストが承認するまで席が移らない", async ({ browser }) => {
   const t = await setupTable(browser, 3, { dice: "manual" });
-  await t.board.getByRole("button", { name: "ゲームを始める" }).click();
-  await completeSetup(t);
+  await startFast(t);
   const name = t.names[1]!;
   await openAdmin(t.board);
   await t.board.locator(".cover-box.admin span", { hasText: "席の再発行" }).getByRole("button", { name }).click();
@@ -136,8 +132,7 @@ test("E2E-21 席の再発行のQRを別の端末で読んでも、ホストが�
 
 test("E2E-13 ゲームの途中でサーバー（Durable Object）を作り直すと、全員が自動で席に戻り、状態が元どおり", async ({ browser }) => {
   const t = await setupTable(browser, 3, { dice: "manual" });
-  await t.board.getByRole("button", { name: "ゲームを始める" }).click();
-  await completeSetup(t);
+  await startFast(t);
   await rollToMain(t, [2, 3]);
   const before = await readState(t);
   // wrangler dev のプロセスを止める代わりに、試験用の口で Durable Object を作り直させる（保存から読み直す点は同じ）
@@ -154,8 +149,7 @@ test("E2E-13 ゲームの途中でサーバー（Durable Object）を作り直�
 
 test("E2E-05 山が尽きる種類を2人が選ぶと、後の人にだけ問いが出直す", async ({ browser }) => {
   const t = await setupTable(browser, 3, { dice: "manual" });
-  await t.board.getByRole("button", { name: "ゲームを始める" }).click();
-  await completeSetup(t);
+  await startFast(t);
   const st = await readState(t);
   // cow の山を1枚にする（残りを席2に渡す）
   await give(t, 2, { cards: { cow: st.piles.cow - 1 } });

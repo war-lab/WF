@@ -1,8 +1,8 @@
 // E2E-07 注文の成立、E2E-08 注文の不成立、E2E-10 日本語の支払い、E2E-17 8点での勝ち（BD06 7章）
 // 試験用の口（TEST_HOOKS=1）で産物とカードを渡し、伏せた注文の条件を読んで、届ける物を決める
 import { expect, test } from "@playwright/test";
-import { closeTable, completeSetup, setupTable } from "./helpers.ts";
-import { adminOp, deliverOrder, give, readState, rollToMain, startAndReachRound3 } from "./hooks.ts";
+import { closeTable, setupTable } from "./helpers.ts";
+import { adminOp, deliverOrder, give, readState, rollToMain, startAndReachRound3, startFast } from "./hooks.ts";
 
 test("E2E-07 注文の成立：英文は伏せてあり、「英文を見る」で開く。大画面は英文を先に出し、約3秒後に成立を出す。補充と読み上げの促しが出る", async ({ browser }) => {
   const t = await setupTable(browser, 4, { dice: "manual" });
@@ -70,8 +70,7 @@ test("E2E-08 注文の不成立：大画面に不成立が出て、sell は減�
 
 test("E2E-10 日本語の支払い：手番でない人がボタンで払うと、大画面に短く出る", async ({ browser }) => {
   const t = await setupTable(browser, 3, { dice: "manual" });
-  await t.board.getByRole("button", { name: "ゲームを始める" }).click();
-  await completeSetup(t);
+  await startFast(t);
   await rollToMain(t, [2, 3]);
   let paid = false;
   for (const ph of t.phones) {

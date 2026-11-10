@@ -723,6 +723,22 @@ describe("試験用の口（E2E のため）", () => {
   });
 });
 
+describe("試験用の前置きの口（E2E のため）", () => {
+  it("debugAdvance は準備を終え、n 手番を回し、記録の行を通常どおり書く。記録の検証と食い違わない", async () => {
+    const { verifyRecord } = await import("@word-farm/protocol/record");
+    const t = await startTable();
+    expect(t.srv.core.debugAdvance("setup")).toBeNull();
+    expect(state(t).turn).not.toBeNull();
+    const serial = state(t).turn!.serial;
+    expect(t.srv.core.debugAdvance("turns", 8, [[2, 3], [4, 4]])).toBeNull();
+    expect(state(t).turn!.serial).toBe(serial + 8);
+    expect(state(t).orders.revealed).toBe(true);
+    await t.srv.admin(t.board, { k: "abortGame" });
+    const r = t.srv.core.record(true) as { ok: true; body: never };
+    expect(verifyRecord(r.body).mismatches).toEqual([]);
+  });
+});
+
 describe("pointer（BD03 3.2）", () => {
   it("拠点を置く番の人の pointer だけを大画面に転送する", async () => {
     const t = await startTable();

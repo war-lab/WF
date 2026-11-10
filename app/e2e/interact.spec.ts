@@ -1,12 +1,11 @@
 // E2E-04 7の同時の入力、E2E-06、06b、06c 交換、E2E-09 共同注文（BD06 7章）
 import { expect, test } from "@playwright/test";
-import { closeTable, completeSetup, setupTable, turnPhone } from "./helpers.ts";
-import { give, phoneOfSeat, readState, rollToMain } from "./hooks.ts";
+import { closeTable, setupTable, turnPhone } from "./helpers.ts";
+import { give, phoneOfSeat, readState, rollToMain, startFast } from "./hooks.ts";
 
 test("E2E-04 7で2人が同時に捨てるカードを選ぶ。片方が答えても進まず、両方が答えると好きな1枚の問いに移る", async ({ browser }) => {
   const t = await setupTable(browser, 4, { dice: "manual" });
-  await t.board.getByRole("button", { name: "ゲームを始める" }).click();
-  await completeSetup(t);
+  await startFast(t);
   const st = await readState(t);
   const turn = st.turn!.seat;
   const a = (turn + 1) % 4;
@@ -38,8 +37,7 @@ test("E2E-04 7で2人が同時に捨てるカードを選ぶ。片方が答え�
 
 test("E2E-06、06b、06c 手番でない人の申し出が大画面にも出る。相手を選ぶ手順はなく、持っていない品目は出ない。手番の人は別のタブでも窓が出て、承諾1回で成立する", async ({ browser }) => {
   const t = await setupTable(browser, 4, { dice: "manual" });
-  await t.board.getByRole("button", { name: "ゲームを始める" }).click();
-  await completeSetup(t);
+  await startFast(t);
   const tp = await rollToMain(t, [2, 3]);
   const st = await readState(t);
   const turn = st.turn!.seat;
@@ -77,8 +75,7 @@ test("E2E-06、06b、06c 手番でない人の申し出が大画面にも出る�
 
 test("E2E-09 共同注文：行の産物と数は画面に出ない。合わない物は受け付けず sell も減らない。3人が1行ずつ出して完成し、点が大画面に出る", async ({ browser }) => {
   const t = await setupTable(browser, 4, { dice: "manual" });
-  await t.board.getByRole("button", { name: "ゲームを始める" }).click();
-  await completeSetup(t);
+  await startFast(t);
   const st0 = await readState(t);
   const joint = st0.joint.faceUp[0]!.joint;
   // 大画面とスマホに、行の産物と数が出ていない
