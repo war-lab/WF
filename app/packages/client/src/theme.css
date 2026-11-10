@@ -1070,13 +1070,30 @@ img.icon {
   vertical-align: middle;
   flex: none;
 }
-.wcard.crop {
-  --cat: #d0782a;
-  --cat-soft: #fbeedd;
+/* 枠の色はタイルの絵の地面の色（art/final/tile-*.png の下半分の中央値）。白い文字が読めるよう、明るい色は少し暗くした */
+.wcard.t-grow {
+  --cat: #b64f15;
+  --cat-soft: #f8e3d6;
 }
-.wcard.animal {
-  --cat: #4f8a3a;
-  --cat-soft: #e6f2dc;
+.wcard.t-buy {
+  --cat: #4f76a3;
+  --cat-soft: #e1eaf4;
+}
+.wcard.t-feed {
+  --cat: #d08a0a;
+  --cat-soft: #fdf0d2;
+}
+.wcard.t-sell {
+  --cat: #6e6b69;
+  --cat-soft: #ecebea;
+}
+.wcard.t-seed {
+  --cat: #6a2e12;
+  --cat-soft: #f1e2d8;
+}
+.wcard.t-animal {
+  --cat: #6a9a10;
+  --cat-soft: #eaf3d6;
 }
 /* 2枚以上は、右上にずらした同じ色のカードを後ろに描く */
 .wcard[data-stack="1"] {
@@ -1309,8 +1326,8 @@ button:not(:disabled):active {
   width: 16px;
   height: 22px;
   border-radius: 3px;
-  background: #4f7fb8;
-  box-shadow: 4px -2px 0 -1px #e3edf8, 4px -2px 0 0 #d0782a;
+  background: #b64f15;
+  box-shadow: 4px -2px 0 -1px #fdf0d2, 4px -2px 0 0 #6a9a10;
 }
 .p-tabs .swap {
   font-size: 22px;
@@ -1341,4 +1358,48 @@ button:not(:disabled):active {
 .choices .card-btn.chosen {
   background: #fff3c4;
   outline: 3px solid #e0a800;
+}
+
+/* ---------- 物が飛ぶ演出（ui/fly.ts） ---------- */
+.fly-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 200;
+  overflow: hidden;
+}
+.fly-layer > * {
+  position: absolute;
+  left: 0;
+  top: 0;
+  will-change: transform, opacity;
+}
+.fly-layer .fly-card {
+  box-shadow: 0 6px 12px rgba(40, 28, 16, 0.35);
+}
+.fly-layer .fly-img img {
+  display: block;
+  filter: drop-shadow(0 4px 4px rgba(40, 28, 16, 0.35));
+}
+.fly-layer .fly-confetti {
+  width: 10px;
+  height: 14px;
+  border-radius: 2px;
+}
+/* 大画面の山（盤面の左上の海の上） */
+.h-game .map {
+  position: relative;
+}
+/* 左上の海は港の看板と重ならない（左下と右下には港がある） */
+.h-game .deck {
+  position: absolute;
+  left: 18px;
+  top: 16px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }

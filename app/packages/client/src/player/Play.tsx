@@ -21,6 +21,7 @@ import {
 } from "@word-farm/engine";
 import { BoardMap } from "../BoardMap.tsx";
 import type { Net } from "../net/useNet.ts";
+import { usePhoneFx } from "./phoneFx.ts";
 import { Cover, Icon, Mark, ProductToken, WordCardView } from "../ui/common.tsx";
 import { rejectText } from "../ui/messages.ts";
 import { Notice, Phrases, useMapProps, vertexInfo } from "./App.tsx";
@@ -64,6 +65,7 @@ export function Play({ net, view }: { net: Net; view: PlayerView }) {
   const myTurn = view.turn?.seat === me;
   const busy = net.state.pending.length > 0 || view.paused;
   const self = view.players[me]!;
+  usePhoneFx(view);
   const cfg = view.config;
 
   // 宣言の結果を短く出す（BD04 3.5）

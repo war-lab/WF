@@ -28,15 +28,15 @@ export function Icon({ name, size = 28, title }: { name: string; size?: number; 
   return <img className="icon" src={`/art/${name}.webp`} alt={title ?? ""} width={size} height={size} draggable={false} />;
 }
 
-/** 単語カードの区分。枠の色を分ける（行動、作物、動物） */
-const CARD_GROUP: Record<string, "action" | "crop" | "animal"> = {
-  grow: "action",
-  buy: "action",
-  feed: "action",
-  sell: "action",
-  carrot: "crop",
-  potato: "crop",
-  wheat: "crop",
+/** 単語カードが出るタイル。枠の色をそのタイルの色に合わせる（作物は seed、動物は animal のタイルから出る） */
+const CARD_TILE: Record<string, string> = {
+  grow: "grow",
+  buy: "buy",
+  feed: "feed",
+  sell: "sell",
+  carrot: "seed",
+  potato: "seed",
+  wheat: "seed",
   cow: "animal",
   chicken: "animal",
 };
@@ -48,7 +48,7 @@ const CARD_GROUP: Record<string, "action" | "crop" | "animal"> = {
 export function WordCardView({ kind, n, w = 68 }: { kind: string; n?: number; w?: number }) {
   const stack = n === undefined ? 0 : Math.min(Math.max(n - 1, 0), 2);
   return (
-    <span className={`wcard ${CARD_GROUP[kind] ?? "action"}${n === 0 ? " zero" : ""}`} data-stack={stack} style={{ ["--w" as string]: `${w}px` }}>
+    <span className={`wcard t-${CARD_TILE[kind] ?? "grow"}${n === 0 ? " zero" : ""}`} data-stack={stack} style={{ ["--w" as string]: `${w}px` }}>
       <span className="face">
         <img src={`/art/card-${kind}.webp`} alt="" draggable={false} />
       </span>

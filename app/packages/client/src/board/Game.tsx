@@ -9,6 +9,7 @@ import { BoardMap, type HarborKind, type TileKind } from "../BoardMap.tsx";
 import { durable } from "../net/browser.ts";
 import type { Net } from "../net/useNet.ts";
 import { CardBack, Icon, Mark, ledgerSummary } from "../ui/common.tsx";
+import { useShown } from "../ui/fly.ts";
 import { eventText } from "../ui/events.ts";
 import { rejectText } from "../ui/messages.ts";
 import { useSounds } from "./sound.ts";
@@ -189,6 +190,11 @@ function BoardGameView({ net, view }: { net: Net; view: BoardView }) {
           selectedColor={pointer ? colorOf(pointer.seat) : null}
           bounce={fx.bounceVertex}
         />
+        {/* 単語カードの山。山から配るカードは、ここから生まれて飛ぶ（ui/fly.ts） */}
+        <div className="deck" data-deck>
+          <CardBack n={Object.values(view.piles).reduce((a, b) => a + b, 0)} w={58} />
+          <span>山</span>
+        </div>
         {fx.dice && (
           <div className={`fx-dice${fx.dice.spin ? " spin" : ""}`} aria-hidden>
             <Die n={fx.dice.a} spin={fx.dice.spin} />
@@ -336,8 +342,22 @@ function Die({ n, spin }: { n: number; spin: boolean }) {
   );
 }
 
+/** プレイヤー欄の産物1種類。飛んでいる途中の数は、届くまで出さない */
+function ProdCount({ seat, k, n }: { seat: number; k: string; n: number }) {
+  const shown = useShown(seat, `product:${k}`, n);
+  return (
+    <span className={shown ? "" : "zero"} data-product={k}>
+      <Icon name={`product-${k}`} size={30} title={k} />
+      {shown}
+    </span>
+  );
+}
+
 function PlayerPanel({ p, turn, choosing, fx }: { p: PublicPlayerView; turn: boolean; choosing: boolean; fx: Fx }) {
-  const coins = useCountUp(p.coins);
+  // 物が飛んでいる間は、届くまで前の値を出す（ui/fly.ts）
+  const coins = useCountUp(useShown(p.seat, "coins", p.coins));
+  const hand = useShown(p.seat, "hand", p.handCount);
+  const hp = useShown(p.seat, "pts", p.halfPoints);
   const floats = fx.floats[p.seat] ?? [];
   const flash = fx.flashPlots[p.seat] ?? [];
   return (
@@ -351,14 +371,14 @@ function PlayerPanel({ p, turn, choosing, fx }: { p: PublicPlayerView; turn: boo
       </div>
       <div className="head">
         <Mark color={p.color} size={32} /> <span className="name">{p.name}</span>
-        <span className="pts">{p.halfPoints / 2}点</span>
+        <span className="pts">{hp / 2}点</span>
         <span className={`coins${coins !== p.coins ? " counting" : ""}`}>
           <Icon name="ui-coin" size={30} title="コイン" /> {coins}
         </span>
       </div>
       <div>
         <span className={`hand${fx.glowHand.includes(p.seat) ? " glow" : ""}`} title={`手札 ${p.handCount}枚`}>
-          <CardBack n={p.handCount} />
+          <CardBack n={hand} />
         </span>
         　無料券 {p.freeTickets}　拠点 {p.houses.length}
         {choosing && <span className="tag">選択中</span>}
@@ -366,15 +386,12 @@ function PlayerPanel({ p, turn, choosing, fx }: { p: PublicPlayerView; turn: boo
       </div>
       <div className="prod">
         {PRODUCTS.map((k) => (
-          <span key={k} className={p.products[k] ? "" : "zero"}>
-            <Icon name={`product-${k}`} size={30} title={k} />
-            {p.products[k] ?? 0}
-          </span>
+          <ProdCount key={k} seat={p.seat} k={k} n={p.products[k] ?? 0} />
         ))}
       </div>
       <div className="plots">
         {p.plots.map((x, i) => (
-          <span key={i} className={`plot ${x.t}${flash.includes(i) ? " flash" : ""}`} title={x.t === "empty" ? "空き" : x.t === "crop" ? x.crop : x.animal}>
+          <span key={i} data-plot={i} className={`plot ${x.t}${flash.includes(i) ? " flash" : ""}`} title={x.t === "empty" ? "空き" : x.t === "crop" ? x.crop : x.animal}>
             {x.t !== "empty" && <Icon name={`farm-${x.t === "crop" ? x.crop : x.animal}`} size={38} title={x.t === "crop" ? x.crop : x.animal} />}
           </span>
         ))}

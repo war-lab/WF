@@ -37,7 +37,7 @@ export interface BoardMapProps {
 // 中段の5枚が幅960pxに収まるよう、六角の幅を180pxにする（BD04 5.1）。座標の単位は外接円の半径
 const R = 180 / Math.sqrt(3);
 const PIER = 0.85; // 桟橋の長さ（外接円の半径に対する比。ルールブックの図と同じ）
-const PAD = 60;
+const PAD = 60; // R、PIER、PAD を変えたら art/bake_board.py も直して焼き直す
 
 const vertexById = new Map(board.vertices.map((v) => [v.id, v]));
 const vtx = (id: number) => {
@@ -63,12 +63,6 @@ const pips = (n: number) => 6 - Math.abs(7 - n);
 
 function hexPoints(ids: number[]): string {
   return ids.map((id) => `${px(vtx(id).x).toFixed(1)},${py(vtx(id).y).toFixed(1)}`).join(" ");
-}
-
-/** タイルの六角を中心から k 倍に広げた頂点。重ねて描くと、島の外周（砂浜と波打ち際）になる */
-function grownHex(t: (typeof board.tiles)[number], k: number): string {
-  const [cx, cy] = t.center;
-  return t.vertices.map((id) => `${px(cx + (vtx(id).x - cx) * k).toFixed(1)},${py(cy + (vtx(id).y - cy) * k).toFixed(1)}`).join(" ");
 }
 
 export function BoardMap({
@@ -114,34 +108,14 @@ export function BoardMap({
             <feBlend in="SourceGraphic" in2="c" mode="multiply" />
           </filter>
         ))}
-        {/* 海と砂浜は、つなぎ目なく並べられる質感（art/cut_texture.py）を敷き詰める */}
-        <pattern id="sea" patternUnits="userSpaceOnUse" width={360} height={360}>
-          <image href="/art/board-sea.webp" width={360} height={360} />
-        </pattern>
-        <pattern id="sand" patternUnits="userSpaceOnUse" width={240} height={240}>
-          <image href="/art/board-sand.webp" width={240} height={240} />
-        </pattern>
         {board.tiles.map((t) => (
           <clipPath key={t.id} id={`clip-t${t.id}`}>
             <polygon points={hexPoints(t.vertices)} />
           </clipPath>
         ))}
       </defs>
-      <rect x={0} y={0} width={W} height={H} rx={24} fill={plain ? "var(--sea)" : "url(#sea)"} />
-      {!plain && (
-        <g className="coast" aria-hidden>
-          {/* 外側から、浅瀬の明るい帯、波打ち際の白、砂浜の順に重ねる */}
-          {board.tiles.map((t) => (
-            <polygon key={`s${t.id}`} points={grownHex(t, 1.42)} fill="rgba(210,245,240,0.45)" />
-          ))}
-          {board.tiles.map((t) => (
-            <polygon key={`f${t.id}`} points={grownHex(t, 1.24)} fill="rgba(255,255,250,0.9)" />
-          ))}
-          {board.tiles.map((t) => (
-            <polygon key={`b${t.id}`} points={grownHex(t, 1.2)} fill="url(#sand)" />
-          ))}
-        </g>
-      )}
+      {/* 海と島の外周は、盤面の配置が固定なので1枚に焼いた画像を貼る（art/bake_board.py）。SVG の模様で毎回描くとスマホで重い */}
+      {plain ? <rect x={0} y={0} width={W} height={H} rx={24} fill="var(--sea)" /> : <image href="/art/board-bg.webp" x={0} y={0} width={W} height={H} preserveAspectRatio="none" />}
 
       {board.harbors.map((h) => {
         const v = vtx(h.vertex);

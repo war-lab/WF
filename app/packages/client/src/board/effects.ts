@@ -1,6 +1,7 @@
 // 大画面の演出（BD04 6章）。届いた出来事から、短い間だけ出す見た目の状態を作る。
 // 演出は1つ1.5秒以内（宣言の結果を待つ約3秒を除く）で、演出の間も操作を止めない。
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { choreograph } from "./choreo.ts";
 import type { BoardView, GameEvent } from "@word-farm/protocol";
 import type { OrderCondition } from "@word-farm/engine";
 import type { Net } from "../net/useNet.ts";
@@ -81,11 +82,16 @@ export function useBoardFx(net: Net, view: BoardView): Fx {
   const nameRef = useRef(name);
   nameRef.current = name;
 
-  useEffect(() => {
+  // 描く前に処理する。物が飛ぶ間は行き先の数字を据え置くため、新しい数字が一瞬でも出ないようにする
+  useLayoutEffect(() => {
     const m = net.last;
     if (m?.t !== "view" || m.events.length === 0) return;
     const later = (ms: number, f: (x: Fx) => Fx) => window.setTimeout(() => setFx(f), ms);
     for (const e of m.events) apply(e);
+    // 宣言の結果を含むメッセージでは、画面を宣言の前に約3秒留める（BoardGame）。物の動きはそれが明けてから始める
+    const held = m.events.some((e) => e.k === "orderSucceeded" || e.k === "orderFailed");
+    if (held) window.setTimeout(() => m.events.forEach(choreograph), 3080);
+    else m.events.forEach(choreograph);
 
     function apply(e: GameEvent): void {
       switch (e.k) {
@@ -106,8 +112,10 @@ export function useBoardFx(net: Net, view: BoardView): Fx {
           const text = `＋${Object.entries(e.cards)
             .map(([c, n]) => (n === 1 ? c : `${c}×${n}`))
             .join(" ")}`;
-          setFx((x) => ({ ...x, floats: addFloat(x.floats, e.seat, k, text), glowHand: [...x.glowHand, e.seat] }));
-          later(1500, (x) => ({ ...x, floats: dropFloat(x.floats, e.seat, k), glowHand: x.glowHand.filter((s) => s !== e.seat) }));
+          // 収入のカードはサイコロが止まってからタイルで生まれて飛ぶ（choreo.ts）。文字はカードが着いてから出す
+          const at = e.reason === "income" ? 1500 : 0;
+          later(at, (x) => ({ ...x, floats: addFloat(x.floats, e.seat, k, text), glowHand: [...x.glowHand, e.seat] }));
+          later(at + 1500, (x) => ({ ...x, floats: dropFloat(x.floats, e.seat, k), glowHand: x.glowHand.filter((s) => s !== e.seat) }));
           return;
         }
         case "diceRolled": {
