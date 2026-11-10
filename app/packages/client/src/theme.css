@@ -1052,3 +1052,293 @@ img.icon {
   background: url(/art/farm-ground.webp) center / cover;
   border-radius: 8px;
 }
+
+/* ---------- 単語カード（縦長の札） ---------- */
+.wcard {
+  --cat: #4f7fb8;
+  --cat-soft: #e3edf8;
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  width: var(--w);
+  aspect-ratio: 5 / 7;
+  box-sizing: border-box;
+  padding: calc(var(--w) * 0.05);
+  border-radius: calc(var(--w) * 0.12);
+  background: var(--cat);
+  box-shadow: 0 2px 3px rgba(40, 28, 16, 0.3);
+  vertical-align: middle;
+  flex: none;
+}
+.wcard.crop {
+  --cat: #d0782a;
+  --cat-soft: #fbeedd;
+}
+.wcard.animal {
+  --cat: #4f8a3a;
+  --cat-soft: #e6f2dc;
+}
+/* 2枚以上は、右上にずらした同じ色のカードを後ろに描く */
+.wcard[data-stack="1"] {
+  box-shadow: 3px -3px 0 -1px var(--cat-soft), 3px -3px 0 0 var(--cat), 0 2px 3px rgba(40, 28, 16, 0.3);
+}
+.wcard[data-stack="2"] {
+  box-shadow: 3px -3px 0 -1px var(--cat-soft), 3px -3px 0 0 var(--cat), 6px -6px 0 -1px var(--cat-soft), 6px -6px 0 0 var(--cat), 0 2px 3px rgba(40, 28, 16, 0.3);
+}
+.wcard .face {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: calc(var(--w) * 0.08);
+  background: radial-gradient(circle at 50% 42%, #fffdf6 30%, var(--cat-soft) 100%);
+  overflow: hidden;
+}
+.wcard .face img {
+  width: 86%;
+  height: auto;
+}
+.wcard .word {
+  color: #fff;
+  font-weight: 800;
+  font-size: max(10px, calc(var(--w) * 0.19));
+  line-height: 1.35;
+  text-align: center;
+  letter-spacing: 0.02em;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.25);
+}
+.wcard .count {
+  position: absolute;
+  top: calc(var(--w) * -0.12);
+  right: calc(var(--w) * -0.14);
+  min-width: 24px;
+  height: 24px;
+  padding: 0 5px;
+  box-sizing: border-box;
+  border-radius: 12px;
+  background: #3a2a18;
+  color: #fff;
+  border: 2px solid #fffdf6;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 20px;
+  text-align: center;
+  z-index: 1;
+}
+.wcard.zero {
+  filter: grayscale(1);
+  opacity: 0.38;
+  box-shadow: none;
+}
+.wcard.back {
+  --cat: #2f5d3a;
+  --cat-soft: #2f5d3a;
+}
+.wcard.back .face {
+  background:
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.12) 0 3px, transparent 3px 7px),
+    radial-gradient(circle at 50% 50%, #e9c46a 0 18%, transparent 19%),
+    #3f7a4a;
+  border: 1px solid rgba(255, 245, 220, 0.6);
+}
+.wcard.back .count {
+  top: auto;
+  bottom: -6px;
+  right: -12px;
+}
+
+/* 手札の並び：区分ごとに1行 */
+.cards {
+  gap: 10px 12px;
+  padding: 8px 6px 2px 0;
+}
+.cards .slot {
+  display: inline-flex;
+}
+
+/* ---------- 産物の札（丸） ---------- */
+.ptoken {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: calc(var(--s) + 8px);
+}
+.ptoken .disc {
+  width: var(--s);
+  height: var(--s);
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #fffaf0 0 45%, #f1dfae 100%);
+  border: 2px solid #c9a227;
+  box-shadow: 0 2px 3px rgba(40, 28, 16, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ptoken .disc img {
+  width: 74%;
+  height: auto;
+}
+.ptoken .word {
+  font-size: 12px;
+  font-weight: 700;
+}
+.ptoken .count {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 22px;
+  height: 22px;
+  border-radius: 11px;
+  background: #3a2a18;
+  color: #fff;
+  border: 2px solid #fffdf6;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 18px;
+  text-align: center;
+  box-sizing: border-box;
+}
+.ptoken.zero {
+  filter: grayscale(1);
+  opacity: 0.38;
+}
+
+/* ---------- カードを選ぶ問い、捨て札 ---------- */
+.choices {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+.choices .card-btn {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 8px 6px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  border-radius: 12px;
+}
+.choices .card-btn:not(:disabled):active .wcard {
+  transform: translateY(2px);
+}
+.choices .card-btn .left {
+  font-size: 13px;
+  color: var(--muted);
+}
+.picked {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 8px 0;
+}
+.discard {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.discard li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: 6px;
+}
+.discard .disc-n {
+  flex: 1;
+  text-align: left;
+}
+
+/* ---------- 大画面：手札は裏面と枚数 ---------- */
+.pp .hand {
+  display: inline-flex;
+  vertical-align: middle;
+  margin: 4px 10px 4px 0;
+}
+.pp .hand.glow .wcard {
+  outline: 3px solid #f2c94c;
+  outline-offset: 2px;
+}
+
+/* ---------- ボタンとタブ ---------- */
+button:not(.card-btn) {
+  box-shadow: 0 2px 0 #cdbf9f;
+}
+button:not(:disabled):active {
+  transform: translateY(1px);
+  box-shadow: none;
+}
+.primary {
+  box-shadow: 0 3px 0 #3d6a28 !important;
+}
+.p-tabs button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  height: 62px;
+  box-shadow: none;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+  background: transparent;
+  border: 0;
+  border-top: 3px solid transparent;
+}
+.p-tabs button.on {
+  outline: 0;
+  color: var(--ink);
+  border-top-color: var(--leaf);
+  background: #f8f0da;
+}
+.p-tabs .tab-ico {
+  height: 26px;
+  display: flex;
+  align-items: center;
+}
+.p-tabs .mini-cards {
+  position: relative;
+  width: 16px;
+  height: 22px;
+  border-radius: 3px;
+  background: #4f7fb8;
+  box-shadow: 4px -2px 0 -1px #e3edf8, 4px -2px 0 0 #d0782a;
+}
+.p-tabs .swap {
+  font-size: 22px;
+  line-height: 1;
+}
+/* 問いの枠：スマホでは横幅を広く使い、カードを3列にする */
+.p .cover-box,
+.cover .cover-box:has(.choices),
+.cover .cover-box:has(.discard) {
+  max-width: min(94%, 460px);
+  padding: 18px 14px;
+}
+.choices {
+  gap: 6px;
+}
+.choices .card-btn {
+  padding: 8px 6px 4px;
+  margin: 0;
+  min-height: 0;
+}
+/* 選んだカードは枠で示し、選び終えたあとはほかのカードだけを薄くする */
+.choices .card-btn:disabled {
+  opacity: 1;
+}
+.choices .card-btn:disabled:not(.chosen) .wcard {
+  opacity: 0.35;
+}
+.choices .card-btn.chosen {
+  background: #fff3c4;
+  outline: 3px solid #e0a800;
+}

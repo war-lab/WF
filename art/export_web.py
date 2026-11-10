@@ -12,9 +12,15 @@ for f in sorted(os.listdir(src)):
         continue
     name = f.replace("@2x.png", "")
     # タイルは盤面で幅180ピクセルのため512、ほかの素材（産物、カード、作物、動物）は表示が小さいため256にする。透過は保つ
-    size = 512 if name.startswith("tile-") else 256
+    # 海と砂浜の質感（board-）は盤面に敷き詰めるため512。桟橋は横長のまま幅512にする
+    opaque = name.startswith(("tile-", "board-")) or name == "farm-ground"
+    size = 512 if name.startswith(("tile-", "board-")) else 256
     im = Image.open(os.path.join(src, f))
-    im = (im.convert("RGB") if name.startswith("tile-") or name == "farm-ground" else im.convert("RGBA")).resize((size, size), Image.LANCZOS)
+    im = im.convert("RGB") if opaque else im.convert("RGBA")
+    if name == "harbor-pier":
+        im = im.resize((512, round(im.height * 512 / im.width)), Image.LANCZOS)
+    else:
+        im = im.resize((size, size), Image.LANCZOS)
     out = os.path.join(dst, f"{name}.webp")
     im.save(out, "WEBP", quality=88, method=6)
     print(out, os.path.getsize(out) // 1024, "KB")

@@ -21,7 +21,7 @@ import {
 } from "@word-farm/engine";
 import { BoardMap } from "../BoardMap.tsx";
 import type { Net } from "../net/useNet.ts";
-import { Cover, Icon, Mark } from "../ui/common.tsx";
+import { Cover, Icon, Mark, ProductToken, WordCardView } from "../ui/common.tsx";
 import { rejectText } from "../ui/messages.ts";
 import { Notice, Phrases, useMapProps, vertexInfo } from "./App.tsx";
 
@@ -143,6 +143,9 @@ export function Play({ net, view }: { net: Net; view: PlayerView }) {
       <nav className="p-tabs">
         {(["hand", "farm", "orders", "trade"] as Tab[]).map((t) => (
           <button key={t} className={tab === t ? "on" : ""} onClick={() => setTab(t)}>
+            <span className={`tab-ico ${t}`} aria-hidden>
+              {t === "hand" ? <span className="mini-cards" /> : t === "farm" ? <Icon name="farm-wheat" size={26} /> : t === "orders" ? <Icon name="product-milk" size={26} /> : <span className="swap">⇄</span>}
+            </span>
             {{ hand: "手札", farm: "農場", orders: "注文", trade: "交換" }[t]}
             {t === "trade" && view.trades.length > 0 && <span className="badge">{view.trades.length}</span>}
           </button>
@@ -206,8 +209,8 @@ function HandTab({ view, busy, setPending, onBuild }: { view: PlayerView; busy: 
           {row.map((k) => {
             const n = view.me.hand[k] ?? 0;
             return (
-              <span key={k} className={`card${n ? "" : " zero"}`} data-card={k}>
-                <Icon name={`card-${k}`} size={28} /> {k} <b>{n}</b>
+              <span key={k} className="slot" data-card={k}>
+                <WordCardView kind={k} n={n} />
               </span>
             );
           })}
@@ -216,8 +219,8 @@ function HandTab({ view, busy, setPending, onBuild }: { view: PlayerView; busy: 
       <h4 className="group">産物</h4>
       <div className="cards products">
         {PRODUCTS.map((p) => (
-          <span key={p} className={`card${me.products[p] ? "" : " zero"}`} data-product={p}>
-            <Icon name={`product-${p}`} size={26} /> {p} <b>{me.products[p] ?? 0}</b>
+          <span key={p} className="slot" data-product={p}>
+            <ProductToken kind={p} n={me.products[p] ?? 0} />
           </span>
         ))}
       </div>

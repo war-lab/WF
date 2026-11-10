@@ -65,6 +65,12 @@ function hexPoints(ids: number[]): string {
   return ids.map((id) => `${px(vtx(id).x).toFixed(1)},${py(vtx(id).y).toFixed(1)}`).join(" ");
 }
 
+/** タイルの六角を中心から k 倍に広げた頂点。重ねて描くと、島の外周（砂浜と波打ち際）になる */
+function grownHex(t: (typeof board.tiles)[number], k: number): string {
+  const [cx, cy] = t.center;
+  return t.vertices.map((id) => `${px(cx + (vtx(id).x - cx) * k).toFixed(1)},${py(cy + (vtx(id).y - cy) * k).toFixed(1)}`).join(" ");
+}
+
 export function BoardMap({
   tileKinds = {},
   harborKinds = {},
@@ -108,13 +114,34 @@ export function BoardMap({
             <feBlend in="SourceGraphic" in2="c" mode="multiply" />
           </filter>
         ))}
+        {/* 海と砂浜は、つなぎ目なく並べられる質感（art/cut_texture.py）を敷き詰める */}
+        <pattern id="sea" patternUnits="userSpaceOnUse" width={360} height={360}>
+          <image href="/art/board-sea.webp" width={360} height={360} />
+        </pattern>
+        <pattern id="sand" patternUnits="userSpaceOnUse" width={240} height={240}>
+          <image href="/art/board-sand.webp" width={240} height={240} />
+        </pattern>
         {board.tiles.map((t) => (
           <clipPath key={t.id} id={`clip-t${t.id}`}>
             <polygon points={hexPoints(t.vertices)} />
           </clipPath>
         ))}
       </defs>
-      <rect x={0} y={0} width={W} height={H} rx={24} fill="var(--sea)" />
+      <rect x={0} y={0} width={W} height={H} rx={24} fill={plain ? "var(--sea)" : "url(#sea)"} />
+      {!plain && (
+        <g className="coast" aria-hidden>
+          {/* 外側から、浅瀬の明るい帯、波打ち際の白、砂浜の順に重ねる */}
+          {board.tiles.map((t) => (
+            <polygon key={`s${t.id}`} points={grownHex(t, 1.42)} fill="rgba(210,245,240,0.45)" />
+          ))}
+          {board.tiles.map((t) => (
+            <polygon key={`f${t.id}`} points={grownHex(t, 1.24)} fill="rgba(255,255,250,0.9)" />
+          ))}
+          {board.tiles.map((t) => (
+            <polygon key={`b${t.id}`} points={grownHex(t, 1.2)} fill="url(#sand)" />
+          ))}
+        </g>
+      )}
 
       {board.harbors.map((h) => {
         const v = vtx(h.vertex);
@@ -123,8 +150,26 @@ export function BoardMap({
         const kind = h.kind === "any" ? "any" : harborKinds[h.vertex];
         return (
           <g key={`h${h.vertex}`} data-harbor={h.vertex}>
-            <line x1={px(v.x)} y1={py(v.y)} x2={bx} y2={by} stroke="var(--soil)" strokeWidth={10} strokeLinecap="round" />
-            <circle cx={bx} cy={by} r={34} fill="var(--paper)" stroke="var(--line)" strokeWidth={3} />
+            {plain ? (
+              <>
+                <line x1={px(v.x)} y1={py(v.y)} x2={bx} y2={by} stroke="var(--soil)" strokeWidth={10} strokeLinecap="round" />
+                <circle cx={bx} cy={by} r={34} fill="var(--paper)" stroke="var(--line)" strokeWidth={3} />
+              </>
+            ) : (
+              <>
+                {/* 桟橋の絵（横長）を、交点から看板へ向けて回して引き伸ばす */}
+                <image
+                  href="/art/harbor-pier.webp"
+                  x={0}
+                  y={-15}
+                  width={Math.hypot(bx - px(v.x), by - py(v.y))}
+                  height={30}
+                  preserveAspectRatio="none"
+                  transform={`translate(${px(v.x)} ${py(v.y)}) rotate(${(Math.atan2(by - py(v.y), bx - px(v.x)) * 180) / Math.PI})`}
+                />
+                <image href="/art/harbor-sign.webp" x={bx - 46} y={by - 46} width={92} height={92} />
+              </>
+            )}
             {kind === "any" ? (
               <text x={bx} y={by + 9} textAnchor="middle" fontSize={26} fontWeight={700}>
                 3:1

@@ -8,7 +8,7 @@ import type { Color, Product } from "@word-farm/engine";
 import { BoardMap, type HarborKind, type TileKind } from "../BoardMap.tsx";
 import { durable } from "../net/browser.ts";
 import type { Net } from "../net/useNet.ts";
-import { Icon, Mark, ledgerSummary } from "../ui/common.tsx";
+import { CardBack, Icon, Mark, ledgerSummary } from "../ui/common.tsx";
 import { eventText } from "../ui/events.ts";
 import { rejectText } from "../ui/messages.ts";
 import { useSounds } from "./sound.ts";
@@ -357,7 +357,10 @@ function PlayerPanel({ p, turn, choosing, fx }: { p: PublicPlayerView; turn: boo
         </span>
       </div>
       <div>
-        <span className={fx.glowHand.includes(p.seat) ? "glow" : ""}>手札 {p.handCount}枚</span>　無料券 {p.freeTickets}　拠点 {p.houses.length}
+        <span className={`hand${fx.glowHand.includes(p.seat) ? " glow" : ""}`} title={`手札 ${p.handCount}枚`}>
+          <CardBack n={p.handCount} />
+        </span>
+        　無料券 {p.freeTickets}　拠点 {p.houses.length}
         {choosing && <span className="tag">選択中</span>}
         {!p.connected && <span className="tag">切断中</span>}
       </div>

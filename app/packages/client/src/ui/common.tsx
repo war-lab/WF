@@ -28,6 +28,59 @@ export function Icon({ name, size = 28, title }: { name: string; size?: number; 
   return <img className="icon" src={`/art/${name}.webp`} alt={title ?? ""} width={size} height={size} draggable={false} />;
 }
 
+/** 単語カードの区分。枠の色を分ける（行動、作物、動物） */
+const CARD_GROUP: Record<string, "action" | "crop" | "animal"> = {
+  grow: "action",
+  buy: "action",
+  feed: "action",
+  sell: "action",
+  carrot: "crop",
+  potato: "crop",
+  wheat: "crop",
+  cow: "animal",
+  chicken: "animal",
+};
+
+/**
+ * 単語カードを、縦長のカードの形で描く。絵の下に英語の単語を出し、n を渡すと右上に枚数の札を付ける。
+ * 2枚以上は後ろに重なったカードを描き、0枚は灰色にする（枠と文字はゲーム側で描く。素材仕様書 1章）
+ */
+export function WordCardView({ kind, n, w = 68 }: { kind: string; n?: number; w?: number }) {
+  const stack = n === undefined ? 0 : Math.min(Math.max(n - 1, 0), 2);
+  return (
+    <span className={`wcard ${CARD_GROUP[kind] ?? "action"}${n === 0 ? " zero" : ""}`} data-stack={stack} style={{ ["--w" as string]: `${w}px` }}>
+      <span className="face">
+        <img src={`/art/card-${kind}.webp`} alt="" draggable={false} />
+      </span>
+      <span className="word">{kind}</span>
+      {n !== undefined && n > 0 && <span className="count">{n}</span>}
+    </span>
+  );
+}
+
+/** 単語カードの裏面。ほかの人の手札の枚数を示す（中身は見せない） */
+export function CardBack({ n, w = 34 }: { n: number; w?: number }) {
+  return (
+    <span className="wcard back" data-stack={Math.min(Math.max(n - 1, 0), 2)} style={{ ["--w" as string]: `${w}px` }}>
+      <span className="face" />
+      <span className="count">{n}</span>
+    </span>
+  );
+}
+
+/** 産物の札。カードではないので、丸い札に絵と数を出す */
+export function ProductToken({ kind, n, size = 52 }: { kind: string; n: number; size?: number }) {
+  return (
+    <span className={`ptoken${n ? "" : " zero"}`} style={{ ["--s" as string]: `${size}px` }}>
+      <span className="disc">
+        <img src={`/art/product-${kind}.webp`} alt="" draggable={false} />
+      </span>
+      <span className="word">{kind}</span>
+      {n > 0 && <span className="count">{n}</span>}
+    </span>
+  );
+}
+
 /** 点の内訳の出どころ（BD01 2.3 の PointEntry.src）の日本語 */
 export const SRC_LABEL: Record<string, string> = {
   order: "注文",

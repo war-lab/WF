@@ -21,13 +21,25 @@ test("tour", async ({ browser }) => {
   await t.board.waitForTimeout(800);
   await s(t.board, "h04");
   await s(p, "p04-hand");
-  await give(t, seat, { cards: { grow: 1, potato: 1, buy: 1, chicken: 1 }, coins: 2 });
+  // 植えると動物を買うのに要る札を、手札に足りない分だけ山から渡す（局面によって山が尽きているため）
+  const st2 = await readState(t);
+  const need: Record<string, number> = {};
+  for (const k of ["grow", "potato", "buy", "chicken"] as const) {
+    const n = Math.min(Math.max(0, 1 - (st2.players[seat]!.hand[k] ?? 0)), st2.piles[k] ?? 0);
+    if (n) need[k] = n;
+  }
+  await give(t, seat, { cards: need, coins: 2 });
   await p.getByRole("button", { name: "植える" }).click();
   await p.locator(".pick button", { hasText: "potato" }).click();
   await p.getByRole("button", { name: "宣言" }).click();
-  await p.getByRole("button", { name: "動物を買う" }).click();
-  await p.locator(".pick button", { hasText: "chicken" }).click();
-  await p.getByRole("button", { name: "宣言" }).click();
+  // chicken が山にも手札にもない局面では買えないので飛ばす
+  const buy = p.getByRole("button", { name: "動物を買う" });
+  await p.waitForTimeout(500);
+  if (await buy.isEnabled()) {
+    await buy.click();
+    await p.locator(".pick button", { hasText: "chicken" }).click();
+    await p.getByRole("button", { name: "宣言" }).click();
+  }
   await t.board.waitForTimeout(1500);
   await s(t.board, "h04-farm");
   await p.getByRole("button", { name: "農場" }).click();

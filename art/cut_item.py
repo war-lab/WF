@@ -8,6 +8,7 @@ from PIL import Image
 
 SIZE = 512
 MARGIN = 0.08
+KEEP_ASPECT = {"harbor-pier"}
 
 
 def remove_background(im: Image.Image, tol: int = 38) -> Image.Image:
@@ -52,6 +53,11 @@ def finish(name: str) -> None:
     if box is None:
         raise SystemExit(f"{name}: 被写体が見つからない")
     im = im.crop(box)
+    if name in KEEP_ASPECT:
+        # 桟橋は盤面で向きと長さを変えて引き伸ばすため、正方形にせず横長のまま、余白も付けない
+        im.resize((1024, round(im.height * 1024 / im.width)), Image.LANCZOS).save(f"art/final/{name}@2x.png")
+        print(f"{name}: 切り詰め {box} → 横長のまま幅1024")
+        return
     side = max(im.size)
     pad = round(side * MARGIN / (1 - 2 * MARGIN))
     canvas = Image.new("RGBA", (side + 2 * pad, side + 2 * pad), (0, 0, 0, 0))
