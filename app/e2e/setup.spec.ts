@@ -5,10 +5,15 @@ import { answerPromptOn, closeTable, completeSetup, setupTable } from "./helpers
 test("E2E-02 スマホで選んだ交点が大画面でも光り、「ここに置く」と確認を押すまで置かれない。2個目のあとにカードの問いが出る", async ({ browser }) => {
   const t = await setupTable(browser, 4, { dice: "manual" });
   await t.board.getByRole("button", { name: "ゲームを始める" }).click();
-  const placer = t.phones.find(async () => true)!;
-  // 席0（開始プレイヤー）のスマホを探す
-  let p = placer;
-  for (const ph of t.phones) if (await ph.getByText("拠点を置く交点を選んでください").isVisible({ timeout: 3000 }).catch(() => false)) p = ph;
+  // 席0（開始プレイヤー）のスマホを探す。isVisible は timeout を無視して即時に判定するため、どれかに出るまで待つ
+  const asked = (ph: (typeof t.phones)[number]) => ph.getByText("拠点を置く交点を選んでください").isVisible();
+  let p = t.phones[0];
+  await expect
+    .poll(async () => {
+      for (const ph of t.phones) if (await asked(ph)) return (p = ph), true;
+      return false;
+    })
+    .toBe(true);
   await expect(p.getByText("拠点を置く交点を選んでください")).toBeVisible();
   const cand = p.locator("circle[data-candidate]").first();
   const vid = await cand.getAttribute("data-candidate");

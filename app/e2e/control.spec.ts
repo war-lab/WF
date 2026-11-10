@@ -161,11 +161,12 @@ test("E2E-05 山が尽きる種類を2人が選ぶと、後の人にだけ問い
   await p.getByRole("button", { name: "入れる" }).click();
   // 捨て札の問い（席2は手札が多い）に答える
   const p2 = await phoneOfSeat(t, 2);
-  if (await p2.getByText(/単語カードを\d+枚捨ててください/).isVisible({ timeout: 2000 }).catch(() => false)) {
-    while (await p2.getByRole("button", { name: "捨てる" }).isDisabled()) await p2.locator(".discard button:not([disabled])", { hasText: "＋" }).first().click();
-    await p2.getByRole("button", { name: "捨てる" }).click();
-    await p2.getByRole("button", { name: "捨てる" }).click();
-  }
+  // 席2は cow の山をほぼ全部受け取るので、捨て札の問いは必ず出る。
+  // isVisible は timeout を無視して即時に判定するため、出るまで待ってから答える
+  await expect(p2.getByText(/単語カードを\d+枚捨ててください/)).toBeVisible();
+  while (await p2.getByRole("button", { name: "捨てる" }).isDisabled()) await p2.locator(".discard button:not([disabled])", { hasText: "＋" }).first().click();
+  await p2.getByRole("button", { name: "捨てる" }).click();
+  await p2.getByRole("button", { name: "捨てる" }).click();
   // 手番の人と次の人が cow を選ぶ。配る順は手番の人から時計回り
   const first = await phoneOfSeat(t, turn);
   const second = await phoneOfSeat(t, (turn + 1) % 3);
