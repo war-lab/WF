@@ -145,8 +145,16 @@ export async function answerAnyPrompt(t: Table): Promise<boolean> {
 
 /** 手番の人のスマホ */
 export async function turnPhone(t: Table): Promise<import("@playwright/test").Page> {
+  // 画面の「あなたの番です」だけで探すと、手番を終えた直後の人のスマホ（表示が古いまま）を拾うことがある。
+  // サーバーの状態から手番の席を取り、その席のスマホに「あなたの番です」が出るまで待つ
   for (let g = 0; g < 50; g++) {
-    for (const p of t.phones) if (await p.getByText("あなたの番です").isVisible()) return p;
+    const r = await t.board.request.get(`/api/rooms/${t.roomId}/test/state`);
+    const seat = r.ok() ? ((await r.json()) as { state: { turn: { seat: number } | null } }).state.turn?.seat : undefined;
+    if (seat !== undefined) {
+      const name = (await t.board.locator(`.pp[data-seat="${seat}"] .name`).textContent())?.trim();
+      const p = name ? t.phones[t.names.indexOf(name)] : undefined;
+      if (p && (await p.getByText("あなたの番です").isVisible())) return p;
+    }
     await t.board.waitForTimeout(100);
   }
   throw new Error("手番の人のスマホが見つからない");
