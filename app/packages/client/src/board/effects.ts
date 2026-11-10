@@ -1,7 +1,7 @@
 // 大画面の演出（BD04 6章）。届いた出来事から、短い間だけ出す見た目の状態を作る。
 // 演出は1つ1.5秒以内（宣言の結果を待つ約3秒を除く）で、演出の間も操作を止めない。
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { choreograph } from "./choreo.ts";
+import { choreograph, holdUntilRelease } from "./choreo.ts";
 import type { BoardView, GameEvent } from "@word-farm/protocol";
 import type { OrderCondition } from "@word-farm/engine";
 import type { Net } from "../net/useNet.ts";
@@ -89,8 +89,10 @@ export function useBoardFx(net: Net, view: BoardView): Fx {
     const later = (ms: number, f: (x: Fx) => Fx) => window.setTimeout(() => setFx(f), ms);
     for (const e of m.events) apply(e);
     // 宣言の結果を含むメッセージでは、画面を宣言の前に約3秒留める（BoardGame）。物の動きはそれが明けてから始める
+    // 一度に多く届いたとき（早送り、取り消しのやり直しなど）は物を飛ばさない。全部を同時に飛ばすと何も追えない
+    if (m.events.length > 12) return;
     const held = m.events.some((e) => e.k === "orderSucceeded" || e.k === "orderFailed");
-    if (held) window.setTimeout(() => m.events.forEach(choreograph), 3080);
+    if (held) holdUntilRelease(m.events);
     else m.events.forEach(choreograph);
 
     function apply(e: GameEvent): void {
@@ -113,16 +115,17 @@ export function useBoardFx(net: Net, view: BoardView): Fx {
             .map(([c, n]) => (n === 1 ? c : `${c}×${n}`))
             .join(" ")}`;
           // 収入のカードはサイコロが止まってからタイルで生まれて飛ぶ（choreo.ts）。文字はカードが着いてから出す
-          const at = e.reason === "income" ? 1500 : 0;
+          const at = e.reason === "income" ? 1900 : 0;
           later(at, (x) => ({ ...x, floats: addFloat(x.floats, e.seat, k, text), glowHand: [...x.glowHand, e.seat] }));
           later(at + 1500, (x) => ({ ...x, floats: dropFloat(x.floats, e.seat, k), glowHand: x.glowHand.filter((s) => s !== e.seat) }));
           return;
         }
         case "diceRolled": {
           const [a, b] = e.dice;
+          // 転がって止まるまで約1秒（Game.tsx の Die）。止まってから約1.6秒、出目と合計を出しておく
           setFx((x) => ({ ...x, dice: { a, b, spin: true } }));
-          later(700, (x) => ({ ...x, dice: x.dice ? { ...x.dice, spin: false } : null }));
-          later(2200, (x) => ({ ...x, dice: null }));
+          later(1000, (x) => ({ ...x, dice: x.dice ? { ...x.dice, spin: false } : null }));
+          later(2600, (x) => ({ ...x, dice: null }));
           if (a + b === 7) {
             setFx((x) => ({ ...x, banner: { text: "Market day", sub: "全員が好きなカードを1枚もらえます" } }));
             later(1500, (x) => ({ ...x, banner: null }));

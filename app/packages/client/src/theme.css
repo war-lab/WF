@@ -1361,11 +1361,12 @@ button:not(:disabled):active {
 }
 
 /* ---------- 物が飛ぶ演出（ui/fly.ts） ---------- */
+/* 問いや管理の枠（.cover、z-index 100）より後ろに置く。飛ぶ物が枠の中の QR や選択肢に重ならないように */
 .fly-layer {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  z-index: 200;
+  z-index: 90;
   overflow: hidden;
 }
 .fly-layer > * {
@@ -1432,4 +1433,24 @@ button:not(:disabled):active {
 .h-game .order .rows li::before {
   content: counter(row) ". ";
   color: var(--muted);
+}
+/* サイコロ：転がす動きは Game.tsx の Die（Web Animations）。止まったら合計を出す */
+.fx-dice.spin .die {
+  animation: none;
+}
+.fx-dice {
+  align-items: center;
+}
+.fx-dice .dice-sum {
+  font-size: 72px;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 3px 0 #3a2a18, 0 0 12px rgba(0, 0, 0, 0.35);
+  animation: sum-pop 0.35s cubic-bezier(0.3, 1.6, 0.6, 1);
+}
+@keyframes sum-pop {
+  from {
+    transform: scale(0.3);
+    opacity: 0;
+  }
 }

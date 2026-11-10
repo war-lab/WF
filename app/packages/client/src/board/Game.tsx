@@ -1,5 +1,5 @@
 // 大画面の H03 準備、H04 対戦、H05 管理パネル、H06 取り消しの確認、H07 結果、H08 記録の書き出し（BD04 2.3〜2.8、5章）。
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { zipSync, strToU8 } from "fflate";
 import QRCode from "qrcode";
 import type { BoardView, GameEvent, PublicPlayerView } from "@word-farm/protocol";
@@ -9,10 +9,11 @@ import { BoardMap, type HarborKind, type TileKind } from "../BoardMap.tsx";
 import { durable } from "../net/browser.ts";
 import type { Net } from "../net/useNet.ts";
 import { CardBack, Icon, Mark, ledgerSummary } from "../ui/common.tsx";
-import { useShown } from "../ui/fly.ts";
+import { burst, useShown } from "../ui/fly.ts";
 import { eventText } from "../ui/events.ts";
 import { rejectText } from "../ui/messages.ts";
 import { useSounds } from "./sound.ts";
+import { releaseHeld } from "./choreo.ts";
 import { condText, useBoardFx, useCountUp, type Fx } from "./effects.ts";
 
 const PRODUCTS: Product[] = ["carrot", "potato", "wheat", "egg", "milk"];
@@ -62,6 +63,12 @@ export function BoardGame({ net, view }: { net: Net; view: BoardView }) {
     const id = window.setTimeout(() => force((n) => n + 1), held.current!.until - Date.now() + 20);
     return () => window.clearTimeout(id);
   }, [holding, m]);
+  // 留めを解いた描画の直後に、ためておいた物の動きを流す（choreo.ts）。画面に出す前なので、新しい数字は一瞬も見えない
+  const wasHolding = useRef(false);
+  useLayoutEffect(() => {
+    if (wasHolding.current && !holding) releaseHeld();
+    wasHolding.current = holding;
+  });
   return <BoardGameView net={net} view={shown} />;
 }
 
@@ -193,8 +200,9 @@ function BoardGameView({ net, view }: { net: Net; view: BoardView }) {
 
         {fx.dice && (
           <div className={`fx-dice${fx.dice.spin ? " spin" : ""}`} aria-hidden>
-            <Die n={fx.dice.a} spin={fx.dice.spin} />
-            <Die n={fx.dice.b} spin={fx.dice.spin} />
+            <Die n={fx.dice.a} spin={fx.dice.spin} i={0} />
+            <Die n={fx.dice.b} spin={fx.dice.spin} i={1} />
+            {!fx.dice.spin && <span className="dice-sum">＝{fx.dice.a + fx.dice.b}</span>}
           </div>
         )}
       </section>
@@ -324,18 +332,50 @@ const PIPS: Record<number, [number, number][]> = {
 };
 
 /** サイコロ。回っている間は目を変え続ける */
-function Die({ n, spin }: { n: number; spin: boolean }) {
+/**
+ * サイコロ1個。盤面の右下から投げ込まれ、3回弾みながら転がって中央で止まる（約1秒。止める時刻は effects.ts）。
+ * 転がる間は目を切り替え続け、止まったら出目を出して土煙を立てる
+ */
+function Die({ n, spin, i }: { n: number; spin: boolean; i: number }) {
   const [face, setFace] = useState(n);
+  const ref = useRef<SVGSVGElement>(null);
   useEffect(() => {
     if (!spin) {
       setFace(n);
+      if (ref.current) burst(ref.current, "puff", { n: 5, spread: 70, size: 40 });
       return;
     }
-    const id = window.setInterval(() => setFace(1 + Math.floor(Math.random() * 6)), 80);
+    const id = window.setInterval(() => setFace(1 + Math.floor(Math.random() * 6)), 70);
     return () => window.clearInterval(id);
   }, [spin, n]);
+  useEffect(() => {
+    if (!spin || !ref.current || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    // 出発点は2個で少しずらす。x は進んだ割合、y は弾みの高さ（負で上）
+    const sx = 560 + i * 70;
+    const sy = 300 - i * 60;
+    const r0 = 900 + i * 180;
+    const path: [number, number, number][] = [
+      [0, 0, 0],
+      [0.3, 0.45, 0],
+      [0.42, 0.6, -70],
+      [0.56, 0.78, 0],
+      [0.66, 0.88, -28],
+      [0.76, 0.95, 0],
+      [0.84, 0.985, -8],
+      [0.92, 1, 0],
+      [1, 1, 0],
+    ];
+    ref.current.animate(
+      path.map(([t, p, h]) => {
+        const rot = r0 * (1 - p) * (1 - p);
+        const squash = h === 0 && t > 0 && t < 1 ? "scale(1.08, 0.92)" : "scale(1)";
+        return { offset: t, opacity: t === 0 ? 0.2 : 1, transform: `translate(${sx * (1 - p)}px, ${sy * (1 - p) + h}px) rotate(${rot}deg) ${squash}` };
+      }),
+      { duration: 1000, easing: "cubic-bezier(.25,.6,.4,1)" },
+    );
+  }, [spin, i]);
   return (
-    <svg className="die" viewBox="0 0 100 100" width={120} height={120}>
+    <svg ref={ref} className="die" viewBox="0 0 100 100" width={120} height={120}>
       <rect x={4} y={4} width={92} height={92} rx={18} fill="#fffdf6" stroke="#4a4036" strokeWidth={5} />
       {PIPS[face]!.map(([x, y], i) => (
         <circle key={i} cx={x} cy={y} r={9} fill={face === 1 ? "#c0392b" : "#2a2620"} />

@@ -19,7 +19,8 @@ const $ = {
   prod: (s: number, k: string) => `.pp[data-seat="${s}"] .prod [data-product="${k}"] img`,
   plot: (s: number, i: number) => `.pp[data-seat="${s}"] .plots [data-plot="${i}"]`,
   pts: (s: number) => `.pp[data-seat="${s}"] .pts`,
-  order: (id: string) => `[data-order="${id}"]`,
+  // 成立した注文は、結果を出す時にはもう列にない（補充で入れ替わる）。そのときは中央に出した結果のカードを使う
+  order: (id: string) => (document.querySelector(`[data-order="${id}"]`) ? `[data-order="${id}"]` : ".fx-focus"),
   joint: (id: string) => `[data-joint="${id}"]`,
 };
 
@@ -92,6 +93,24 @@ function pointsTo(seat: number, hp: number, from: string | null, delay = 0): voi
   flyMany(stars, () => ({ k: "star", size: 40 }), from, $.pts(seat), { delay, gap: 120, max: 4, ms: 700, spawn: true, shrink: true, hold: { seat, key: "pts", n: hp }, bump: $.pts(seat) });
 }
 
+// 宣言の結果を含むメッセージの出来事は、画面を宣言の前に留める間ためておき、留めを解く描画の直後に流す。
+// 時計で合わせると、解く描画と飛ばし始めの間に新しい数字が一瞬見える（2026-11-10 の録画で、点が 1.5→0→1.5 とちらついた）
+let held: GameEvent[] = [];
+let heldTimer = 0;
+export function holdUntilRelease(events: GameEvent[]): void {
+  held.push(...events);
+  // 解く描画が来なかったとき（画面を離れたなど）の保険
+  window.clearTimeout(heldTimer);
+  heldTimer = window.setTimeout(releaseHeld, 4000);
+}
+/** 留めを解いた描画の直後（画面に出す前）に呼ぶ。BoardGame の useLayoutEffect から */
+export function releaseHeld(): void {
+  window.clearTimeout(heldTimer);
+  const evs = held;
+  held = [];
+  evs.forEach(choreograph);
+}
+
 /** 届いた出来事1つぶんの振り付け */
 export function choreograph(e: GameEvent): void {
   switch (e.k) {
@@ -107,8 +126,8 @@ export function choreograph(e: GameEvent): void {
       const total = Object.values(e.cards).reduce<number>((a, b) => a + (b ?? 0), 0);
       // 収入はサイコロが止まってから、そのタイルから生まれる。ほかは山から
       const fromTile = e.tile !== null ? $.tile(e.tile) : null;
-      cardsTo(e.seat, kinds, total, fromTile ?? $.deck(), e.reason === "income" ? 800 : 0);
-      if (fromTile && e.reason === "income") later(760, () => burst(fromTile, "sparkle", { n: 6 }));
+      cardsTo(e.seat, kinds, total, fromTile ?? $.deck(), e.reason === "income" ? 1100 : 0);
+      if (fromTile && e.reason === "income") later(1060, () => burst(fromTile, "sparkle", { n: 8 }));
       return;
     }
     case "cardsDiscarded":
@@ -179,15 +198,17 @@ export function choreograph(e: GameEvent): void {
       return;
     case "orderSucceeded":
       // 産物を注文へ届け、点の星とコインを返す
-      later(0, () => {
-        Object.entries(e.items).forEach(([k, n], i) => productsMove(k, n ?? 0, $.prod(e.seat, k), $.order(e.orderId), { delay: i * 120 }));
+      {
+        // 点とコインの据え置きは今すぐ始め、飛ぶ物だけを遅らせる（遅らせて呼ぶと、その間に新しい数字が見える）
+        const at = $.order(e.orderId);
+        Object.entries(e.items).forEach(([k, n], i) => productsMove(k, n ?? 0, $.prod(e.seat, k), at, { delay: i * 120 }));
         later(550, () => {
-          burst($.order(e.orderId), "sparkle", { n: 12, spread: 120 });
-          burst($.order(e.orderId), "confetti", { n: 20, spread: 160 });
-          pointsTo(e.seat, e.hp, $.order(e.orderId), 150);
-          coinsMove(e.coins, $.order(e.orderId), $.coins(e.seat), { delay: 300, recvSeat: e.seat });
+          burst(at, "sparkle", { n: 12, spread: 120 });
+          burst(at, "confetti", { n: 20, spread: 160 });
         });
-      });
+        pointsTo(e.seat, e.hp, at, 700);
+        coinsMove(e.coins, at, $.coins(e.seat), { delay: 850, recvSeat: e.seat });
+      }
       return;
     case "orderFailed":
       shake($.order(e.orderId));
