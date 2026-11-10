@@ -1,0 +1,17 @@
+{
+  "name": "@word-farm/protocol",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./record": "./src/record.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "verify": "node tools/verify.ts"
+  },
+  "dependencies": {
+    "@word-farm/engine": "*",
+    "zod": "^4.6.7"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "name": "@word-farm/engine",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:unit": "vitest run --exclude test/property.test.ts",
+    "typecheck": "tsc -p tsconfig.json",
+    "test:nightly": "vitest run test/property.test.ts --mode nightly",
+    "coverage": "vitest run --coverage --coverage.include=src/**",
+    "bench": "node bench/perf.ts 50",
+    "compare": "node tools/compare.ts 1600"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^5.1.0",
+    "fast-check": "^4.10.2"
+  }
+}

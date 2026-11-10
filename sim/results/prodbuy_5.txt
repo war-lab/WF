@@ -1,0 +1,1 @@
+4人戦 300局 ラウンド10.3  1局あたり: trade 20.08  prod_trade 3.64  prodbuy 1.94  refused 6.08  bank 1.60  coinbank 5.26  market 7.10  joint_line 6.60  joint_done 0.61  bank2 0.77  bank3 0.21

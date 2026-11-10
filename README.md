@@ -2,7 +2,7 @@
 
 社内の英語学習サークル向けのボードゲーム。英語で交渉し、英文の注文を読んで、農場の産物を届ける。
 
-現在は第1回試遊の前の段階で、ルールは模擬対局で確かめたが、人による試遊はまだ行っていない。
+現在は第1回試遊の前の段階で、ルールは模擬対局で確かめたが、人による試遊はまだ行っていない。第1回試遊はアプリで行うため、アプリを作っている。
 
 ## まず読むもの
 
@@ -10,7 +10,8 @@
 |---|---|---|
 | 遊ぶ人 | `word_farm_rules.html` | ルールブック（正本）。公開版：https://claude.ai/artifact/HoSAWvybiFEWnQJ7oJBBcE |
 | 遊ぶ人（オフライン） | `word_farm_rules_local.html` | ルールブックを単体で開ける形にしたもの。ブラウザで開いて印刷できる |
-| 作る人 | `WORD_FARM_DESIGN_v0.4.md` | 設計メモ。仕様の要約、判断の根拠、保留した案、試遊で確認する項目、模擬の数値 |
+| 作る人 | `WORD_FARM_DESIGN_v0.5.md` | 設計メモ。仕様の要約、判断の根拠、保留した案、試遊で確認する項目、模擬の数値 |
+| アプリを作る人 | `WORD_FARM_APP_DESIGN_v0.1.md` | アプリ設計書。ホストPCのブラウザが大画面、各自のスマホに手札を出し、サーバーは Cloudflare の無料プランに置く構成 |
 | 絵や音を作る人 | `art/ASSET_SPEC.md` | アプリ版の素材仕様（Codexでの画像生成とフリー素材の効果音） |
 
 ルールを変えるときは、`word_farm_rules.html` を直してから `word_farm_rules_local.html` を書き出し直す。設計メモには、変えた理由を書く。
@@ -19,23 +20,32 @@
 
 詳細はルールブックを正とする。
 
-- 3〜4人、60〜80分。勝利点8点（人数によらない）。自分の手番中に届いたら勝ち。
+- 3〜4人、70〜90分。勝利点8点（人数によらない）。自分の手番中に届いたら勝ち。遊び始めて70分で打ち切る（試遊の目安）。
+- 初期コインは開始プレイヤーから時計回りに、4人戦が3・3・4・5、3人戦が3・3・4（後の席の補正）。
 - マップは六角タイル13枚（中央はMarket）。数字と港の位置は固定し、タイルと港の種類だけシャッフルする。
-- 拠点は交点に置く。距離ルールあり、道なし、最大3個。港は外側の角1か所。
-- 注文はゲームごとに36枚を自動で作る（0.5〜3点）。紙ではルールブックの印刷用36枚を使う。
+- 拠点は交点に置く。距離ルールあり、道なし、最大3個。ゲーム中の追加は5コイン。港は桟橋の先の角1か所。
+- 注文はゲームごとに36枚を自動で作る（0.5〜3点）。紙ではルールブックの印刷用36枚を使う。うち2枚はボーナス注文で、英文に出てくる5種類のうち受け付ける2〜3種類から1種類を選び、好きな数だけ出せる（数×0.2点、卵は×0.25点を0.5点刻みで切り捨て、コインは数×1）。
+- 注文は最初は伏せておき、ラウンド3の初めに3枚を表にする。表にした人の手番が3回終わる（3人戦で9手番、4人戦で12手番）まで達成されなければ流れて補充される。注文を1コインで流すルールはなくした。
+- 共同注文を別に2枚置く。3行を全員で出し合い、完成したら各自が自分の行の点を受け取る。同じ人は2枚を合わせて1手番に1行まで。最初の行を出した人の手番が3回終わるまでに完成しなければ半分の点（0.5点刻みで切り捨て）。
+- 1手番の行動の回数に上限はない（カードがある限り行動できる）。
+- sellカードで動物を手放せる（買値の半分のコイン、区画が空く）。
 - 交渉は英語。日本語はコインか無料券（全員2枚）で使う。文法は審査しない。
 - 7が出たら、手札7枚以上の人は半分を捨て、そのあと全員が好きな1枚をもらう。
+- 市場価格はニンジンとミルクが2コイン、ほかが1コイン。ニンジンを植えるにはfeedカードも要る（I grow carrots and feed the soil.）。
+- 牛は4コインとgrowカードも要る（I buy a cow and grow grass.）。餌をやるとミルク3つがすぐ出る。
+- 銀行では、5コインで好きな単語カードを1枚買える。産物は、ジャガイモ、小麦、卵が10コイン、ニンジンとミルクが15コインで1つ買える（1手番に1つまで）。
 
 ## フォルダ構成
 
 | 場所 | 内容 |
 |---|---|
 | `word_farm_rules.html`、`word_farm_rules_local.html` | ルールブック |
-| `WORD_FARM_DESIGN_v0.4.md` | 設計メモ |
+| `WORD_FARM_DESIGN_v0.5.md` | 設計メモ |
 | `art/` | 素材仕様 |
 | `sim/` | 模擬エンジンとボット、注文の生成、紹介動画の台本 |
 | `sim/results/` | 模擬対局の結果（設計メモの付録の元データ） |
 | `sim/backup/` | 作業前のコードの控え |
+| `app/` | アプリ（npm workspaces。engine、protocol、worker、client）。構成はアプリ設計書の付録 A |
 | `video/` | 紹介動画（Remotion） |
 | `archive/` | 方針転換前の旧設計（v0.5、ブラウザ対戦と5文型の版） |
 
@@ -47,15 +57,41 @@
 
 ```text
 cd sim
-export PYTHONIOENCODING=utf-8 ORDERSET=3 ORD13=down DEV=1 DEVOFF=1 LOWPRICE=1 COINBANK=1 COINPRICE=4 \
-  HARBORS=6 BANKBASE=4 HSINGLE=1 FIXED=1 COWMODE=delay SEVEN=1 \
-  ORDERGEN=1 ORDERN=36 EGGW=1.8 MILKW=1.8 MAP_T4=8 MAP_T3=8
+export PYTHONIOENCODING=utf-8 ORDERSET=3 ORD13=down DEV=1 DEVOFF=1 LOWPRICE=1 COINBANK=1 \
+  HARBORS=6 BANKBASE=4 HSINGLE=1 FIXED=1 COWMODE= SEVEN=1 \
+  ORDERGEN=1 ORDERN=36 EGGW=1.8 MILKW=1.8 MAP_T4=8 MAP_T3=8 JOINT=1 JQSMALL=1 JTIMEOUT=3 \
+  ACTIVE=1 PRODMULT=5 PRICES=carrot:2,potato:1,wheat:1,egg:1,milk:2 CARROTFEED=1 COWGROW=buy \
+  ACTIONS=99 COINPRICE=5 PRODPRICES=1:10,2:15 HOUSECOST=5 JOINTN=2 JSTART=line \
+  ORDEXP=3 ORDSTART=1 ORDREVEAL=3 EXPTURN=1 EXPOFF=1 JEXPTURN=1 NOFLUSH=1 \n  ANIMALSELL=1 BONUSN=2 SEATCOIN=auto
 python probe_vp.py 300 4     # 4人戦300局の長さと展開
 python mapprobe.py hex454 300 3   # 3人戦300局の収入、港、方針別の勝率
 python ordergen.py 2026      # 注文36枚の生成例
+python probe_joint.py 300 4  # 共同注文の完成回数など
+python probe_buy.py 300 4    # 交換、産物の購入、市場の回数と方針別の勝率
 ```
 
 `cli.py` は旧6タイル版の対話式実行で、今の仕様には対応していない。
+
+## アプリの動かし方
+
+```text
+cd app
+npm install                 # 初回のみ
+npm test                    # エンジン（単体と性質のテスト200局、数分かかる）、サーバー（部屋の処理と Miniflare の結合）、端末の接続のテスト
+npm run test:unit           # 性質のテストを除く単体テストだけ（十数秒）。コミット前とPRの前は npm test を通す
+npm run typecheck
+npm run dev                 # client をビルドし、wrangler dev で http://localhost:8787/board を開く
+npm run check:board         # board.json が sim の盤面と一致するか（python が要る）
+npm run compare             # 模擬との照合。sim の記録を各1600局作り、エンジンで再適用して手番ごとに比べる（python が要る、十数分）
+npm run test:nightly -w @word-farm/engine   # 性質のテスト5000局（毎晩用）
+npm run coverage -w @word-farm/engine       # 網羅率（基準は行95%、分岐90%。BD06 10.1）
+npm run bench -w @word-farm/engine          # 処理時間と記録の大きさ（PERF-01、PERF-03）
+npm run verify -w @word-farm/protocol -- record.json   # 写しを含めて取り出した記録を再適用し、各行の写しと比べる（BD05 5.4）
+```
+
+手元で `npm run dev` を使う前に、`app/packages/worker/.dev.vars` に `HOST_KEY=<ホストの鍵>` を書く（git の対象外）。E2E を流すときは、同じファイルに `HOST_KEY=local-dev-host-key` と `TEST_HOOKS=1` を書いて `wrangler dev` を起動しておき、`npm run e2e`（すべて Chromium、約2分）か `npm run e2e:mixed`（iPhone 役のスマホを WebKit、約3分）を流す。初回は `npx playwright install chromium webkit` が要る。デプロイした版の鍵は `npx wrangler secret put HOST_KEY` で設定する（BD05 4.3）。
+
+盤面の数字や港を変えたら、`sim/fixed_layout.json` を直してから `python sim/export_board.py` で `app/packages/engine/src/data/board.json` を書き出し直す。`board.json` は手で直さない。大画面に `?sample=rulebook` を付けると、ルールブックの図と同じ種類で盤面を描き、`?ids` で交点の番号を出す。
 
 ## 紹介動画の作り方
 
@@ -63,19 +99,20 @@ python ordergen.py 2026      # 注文36枚の生成例
 
 ```text
 cd sim
-AUTOSEED=20 python scenario_run.py      # video/public/game.json を作る
+AUTOSEED=1077 python scenario_run.py     # video/public/game.json を作る（台本用の設定は scenario_run.py が入れる）
 cd ../video
 npm install                             # 初回のみ
 npx remotion studio src/index.ts        # ブラウザで確認
 npx remotion render src/index.ts WordFarm out/word_farm.mp4
 ```
 
-台本の1〜5ラウンドは手書きで、その後は乱数の種20でボットが進める。種を変えると展開が変わるため、終盤の考えと台詞（`FINALE_NOTES`）も書き直す必要がある。
+紹介動画はルールブック v0.8 のルールで作っている。台本の1〜5ラウンドは手書きで、その後は乱数の種1077でボットが進める（`SEEDMAX=1500 python scenario_run.py` で、Chikaが勝つ種を探し直せる）。種を変えると展開が変わるため、終盤の考えと台詞（`FINALE_NOTES`）も書き直す必要がある。
 
 キャラクターは、Aki が冷静なお姉さん（英語上級）、Ben がおちゃらけた陽気なお兄さん（中上級）、Chika が元気いっぱいの女の子（初級）、Dan が英国紳士（中級）。
 
 ## 次にやること
 
-1. 第1回試遊の準備：交渉の例文を載せた早見表と、観察シートを作る。サークルの人数と活動時間（上限90分）を確かめる。
-2. 試遊で、設計メモ5章の項目を確かめる。
-3. 試遊の結果でルールを直してから、アプリの絵を作る（素材仕様の手順2以降）。
+1. アプリを作る（`WORD_FARM_APP_DESIGN_v0.1.md` の12章、M0〜M5）。
+2. 第1回試遊の準備：交渉の例文を載せた早見表と、観察シートを作る。サークルの人数と活動時間（上限90分）を確かめる。アプリが動かない場合に備え、紙で遊ぶ道具も用意する。
+3. アプリで第1回試遊を行い、設計メモ5章の項目を確かめる。
+4. 試遊の結果でルールを直してから、アプリの絵を作る（素材仕様の手順2以降）。

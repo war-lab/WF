@@ -1,0 +1,5 @@
+ラウンド12.1  1位と2位の差2.48  3R首位が勝つ41%  1局あたり: carrot_orders_face 0.00  prod_trade 2.60  prodbuy 0.31  prodbuy_coin 3.22  refused 6.58  coinbank 10.98  orders 7.82  joint_done 0.85  market 18.39  market_coin 61.54  coins_end 12.81  plant 18.29  trade 22.66  bank 1.25  joint_line 11.03  joint_pts 8.12  joint_half 6.91  house 0.00
+  勝率: crop 32%  chicken 19%  cow 20%  mixed 28%
+  拠点の追加（方針別、1人1局）: crop 0.00  chicken 0.00  cow 0.00  mixed 0.00
+  1手番の行動 平均1.87回  1局で最も多かった手番の平均3.8回  勝者の超過0.62点
+  共同注文：点のうちの割合36%

@@ -1,0 +1,1456 @@
+/* 色はルールブックの図に合わせた仮の値。素材の段階（M7）で見直す */
+:root {
+  --sea: #cfe6ee;
+  --paper: #fffdf6;
+  --soil: #8a6a46;
+  --line: #4a4036;
+  --leaf: #5a8f3c;
+  --wheat: #f3e3b3;
+  --wheat-ink: #5a4a1a;
+  --warn: #c0392b;
+  --muted: #7a7266;
+  --ink: #2a2620;
+}
+html,
+body {
+  margin: 0;
+  background: #f4efe2;
+  color: var(--ink);
+  font-family: "Yu Gothic UI", "Hiragino Sans", "Noto Sans JP", sans-serif;
+}
+.board-map text {
+  fill: var(--ink);
+}
+
+button {
+  font: inherit;
+  touch-action: manipulation;
+}
+button:disabled {
+  opacity: 0.45;
+}
+.cover {
+  position: fixed;
+  inset: 0;
+  background: rgba(40, 32, 20, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+.cover-box {
+  background: var(--paper);
+  border-radius: 12px;
+  padding: 24px 28px;
+  max-width: 80%;
+  /* 内容が画面より高いと上下が切れて押せなくなるため、枠の中でスクロールさせる（手札9種類の捨て札など） */
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  box-sizing: border-box;
+  text-align: center;
+  font-size: 1.2em;
+}
+
+/* ---------- 共通 ---------- */
+.primary {
+  background: var(--leaf);
+  color: #fff;
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 18px;
+  font-weight: 700;
+}
+button {
+  min-height: 44px;
+  border-radius: 10px;
+  border: 1px solid #b9ab8e;
+  background: var(--paper);
+  padding: 6px 12px;
+  margin: 3px;
+}
+button.on {
+  outline: 3px solid var(--leaf);
+}
+.err {
+  color: var(--warn);
+  font-weight: 700;
+}
+.why {
+  color: var(--muted);
+  display: block;
+  font-size: 0.85em;
+}
+.tag {
+  margin-left: 8px;
+  padding: 0 6px;
+  border-radius: 6px;
+  background: #eee2c4;
+  font-size: 0.8em;
+}
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+.row.split {
+  justify-content: space-between;
+}
+.big {
+  font-size: 1.3em;
+  font-weight: 700;
+}
+.blink {
+  animation: blink 0.8s steps(2, start) infinite;
+}
+@keyframes blink {
+  to {
+    visibility: hidden;
+  }
+}
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 140px;
+  transform: translateX(-50%);
+  background: var(--paper);
+  border: 2px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 16px;
+  z-index: 120;
+}
+.paused-badge {
+  position: fixed;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--warn);
+  color: #fff;
+  padding: 6px 18px;
+  border-radius: 10px;
+  z-index: 90;
+  font-weight: 700;
+}
+.credit {
+  margin-top: 24px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+/* ---------- 大画面（BD04 5章。1920×1080 を基準） ---------- */
+.h-start,
+.h-lobby,
+.h-result {
+  font-size: 32px;
+  padding: 32px;
+}
+.h-start label,
+.h-start fieldset {
+  display: block;
+  margin: 12px 0;
+}
+.h-start input,
+.h-start select {
+  font-size: 28px;
+  margin-left: 12px;
+}
+.h-lobby {
+  display: grid;
+  grid-template-columns: 520px 1fr;
+  gap: 32px;
+}
+.h-lobby .people li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 8px 0;
+}
+.h-lobby .people li.off {
+  opacity: 0.5;
+}
+.h-lobby .ctl select,
+.h-lobby .ctl button {
+  font-size: 22px;
+}
+.h-lobby .url {
+  grid-column: 1 / -1;
+  font-size: 20px;
+  color: var(--muted);
+}
+.h-game {
+  display: grid;
+  grid-template-columns: 440px 960px 520px;
+  grid-template-rows: 80px 880px 120px;
+  width: 1920px;
+  height: 1080px;
+  font-size: 28px;
+}
+.h-game .top {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  padding: 0 24px;
+  font-size: 32px;
+  background: #efe3c4;
+}
+.h-game .top .dice,
+.h-game .top .clock {
+  font-size: 48px;
+  font-weight: 700;
+}
+.h-game .top .warn {
+  color: var(--warn);
+  font-weight: 700;
+}
+.h-game .admin-open {
+  margin-left: auto;
+}
+.h-game .players {
+  overflow: hidden;
+}
+.pp {
+  overflow: hidden;
+  height: 212px;
+  box-sizing: border-box;
+  padding: 8px 12px;
+  border-bottom: 1px solid #d8cbb0;
+  font-size: 24px;
+}
+.pp.turn {
+  border: 6px solid var(--leaf);
+  background: #fffbe9;
+}
+.pp.off {
+  opacity: 0.5;
+}
+.pp .head {
+  font-size: 32px;
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+}
+.pp .pts {
+  font-size: 44px;
+  font-weight: 700;
+  margin-left: auto;
+}
+.pp .prod {
+  font-size: 20px;
+}
+.pp .plots {
+  display: flex;
+  gap: 6px;
+}
+.pp .plot {
+  border: 1px solid #c9b994;
+  border-radius: 6px;
+  padding: 0 6px;
+}
+.h-game .map > svg.board-map {
+  width: 960px;
+  height: 880px;
+}
+.h-game .orders {
+  overflow: hidden;
+  padding: 8px;
+}
+.order {
+  background: var(--paper);
+  border: 2px solid #c9b994;
+  border-radius: 10px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+}
+.order.bonus {
+  background: #e6f2ff;
+}
+.order.joint {
+  background: #fff1dd;
+}
+.order .text {
+  margin: 0 0 4px;
+}
+.h-game .order .text {
+  font-size: 28px;
+}
+.order .rows {
+  margin: 0;
+  padding-left: 1.2em;
+  font-size: 24px;
+}
+.h-game .piles {
+  font-size: 20px;
+  color: var(--muted);
+}
+.h-game .band {
+  grid-column: 1 / -1;
+  padding: 8px 24px;
+  background: #efe3c4;
+  overflow: hidden;
+}
+.h-game .band .sentence,
+.h-game .band .result {
+  font-size: 48px;
+  margin: 0;
+}
+.h-game .band .result.ok {
+  color: var(--leaf);
+}
+.h-game .band .result.ng {
+  color: var(--warn);
+}
+.h-game .band .note-line {
+  font-size: 32px;
+  margin: 0;
+  color: var(--leaf);
+  font-weight: 700;
+}
+.h-game .band .read,
+.h-game .band .trade {
+  font-size: 28px;
+  margin: 0;
+}
+.cover-box.admin {
+  font-size: 28px;
+  white-space: pre-line;
+}
+
+/* ---------- スマホ（BD04 7.2。幅360px を基準） ---------- */
+.p {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 12px 12px calc(140px + env(safe-area-inset-bottom));
+  font-size: 16px;
+}
+.p input {
+  font-size: 18px;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 44px;
+}
+.p-play .p-top {
+  position: sticky;
+  top: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 56px;
+  background: #efe3c4;
+  margin: -12px -12px 8px;
+  padding: 0 8px;
+  z-index: 10;
+}
+.p-play.my-turn .p-top {
+  background: #cfe8b8;
+}
+.p-actions {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(56px + env(safe-area-inset-bottom));
+  height: 64px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: var(--paper);
+  border-top: 1px solid #d8cbb0;
+}
+.p-tabs {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding-bottom: env(safe-area-inset-bottom);
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  background: #efe3c4;
+}
+.p-tabs button {
+  margin: 0;
+  border-radius: 0;
+  height: 56px;
+}
+.p-tabs .badge {
+  background: var(--warn);
+  color: #fff;
+  border-radius: 8px;
+  padding: 0 6px;
+  margin-left: 4px;
+}
+.cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.card {
+  border: 1px solid #b9ab8e;
+  border-radius: 8px;
+  padding: 6px 8px;
+  background: var(--paper);
+}
+.card.zero {
+  opacity: 0.4;
+}
+.acts,
+.pick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.act {
+  display: inline-flex;
+  flex-direction: column;
+}
+.farm {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.farm .plot {
+  border: 1px solid #c9b994;
+  border-radius: 10px;
+  padding: 8px;
+  min-height: 120px;
+  background: var(--paper);
+}
+.sentence-box {
+  border: 2px dashed #b9ab8e;
+  border-radius: 10px;
+  padding: 12px;
+  margin: 12px 0;
+}
+.sentence-box .sentence {
+  font-size: 24px;
+}
+.p-place svg {
+  width: 100%;
+  height: auto;
+  touch-action: pinch-zoom;
+}
+.sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--paper);
+  padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
+  border-top: 2px solid var(--line);
+}
+.counter b {
+  display: inline-block;
+  min-width: 2em;
+  text-align: center;
+}
+.offer-side .row {
+  justify-content: space-between;
+}
+@media (orientation: landscape) and (max-height: 500px) {
+  .p::before {
+    content: "縦向きにしてください";
+    position: fixed;
+    inset: 0;
+    background: var(--paper);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+    font-size: 20px;
+  }
+}
+
+/* ---------- 演出（BD04 6章。1つ1.5秒以内） ---------- */
+.h-game .map {
+  position: relative;
+}
+.fx-banner {
+  position: fixed;
+  left: 50%;
+  top: 40%;
+  transform: translate(-50%, -50%);
+  background: rgba(255, 253, 246, 0.96);
+  border: 6px solid var(--leaf);
+  border-radius: 24px;
+  padding: 24px 56px;
+  z-index: 95;
+  text-align: center;
+  animation: pop-in 0.35s ease-out;
+}
+.fx-banner p {
+  margin: 0;
+  font-size: 80px;
+  font-weight: 800;
+}
+.fx-banner .sub {
+  font-size: 36px;
+  font-weight: 600;
+}
+@keyframes pop-in {
+  from {
+    transform: translate(-50%, -50%) scale(0.6);
+    opacity: 0;
+  }
+  to {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+}
+.fx-dice {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  gap: 24px;
+  z-index: 20;
+  filter: drop-shadow(4px 6px 6px rgba(0, 0, 0, 0.35));
+}
+.fx-dice.spin .die {
+  animation: roll 0.35s linear infinite;
+}
+@keyframes roll {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.fx-focus {
+  position: fixed;
+  inset: 80px 0 120px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 80;
+  pointer-events: none;
+}
+.focus-card {
+  width: 900px;
+  background: var(--paper);
+  border: 6px solid #c9b994;
+  border-radius: 24px;
+  padding: 32px 40px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+  animation: come-forward 0.5s ease-out;
+}
+.focus-card .text {
+  font-size: 48px;
+  margin: 0;
+}
+.focus-card .fold {
+  margin-top: 20px;
+  border-top: 3px dashed #c9b994;
+  padding-top: 16px;
+  animation: unfold 0.5s ease-out;
+  transform-origin: top;
+}
+.focus-card .cond {
+  font-size: 36px;
+  margin: 0;
+}
+.focus-card .verdict {
+  font-size: 72px;
+  font-weight: 800;
+  margin: 8px 0 0;
+}
+.focus-card.ok {
+  border-color: var(--leaf);
+}
+.focus-card.ok .verdict {
+  color: var(--leaf);
+}
+.focus-card.ng {
+  border-color: var(--warn);
+}
+.focus-card.ng .verdict {
+  color: var(--warn);
+}
+@keyframes come-forward {
+  from {
+    transform: translateX(380px) scale(0.5);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+@keyframes unfold {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+.order.flip-in {
+  animation: flip 0.6s ease-out;
+}
+@keyframes flip {
+  from {
+    transform: perspective(800px) rotateY(90deg);
+  }
+  to {
+    transform: perspective(800px) rotateY(0);
+  }
+}
+.order.declared {
+  outline: 6px solid #ffd84a;
+}
+.order.ghost {
+  animation: fade-away 1.5s ease-in forwards;
+}
+.order.ghost.done {
+  border-color: var(--leaf);
+  animation: done-glow 2.5s ease-in forwards;
+}
+.ghost-label {
+  font-weight: 800;
+  font-size: 30px;
+  margin: 0;
+}
+@keyframes fade-away {
+  to {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+}
+@keyframes done-glow {
+  0% {
+    box-shadow: 0 0 0 0 rgba(90, 143, 60, 0.9);
+  }
+  40% {
+    box-shadow: 0 0 30px 12px rgba(90, 143, 60, 0.6);
+  }
+  100% {
+    box-shadow: none;
+    opacity: 0;
+  }
+}
+.order .rows li.pop {
+  animation: row-pop 0.6s ease-out;
+}
+@keyframes row-pop {
+  50% {
+    transform: scale(1.25);
+    color: var(--leaf);
+  }
+}
+.pp {
+  position: relative;
+}
+.pp.pulse {
+  animation: pulse 1.2s ease-out;
+}
+@keyframes pulse {
+  0% {
+    box-shadow: inset 0 0 0 0 rgba(90, 143, 60, 0.8);
+  }
+  50% {
+    box-shadow: inset 0 0 0 12px rgba(90, 143, 60, 0.5);
+  }
+  100% {
+    box-shadow: none;
+  }
+}
+.pp .floats {
+  position: absolute;
+  right: 16px;
+  top: 60px;
+  pointer-events: none;
+}
+.pp .float {
+  display: block;
+  font-size: 30px;
+  font-weight: 800;
+  color: var(--leaf);
+  animation: float-up 1.5s ease-out forwards;
+}
+@keyframes float-up {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-40px);
+    opacity: 0;
+  }
+}
+.pp .glow {
+  animation: glow 1.5s ease-out;
+}
+@keyframes glow {
+  30% {
+    background: #ffe98a;
+  }
+}
+.pp .coins.counting {
+  color: #b8860b;
+  font-weight: 800;
+}
+.pp .plot.flash {
+  animation: glow 1.2s ease-out;
+}
+.board-map .bounce {
+  animation: bounce 0.8s ease-out;
+}
+@keyframes bounce {
+  30% {
+    transform: translateY(-22px);
+  }
+  60% {
+    transform: translateY(0);
+  }
+  80% {
+    transform: translateY(-6px);
+  }
+}
+
+/* ---------- 見た目の細部（M4） ---------- */
+.h-start {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+.start-card {
+  background: var(--paper);
+  border: 3px solid #c9b994;
+  border-radius: 24px;
+  padding: 32px 48px;
+  min-width: 900px;
+}
+.start-card h1 {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 0 0 16px;
+  font-size: 64px;
+}
+.start-card h1 img {
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+}
+.start-card input[type="password"],
+.start-card select {
+  font-size: 28px;
+  min-height: 52px;
+  padding: 4px 12px;
+  border-radius: 10px;
+  border: 2px solid #b9ab8e;
+}
+.start-card input[type="password"] {
+  width: 520px;
+}
+.start-card fieldset {
+  border: 2px solid #d8cbb0;
+  border-radius: 14px;
+  padding: 12px 20px;
+}
+.start-card label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 12px 0;
+}
+.start-card input[type="checkbox"] {
+  width: 28px;
+  height: 28px;
+}
+.primary.big,
+.start-card .primary {
+  font-size: 32px;
+  padding: 12px 32px;
+}
+.order-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.order .pic {
+  background: #fff3c4;
+  border: 2px solid #e0c060;
+  border-radius: 8px;
+  padding: 0 10px;
+  font-weight: 700;
+}
+.order .left {
+  font-size: 0.8em;
+  color: var(--muted);
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}
+.admin-groups {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  text-align: left;
+}
+.admin-groups section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.admin-groups h3 {
+  margin: 0;
+  font-size: 24px;
+  color: var(--muted);
+}
+.admin-groups button {
+  font-size: 26px;
+  min-height: 60px;
+}
+button.danger {
+  border-color: var(--warn);
+  color: var(--warn);
+}
+.cover-box.admin {
+  min-width: 1100px;
+}
+.h-result {
+  max-width: 1500px;
+  margin: 0 auto;
+}
+.result-head .winner {
+  font-size: 88px;
+  font-weight: 800;
+  margin: 16px 0 0;
+}
+.result-head .reason {
+  font-size: 36px;
+  margin: 0 0 24px;
+  color: var(--muted);
+}
+.h-result .result-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 34px;
+}
+.h-result .result-table th {
+  text-align: left;
+  border-bottom: 3px solid var(--line);
+  padding: 8px 16px;
+  font-size: 26px;
+  color: var(--muted);
+}
+.h-result .result-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #d8cbb0;
+}
+.h-result .result-table tr.first {
+  background: #fff5cf;
+}
+.h-result .result-table .rank,
+.h-result .result-table .num {
+  font-weight: 800;
+  font-size: 44px;
+}
+.h-result .ledger span {
+  display: inline-block;
+  margin-right: 18px;
+  font-size: 24px;
+}
+.h-result .reveal {
+  margin: 20px 0;
+  font-size: 26px;
+}
+.h-result .reveal li {
+  margin: 6px 0;
+}
+.h-result .reveal .cond {
+  margin-left: 16px;
+  color: var(--muted);
+}
+.export {
+  background: var(--paper);
+  border: 3px solid #c9b994;
+  border-radius: 20px;
+  padding: 16px 28px;
+  margin-top: 16px;
+}
+.export .stats th {
+  text-align: left;
+  padding: 4px 24px 4px 0;
+  font-weight: 600;
+}
+.export .stats td {
+  font-weight: 800;
+}
+.not-turn {
+  background: #efe3c4;
+  border-radius: 8px;
+  padding: 6px 10px;
+  margin: 0 0 8px;
+}
+.cards .card b {
+  font-size: 1.15em;
+}
+.cards.action .card {
+  border-color: #6c8ebf;
+  background: #eef4fb;
+}
+.cards.crop .card {
+  border-color: #c97a2b;
+  background: #fbf1e6;
+}
+.cards.animal .card {
+  border-color: #5a8f3c;
+  background: #eef6e8;
+}
+.cards.products .card {
+  border-color: #c9a227;
+  background: #fff8db;
+}
+.cards .card.zero {
+  opacity: 0.4;
+}
+.p .money b {
+  font-size: 1.2em;
+}
+.p .order .rows {
+  margin: 4px 0;
+  padding-left: 1.4em;
+}
+.offer-side {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px 8px;
+}
+.offer-side .row {
+  justify-content: space-between;
+  border-bottom: 1px solid #eee3c9;
+}
+.offer-side .counter button {
+  min-height: 40px;
+  min-width: 40px;
+  margin: 2px;
+  padding: 0;
+}
+.offer-form {
+  padding-bottom: 80px;
+}
+.offer-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(120px + env(safe-area-inset-bottom));
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--paper);
+  border-top: 1px solid #d8cbb0;
+  z-index: 15;
+}
+.p-result .my-rank {
+  font-size: 28px;
+  margin: 16px 0;
+}
+.p-result .my-rank b {
+  font-size: 48px;
+}
+.p-result .result-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 18px;
+}
+.p-result .result-table td {
+  padding: 8px;
+  border-bottom: 1px solid #d8cbb0;
+}
+.p-result .result-table tr.me {
+  background: #fff5cf;
+  font-weight: 800;
+}
+
+.p h4.group {
+  margin: 10px 0 4px;
+  font-size: 14px;
+  color: var(--muted);
+}
+.offer-side .sub {
+  grid-column: 1 / -1;
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+/* ---------- 素材の絵 ---------- */
+img.icon {
+  vertical-align: middle;
+  display: inline-block;
+}
+.order .pic {
+  background: none;
+  border: 0;
+  padding: 0;
+}
+.pp .prod {
+  display: flex;
+  gap: 10px;
+  font-size: 22px;
+  font-weight: 700;
+}
+.pp .prod span {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+.pp .prod .zero {
+  opacity: 0.35;
+}
+.pp .coins {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.cards .card {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.choices button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.farm .plot {
+  background: url(/art/farm-ground.webp) center / cover;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  text-align: center;
+}
+.farm .plot .plot-label {
+  background: rgba(40, 28, 16, 0.6);
+  border-radius: 6px;
+  padding: 2px 6px;
+  margin: 4px 0;
+}
+.farm .plot .act button {
+  color: var(--ink);
+}
+.farm .plot .why {
+  color: #fff;
+  text-shadow: 0 1px 2px #000;
+}
+.pp .plots .plot {
+  width: 46px;
+  height: 46px;
+  box-sizing: border-box;
+  padding: 2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: url(/art/farm-ground.webp) center / cover;
+  border-radius: 8px;
+}
+
+/* ---------- 単語カード（縦長の札） ---------- */
+.wcard {
+  --cat: #4f7fb8;
+  --cat-soft: #e3edf8;
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  width: var(--w);
+  aspect-ratio: 5 / 7;
+  box-sizing: border-box;
+  padding: calc(var(--w) * 0.05);
+  border-radius: calc(var(--w) * 0.12);
+  background: var(--cat);
+  box-shadow: 0 2px 3px rgba(40, 28, 16, 0.3);
+  vertical-align: middle;
+  flex: none;
+}
+/* 枠の色はタイルの絵の地面の色（art/final/tile-*.png の下半分の中央値）。白い文字が読めるよう、明るい色は少し暗くした */
+.wcard.t-grow {
+  --cat: #b64f15;
+  --cat-soft: #f8e3d6;
+}
+.wcard.t-buy {
+  --cat: #4f76a3;
+  --cat-soft: #e1eaf4;
+}
+.wcard.t-feed {
+  --cat: #d08a0a;
+  --cat-soft: #fdf0d2;
+}
+.wcard.t-sell {
+  --cat: #6e6b69;
+  --cat-soft: #ecebea;
+}
+.wcard.t-seed {
+  --cat: #6a2e12;
+  --cat-soft: #f1e2d8;
+}
+.wcard.t-animal {
+  --cat: #6a9a10;
+  --cat-soft: #eaf3d6;
+}
+/* 2枚以上は、右上にずらした同じ色のカードを後ろに描く */
+.wcard[data-stack="1"] {
+  box-shadow: 3px -3px 0 -1px var(--cat-soft), 3px -3px 0 0 var(--cat), 0 2px 3px rgba(40, 28, 16, 0.3);
+}
+.wcard[data-stack="2"] {
+  box-shadow: 3px -3px 0 -1px var(--cat-soft), 3px -3px 0 0 var(--cat), 6px -6px 0 -1px var(--cat-soft), 6px -6px 0 0 var(--cat), 0 2px 3px rgba(40, 28, 16, 0.3);
+}
+.wcard .face {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: calc(var(--w) * 0.08);
+  background: radial-gradient(circle at 50% 42%, #fffdf6 30%, var(--cat-soft) 100%);
+  overflow: hidden;
+}
+.wcard .face img {
+  width: 86%;
+  height: auto;
+}
+.wcard .word {
+  color: #fff;
+  font-weight: 800;
+  font-size: max(10px, calc(var(--w) * 0.19));
+  line-height: 1.35;
+  text-align: center;
+  letter-spacing: 0.02em;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.25);
+}
+.wcard .count {
+  position: absolute;
+  top: calc(var(--w) * -0.12);
+  right: calc(var(--w) * -0.14);
+  min-width: 24px;
+  height: 24px;
+  padding: 0 5px;
+  box-sizing: border-box;
+  border-radius: 12px;
+  background: #3a2a18;
+  color: #fff;
+  border: 2px solid #fffdf6;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 20px;
+  text-align: center;
+  z-index: 1;
+}
+.wcard.zero {
+  filter: grayscale(1);
+  opacity: 0.38;
+  box-shadow: none;
+}
+.wcard.back {
+  --cat: #2f5d3a;
+  --cat-soft: #2f5d3a;
+}
+.wcard.back .face {
+  background:
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.12) 0 3px, transparent 3px 7px),
+    radial-gradient(circle at 50% 50%, #e9c46a 0 18%, transparent 19%),
+    #3f7a4a;
+  border: 1px solid rgba(255, 245, 220, 0.6);
+}
+.wcard.back .count {
+  top: auto;
+  bottom: -6px;
+  right: -12px;
+}
+
+/* 手札の並び：区分ごとに1行 */
+.cards {
+  gap: 10px 12px;
+  padding: 8px 6px 2px 0;
+}
+.cards .slot {
+  display: inline-flex;
+}
+
+/* ---------- 産物の札（丸） ---------- */
+.ptoken {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: calc(var(--s) + 8px);
+}
+.ptoken .disc {
+  width: var(--s);
+  height: var(--s);
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #fffaf0 0 45%, #f1dfae 100%);
+  border: 2px solid #c9a227;
+  box-shadow: 0 2px 3px rgba(40, 28, 16, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ptoken .disc img {
+  width: 74%;
+  height: auto;
+}
+.ptoken .word {
+  font-size: 12px;
+  font-weight: 700;
+}
+.ptoken .count {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 22px;
+  height: 22px;
+  border-radius: 11px;
+  background: #3a2a18;
+  color: #fff;
+  border: 2px solid #fffdf6;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 18px;
+  text-align: center;
+  box-sizing: border-box;
+}
+.ptoken.zero {
+  filter: grayscale(1);
+  opacity: 0.38;
+}
+
+/* ---------- カードを選ぶ問い、捨て札 ---------- */
+.choices {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+.choices .card-btn {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 8px 6px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  border-radius: 12px;
+}
+.choices .card-btn:not(:disabled):active .wcard {
+  transform: translateY(2px);
+}
+.choices .card-btn .left {
+  font-size: 13px;
+  color: var(--muted);
+}
+.picked {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 8px 0;
+}
+.discard {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.discard li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: 6px;
+}
+.discard .disc-n {
+  flex: 1;
+  text-align: left;
+}
+
+/* ---------- 大画面：手札は裏面と枚数 ---------- */
+.pp .hand {
+  display: inline-flex;
+  vertical-align: middle;
+  margin: 4px 10px 4px 0;
+}
+.pp .hand.glow .wcard {
+  outline: 3px solid #f2c94c;
+  outline-offset: 2px;
+}
+
+/* ---------- ボタンとタブ ---------- */
+button:not(.card-btn) {
+  box-shadow: 0 2px 0 #cdbf9f;
+}
+button:not(:disabled):active {
+  transform: translateY(1px);
+  box-shadow: none;
+}
+.primary {
+  box-shadow: 0 3px 0 #3d6a28 !important;
+}
+.p-tabs button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  height: 62px;
+  box-shadow: none;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+  background: transparent;
+  border: 0;
+  border-top: 3px solid transparent;
+}
+.p-tabs button.on {
+  outline: 0;
+  color: var(--ink);
+  border-top-color: var(--leaf);
+  background: #f8f0da;
+}
+.p-tabs .tab-ico {
+  height: 26px;
+  display: flex;
+  align-items: center;
+}
+.p-tabs .mini-cards {
+  position: relative;
+  width: 16px;
+  height: 22px;
+  border-radius: 3px;
+  background: #b64f15;
+  box-shadow: 4px -2px 0 -1px #fdf0d2, 4px -2px 0 0 #6a9a10;
+}
+.p-tabs .swap {
+  font-size: 22px;
+  line-height: 1;
+}
+/* 問いの枠：スマホでは横幅を広く使い、カードを3列にする */
+.p .cover-box,
+.cover .cover-box:has(.choices),
+.cover .cover-box:has(.discard) {
+  max-width: min(94%, 460px);
+  padding: 18px 14px;
+}
+.choices {
+  gap: 6px;
+}
+.choices .card-btn {
+  padding: 8px 6px 4px;
+  margin: 0;
+  min-height: 0;
+}
+/* 選んだカードは枠で示し、選び終えたあとはほかのカードだけを薄くする */
+.choices .card-btn:disabled {
+  opacity: 1;
+}
+.choices .card-btn:disabled:not(.chosen) .wcard {
+  opacity: 0.35;
+}
+.choices .card-btn.chosen {
+  background: #fff3c4;
+  outline: 3px solid #e0a800;
+}
+
+/* ---------- 物が飛ぶ演出（ui/fly.ts） ---------- */
+/* 問いや管理の枠（.cover、z-index 100）より後ろに置く。飛ぶ物が枠の中の QR や選択肢に重ならないように */
+.fly-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 90;
+  overflow: hidden;
+}
+.fly-layer > * {
+  position: absolute;
+  left: 0;
+  top: 0;
+  will-change: transform, opacity;
+}
+.fly-layer .fly-card {
+  box-shadow: 0 6px 12px rgba(40, 28, 16, 0.35);
+}
+.fly-layer .fly-img img {
+  display: block;
+  filter: drop-shadow(0 4px 4px rgba(40, 28, 16, 0.35));
+}
+.fly-layer .fly-confetti {
+  width: 10px;
+  height: 14px;
+  border-radius: 2px;
+}
+/* 大画面の山（盤面の左上の海の上） */
+.h-game .map {
+  position: relative;
+}
+/* 山は右下の山の一覧の横に置き、注文の列の下端に固定する（注文が長くても隠れないように） */
+.h-game .orders {
+  position: relative;
+  padding-bottom: 60px;
+}
+.h-game .pile-row {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 0;
+  height: 60px;
+  background: #f4efe2;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.h-game .pile-row .piles {
+  margin: 0;
+}
+.h-game .deck {
+  flex: none;
+  padding: 4px 8px 0 0;
+}
+/* 大画面の共同注文の行は横に並べる。縦に3行並べると、注文の列が画面の高さに収まらない */
+.h-game .order .rows {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 18px;
+  list-style: none;
+  padding-left: 0;
+  font-size: 22px;
+  counter-reset: row;
+}
+.h-game .order .rows li {
+  counter-increment: row;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 6px;
+  padding: 0 6px;
+}
+.h-game .order .rows li::before {
+  content: counter(row) ". ";
+  color: var(--muted);
+}
+/* サイコロ：転がす動きは Game.tsx の Die（Web Animations）。止まったら合計を出す */
+.fx-dice.spin .die {
+  animation: none;
+}
+.fx-dice {
+  align-items: center;
+}
+.fx-dice .dice-sum {
+  font-size: 72px;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 3px 0 #3a2a18, 0 0 12px rgba(0, 0, 0, 0.35);
+  animation: sum-pop 0.35s cubic-bezier(0.3, 1.6, 0.6, 1);
+}
+@keyframes sum-pop {
+  from {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+}
