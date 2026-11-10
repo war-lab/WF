@@ -243,7 +243,7 @@ button.on {
   border-radius: 6px;
   padding: 0 6px;
 }
-.h-game .map svg {
+.h-game .map > svg.board-map {
   width: 960px;
   height: 880px;
 }
@@ -453,5 +453,253 @@ button.on {
     justify-content: center;
     z-index: 200;
     font-size: 20px;
+  }
+}
+
+/* ---------- 演出（BD04 6章。1つ1.5秒以内） ---------- */
+.h-game .map {
+  position: relative;
+}
+.fx-banner {
+  position: fixed;
+  left: 50%;
+  top: 40%;
+  transform: translate(-50%, -50%);
+  background: rgba(255, 253, 246, 0.96);
+  border: 6px solid var(--leaf);
+  border-radius: 24px;
+  padding: 24px 56px;
+  z-index: 95;
+  text-align: center;
+  animation: pop-in 0.35s ease-out;
+}
+.fx-banner p {
+  margin: 0;
+  font-size: 80px;
+  font-weight: 800;
+}
+.fx-banner .sub {
+  font-size: 36px;
+  font-weight: 600;
+}
+@keyframes pop-in {
+  from {
+    transform: translate(-50%, -50%) scale(0.6);
+    opacity: 0;
+  }
+  to {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+}
+.fx-dice {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  gap: 24px;
+  z-index: 20;
+  filter: drop-shadow(4px 6px 6px rgba(0, 0, 0, 0.35));
+}
+.fx-dice.spin .die {
+  animation: roll 0.35s linear infinite;
+}
+@keyframes roll {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.fx-focus {
+  position: fixed;
+  inset: 80px 0 120px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 80;
+  pointer-events: none;
+}
+.focus-card {
+  width: 900px;
+  background: var(--paper);
+  border: 6px solid #c9b994;
+  border-radius: 24px;
+  padding: 32px 40px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+  animation: come-forward 0.5s ease-out;
+}
+.focus-card .text {
+  font-size: 48px;
+  margin: 0;
+}
+.focus-card .fold {
+  margin-top: 20px;
+  border-top: 3px dashed #c9b994;
+  padding-top: 16px;
+  animation: unfold 0.5s ease-out;
+  transform-origin: top;
+}
+.focus-card .cond {
+  font-size: 36px;
+  margin: 0;
+}
+.focus-card .verdict {
+  font-size: 72px;
+  font-weight: 800;
+  margin: 8px 0 0;
+}
+.focus-card.ok {
+  border-color: var(--leaf);
+}
+.focus-card.ok .verdict {
+  color: var(--leaf);
+}
+.focus-card.ng {
+  border-color: var(--warn);
+}
+.focus-card.ng .verdict {
+  color: var(--warn);
+}
+@keyframes come-forward {
+  from {
+    transform: translateX(380px) scale(0.5);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+@keyframes unfold {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+.order.flip-in {
+  animation: flip 0.6s ease-out;
+}
+@keyframes flip {
+  from {
+    transform: perspective(800px) rotateY(90deg);
+  }
+  to {
+    transform: perspective(800px) rotateY(0);
+  }
+}
+.order.declared {
+  outline: 6px solid #ffd84a;
+}
+.order.ghost {
+  animation: fade-away 1.5s ease-in forwards;
+}
+.order.ghost.done {
+  border-color: var(--leaf);
+  animation: done-glow 2.5s ease-in forwards;
+}
+.ghost-label {
+  font-weight: 800;
+  font-size: 30px;
+  margin: 0;
+}
+@keyframes fade-away {
+  to {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+}
+@keyframes done-glow {
+  0% {
+    box-shadow: 0 0 0 0 rgba(90, 143, 60, 0.9);
+  }
+  40% {
+    box-shadow: 0 0 30px 12px rgba(90, 143, 60, 0.6);
+  }
+  100% {
+    box-shadow: none;
+    opacity: 0;
+  }
+}
+.order .rows li.pop {
+  animation: row-pop 0.6s ease-out;
+}
+@keyframes row-pop {
+  50% {
+    transform: scale(1.25);
+    color: var(--leaf);
+  }
+}
+.pp {
+  position: relative;
+}
+.pp.pulse {
+  animation: pulse 1.2s ease-out;
+}
+@keyframes pulse {
+  0% {
+    box-shadow: inset 0 0 0 0 rgba(90, 143, 60, 0.8);
+  }
+  50% {
+    box-shadow: inset 0 0 0 12px rgba(90, 143, 60, 0.5);
+  }
+  100% {
+    box-shadow: none;
+  }
+}
+.pp .floats {
+  position: absolute;
+  right: 16px;
+  top: 60px;
+  pointer-events: none;
+}
+.pp .float {
+  display: block;
+  font-size: 30px;
+  font-weight: 800;
+  color: var(--leaf);
+  animation: float-up 1.5s ease-out forwards;
+}
+@keyframes float-up {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-40px);
+    opacity: 0;
+  }
+}
+.pp .glow {
+  animation: glow 1.5s ease-out;
+}
+@keyframes glow {
+  30% {
+    background: #ffe98a;
+  }
+}
+.pp .coins.counting {
+  color: #b8860b;
+  font-weight: 800;
+}
+.pp .plot.flash {
+  animation: glow 1.2s ease-out;
+}
+.board-map .bounce {
+  animation: bounce 0.8s ease-out;
+}
+@keyframes bounce {
+  30% {
+    transform: translateY(-22px);
+  }
+  60% {
+    transform: translateY(0);
+  }
+  80% {
+    transform: translateY(-6px);
   }
 }

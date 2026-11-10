@@ -73,6 +73,8 @@ export function Play({ net, view }: { net: Net; view: PlayerView }) {
       if (e.k === "orderSucceeded" && e.seat === me) setResult(`成立しました（${e.hp / 2}点）`);
       if (e.k === "orderFailed" && e.seat === me) setResult("不成立でした");
       if (e.k === "undone") setResult(`ホストが取り消しました：${e.summary}`);
+      // 自分の手番になったら振動で知らせる（補助。BD04 3.4）。振動できない端末では何もしない
+      if (e.k === "turnStarted" && e.seat === me) navigator.vibrate?.(200);
     }
   }, [net.last, me]);
   useEffect(() => {

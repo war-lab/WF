@@ -1,5 +1,5 @@
 // 大画面の H03 準備、H04 対戦、H05 管理パネル、H06 取り消しの確認、H07 結果、H08 記録の書き出し（BD04 2.3〜2.8、5章）。
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { zipSync, strToU8 } from "fflate";
 import QRCode from "qrcode";
 import type { BoardView, GameEvent, PublicPlayerView } from "@word-farm/protocol";
@@ -12,6 +12,7 @@ import { Mark } from "../ui/common.tsx";
 import { eventText } from "../ui/events.ts";
 import { rejectText } from "../ui/messages.ts";
 import { useSounds } from "./sound.ts";
+import { useBoardFx, useCountUp, type Fx } from "./effects.ts";
 
 const PRODUCTS: Product[] = ["carrot", "potato", "wheat", "egg", "milk"];
 const CREDIT = "音楽：魔王魂（https://maou.audio/）　効果音：効果音ラボ、Pixabay";
@@ -38,7 +39,32 @@ const setupSeat = (v: BoardView) => {
 
 const DECL = new Set(["orderDeclared", "jointRowFilled", "planted", "animalBought", "fed", "productsSold", "animalSold", "houseBuilt"]);
 
+/**
+ * 宣言の結果を含む表示が届いたら、約3秒は宣言の前の表示を出し続ける（BD04 6章）。
+ * 結果を遅らせても、点やコインの数、注文の補充が先に変わると、聞き手が英文を聞く前に結果が分かってしまうため
+ */
 export function BoardGame({ net, view }: { net: Net; view: BoardView }) {
+  const prev = useRef(view);
+  const handled = useRef<unknown>(null);
+  const held = useRef<{ view: BoardView; until: number } | null>(null);
+  const [, force] = useState(0);
+  const m = net.last;
+  if (m !== handled.current && m?.t === "view" && m.events.some((e) => e.k === "orderSucceeded" || e.k === "orderFailed")) {
+    handled.current = m;
+    held.current = { view: prev.current, until: Date.now() + 3000 };
+  }
+  const holding = held.current !== null && Date.now() < held.current.until;
+  const shown = holding ? held.current!.view : view;
+  if (!holding) prev.current = view;
+  useEffect(() => {
+    if (!holding) return;
+    const id = window.setTimeout(() => force((n) => n + 1), held.current!.until - Date.now() + 20);
+    return () => window.clearTimeout(id);
+  }, [holding, m]);
+  return <BoardGameView net={net} view={shown} />;
+}
+
+function BoardGameView({ net, view }: { net: Net; view: BoardView }) {
   const admin = net.state.welcome?.admin ?? false;
   const now = useNow();
   const [receivedAt, setReceivedAt] = useState(Date.now());
@@ -47,6 +73,7 @@ export function BoardGame({ net, view }: { net: Net; view: BoardView }) {
   const [notice, setNotice] = useState<string | null>(null);
   const [delayed, setDelayed] = useState<GameEvent | null>(null);
   const play = useSounds();
+  const fx = useBoardFx(net, view);
 
   const name = (seat: number) => view.players[seat]?.name ?? `席${seat}`;
   const colorOf = (seat: number): Color => view.players[seat]?.color ?? "red";
@@ -115,7 +142,8 @@ export function BoardGame({ net, view }: { net: Net; view: BoardView }) {
       ? name(view.turn?.seat ?? 0)
       : null;
 
-  if (view.phase.k === "over") return <Result net={net} view={view} admin={admin} />;
+  // 終わりの演出（勝者の名前）を出し終えてから、結果の画面に切り替える
+  if (view.phase.k === "over" && !fx.holdResult) return <Result net={net} view={view} admin={admin} />;
 
   const phaseText =
     view.phase.k === "setupPlace"
@@ -147,7 +175,7 @@ export function BoardGame({ net, view }: { net: Net; view: BoardView }) {
 
       <aside className="players">
         {view.players.map((p) => (
-          <PlayerPanel key={p.seat} p={p} turn={view.turn?.seat === p.seat || placing === p.seat} choosing={view.promptStatus.some((x) => x.seat === p.seat && !x.answered)} />
+          <PlayerPanel key={p.seat} p={p} fx={fx} turn={view.turn?.seat === p.seat || placing === p.seat} choosing={view.promptStatus.some((x) => x.seat === p.seat && !x.answered)} />
         ))}
       </aside>
 
@@ -159,15 +187,28 @@ export function BoardGame({ net, view }: { net: Net; view: BoardView }) {
           litTiles={lit}
           selected={pointer?.vertex ?? null}
           selectedColor={pointer ? colorOf(pointer.seat) : null}
+          bounce={fx.bounceVertex}
         />
+        {fx.dice && (
+          <div className={`fx-dice${fx.dice.spin ? " spin" : ""}`} aria-hidden>
+            <Die n={fx.dice.a} spin={fx.dice.spin} />
+            <Die n={fx.dice.b} spin={fx.dice.spin} />
+          </div>
+        )}
       </section>
 
       <aside className="orders">
+        {fx.ghosts.map((g) => (
+          <div key={g.key} className={`order ghost ${g.kind}`}>
+            <p className="text">{g.text}</p>
+            <p className="ghost-label">{g.label}</p>
+          </div>
+        ))}
         {!view.orders.revealed ? (
           <p className="note">ラウンド3の初めに3枚を表にします</p>
         ) : (
           view.orders.faceUp.map((o) => (
-            <div key={o.id} className={`order${o.isBonus ? " bonus" : ""}`} data-order={o.id}>
+            <div key={o.id} className={`order${o.isBonus ? " bonus" : ""}${fx.flipIn.includes(o.id) ? " flip-in" : ""}${fx.declared?.orderId === o.id ? " declared" : ""}`} data-order={o.id}>
               <p className="text">{o.text}</p>
               {o.picture && <span className="pic">{o.picture}</span>}
               <span className="left">
@@ -179,11 +220,11 @@ export function BoardGame({ net, view }: { net: Net; view: BoardView }) {
           ))
         )}
         {view.joint.faceUp.map((j) => (
-          <div key={j.id} className="order joint" data-joint={j.id}>
+          <div key={j.id} className={`order joint${fx.flipIn.includes(j.id) ? " flip-in" : ""}`} data-joint={j.id}>
             <p className="text">{j.text}</p>
             <ol className="rows">
               {j.rows.map((r, i) => (
-                <li key={i}>
+                <li key={i} className={fx.jointPop?.jointId === j.id && fx.jointPop.row === i ? "pop" : ""}>
                   {j.rowPoints[i]! / 2}点 {r ? <><Mark color={colorOf(r.seat)} /> {name(r.seat)}</> : "空き"}
                 </li>
               ))}
@@ -224,29 +265,95 @@ export function BoardGame({ net, view }: { net: Net; view: BoardView }) {
         )}
       </footer>
 
+      {(fx.declared || fx.reveal) && <FocusCard fx={fx} />}
+      {fx.banner && (
+        <div className="fx-banner" role="status">
+          <p>{fx.banner.text}</p>
+          {fx.banner.sub && <p className="sub">{fx.banner.sub}</p>}
+        </div>
+      )}
       {view.paused && <div className="paused-badge">一時停止中</div>}
       {panel && admin && <AdminPanel net={net} view={view} onClose={() => setPanel(false)} name={name} />}
     </main>
   );
 }
 
-function PlayerPanel({ p, turn, choosing }: { p: PublicPlayerView; turn: boolean; choosing: boolean }) {
+/** 宣言した注文のカードを手前に大きく出し、約3秒後に条件を開いて結果を出す（BD04 6章） */
+function FocusCard({ fx }: { fx: Fx }) {
+  const r = fx.reveal;
+  const text = r ? r.text : fx.declared!.text;
   return (
-    <div className={`pp${turn ? " turn" : ""}${p.connected ? "" : " off"}`} data-seat={p.seat}>
+    <div className="fx-focus" aria-hidden>
+      <div className={`focus-card${r ? (r.ok ? " ok" : " ng") : ""}`}>
+        <p className="text">{text}</p>
+        {r && (
+          <div className="fold">
+            <p className="cond">{r.cond}（{r.points}）</p>
+            <p className="verdict">{r.ok ? "成立" : "不成立"}</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const PIPS: Record<number, [number, number][]> = {
+  1: [[50, 50]],
+  2: [[28, 28], [72, 72]],
+  3: [[28, 28], [50, 50], [72, 72]],
+  4: [[28, 28], [72, 28], [28, 72], [72, 72]],
+  5: [[28, 28], [72, 28], [50, 50], [28, 72], [72, 72]],
+  6: [[28, 25], [72, 25], [28, 50], [72, 50], [28, 75], [72, 75]],
+};
+
+/** サイコロ。回っている間は目を変え続ける */
+function Die({ n, spin }: { n: number; spin: boolean }) {
+  const [face, setFace] = useState(n);
+  useEffect(() => {
+    if (!spin) {
+      setFace(n);
+      return;
+    }
+    const id = window.setInterval(() => setFace(1 + Math.floor(Math.random() * 6)), 80);
+    return () => window.clearInterval(id);
+  }, [spin, n]);
+  return (
+    <svg className="die" viewBox="0 0 100 100" width={120} height={120}>
+      <rect x={4} y={4} width={92} height={92} rx={18} fill="#fffdf6" stroke="#4a4036" strokeWidth={5} />
+      {PIPS[face]!.map(([x, y], i) => (
+        <circle key={i} cx={x} cy={y} r={9} fill={face === 1 ? "#c0392b" : "#2a2620"} />
+      ))}
+    </svg>
+  );
+}
+
+function PlayerPanel({ p, turn, choosing, fx }: { p: PublicPlayerView; turn: boolean; choosing: boolean; fx: Fx }) {
+  const coins = useCountUp(p.coins);
+  const floats = fx.floats[p.seat] ?? [];
+  const flash = fx.flashPlots[p.seat] ?? [];
+  return (
+    <div className={`pp${turn ? " turn" : ""}${p.connected ? "" : " off"}${fx.pulseSeat === p.seat ? " pulse" : ""}`} data-seat={p.seat}>
+      <div className="floats" aria-hidden>
+        {floats.map((f) => (
+          <span key={f.key} className="float">
+            {f.text}
+          </span>
+        ))}
+      </div>
       <div className="head">
         <Mark color={p.color} size={32} /> <span className="name">{p.name}</span>
         <span className="pts">{p.halfPoints / 2}点</span>
-        <span className="coins">コイン {p.coins}</span>
+        <span className={`coins${coins !== p.coins ? " counting" : ""}`}>コイン {coins}</span>
       </div>
       <div>
-        手札 {p.handCount}枚　無料券 {p.freeTickets}　拠点 {p.houses.length}
+        <span className={fx.glowHand.includes(p.seat) ? "glow" : ""}>手札 {p.handCount}枚</span>　無料券 {p.freeTickets}　拠点 {p.houses.length}
         {choosing && <span className="tag">選択中</span>}
         {!p.connected && <span className="tag">切断中</span>}
       </div>
       <div className="prod">{PRODUCTS.map((k) => `${k} ${p.products[k] ?? 0}`).join("  ")}</div>
       <div className="plots">
         {p.plots.map((x, i) => (
-          <span key={i} className="plot">
+          <span key={i} className={`plot${flash.includes(i) ? " flash" : ""}`}>
             {x.t === "empty" ? "空き" : x.t === "crop" ? x.crop : x.animal}
           </span>
         ))}

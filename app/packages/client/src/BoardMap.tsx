@@ -26,6 +26,8 @@ export interface BoardMapProps {
   litTiles?: number[];
   /** 交点を選んだとき。タップした位置に最も近い置ける交点を返す（BD04 3.3） */
   onSelect?: (vertex: number) => void;
+  /** 置いたばかりの拠点（一度跳ねさせる。BD04 6章） */
+  bounce?: number | null;
   /** 確認用に交点の番号を出す */
   showVertexIds?: boolean;
   /** 絵を使わず図形と文字で描く（M0 の確認用） */
@@ -72,6 +74,7 @@ export function BoardMap({
   selectedColor = null,
   litTiles = [],
   onSelect,
+  bounce = null,
   showVertexIds = false,
   plain = false,
 }: BoardMapProps) {
@@ -197,10 +200,12 @@ export function BoardMap({
         const c = COLOR_INFO[color];
         return (
           <g key={`b${vid}`} data-house={vid} transform={`translate(${px(v.x).toFixed(1)} ${py(v.y).toFixed(1)})`}>
-            <path d="M-19 10 L-19 -8 L0 -24 L19 -8 L19 10 Z" fill={c.hex} stroke="var(--line)" strokeWidth={3} />
-            <text x={0} y={7} textAnchor="middle" fontSize={16} style={{ fill: "#fff" }}>
-              {c.mark}
-            </text>
+            <g className={Number(vid) === bounce ? "bounce" : undefined}>
+              <path d="M-19 10 L-19 -8 L0 -24 L19 -8 L19 10 Z" fill={c.hex} stroke="var(--line)" strokeWidth={3} />
+              <text x={0} y={7} textAnchor="middle" fontSize={16} style={{ fill: "#fff" }}>
+                {c.mark}
+              </text>
+            </g>
           </g>
         );
       })}
