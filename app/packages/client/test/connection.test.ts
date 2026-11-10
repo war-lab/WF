@@ -1,7 +1,7 @@
 // 端末の側の接続の単体テスト（BD06 TC-SRV-13、13c と BD03 3.5、3.7）
 import { describe, expect, it } from "vitest";
 import type { ServerMsg } from "@word-farm/protocol";
-import { Connection, RETRY_MS, type KeyValue, type NetDeps, type SocketLike } from "../src/net/connection.ts";
+import { Connection, ENGINE_RETRY_MS, RETRY_MS, type KeyValue, type NetDeps, type SocketLike } from "../src/net/connection.ts";
 
 class FakeSocket implements SocketLike {
   sent: Record<string, unknown>[] = [];
@@ -207,5 +207,40 @@ describe("再接続と生存確認（BD03 3.5、3.7）", () => {
     b.env.last.recv({ t: "error", code: "TOKEN", message: "" });
     expect(b.c.state.status).toBe("needJoin");
     expect(b.env.durable.get(`wf:token:${ROOM}`)).toBeNull();
+  });
+});
+
+describe("エンジンの版が違って止まった部屋（BD05 2.10、BD06 DEV-05b）", () => {
+  it("止まった表示のまま間をおいてつなぎ直し、版が戻っていれば自動で再開する", () => {
+    const { env, c } = setup();
+    env.last.recv(welcome());
+    env.last.recv(view(4));
+    env.last.recv({ t: "error", code: "ENGINE_CHANGED", message: "記録の版 a、今の版 b" } as ServerMsg);
+    expect(c.state.status).toBe("engineChanged");
+    const n = env.sockets.length;
+    // つなぎ直しても版が違えば、止まった表示のまま（「再接続しています」に変わらない）
+    env.advance(ENGINE_RETRY_MS);
+    expect(env.sockets.length).toBe(n + 1);
+    expect(c.state.status).toBe("engineChanged");
+    env.last.onopen!();
+    env.last.recv({ t: "error", code: "ENGINE_CHANGED", message: "記録の版 a、今の版 b" } as ServerMsg);
+    expect(c.state.status).toBe("engineChanged");
+    // 版を戻したあとのつなぎ直しでは welcome が届き、再開する
+    env.advance(ENGINE_RETRY_MS);
+    env.last.onopen!();
+    env.last.recv(welcome());
+    expect(c.state.status).toBe("open");
+  });
+
+  it("つなぎ直しが開けなかったときも、止まった表示のまま試し続ける", () => {
+    const { env, c } = setup();
+    env.last.recv(welcome());
+    env.last.recv({ t: "error", code: "ENGINE_CHANGED", message: "" } as ServerMsg);
+    env.advance(ENGINE_RETRY_MS);
+    env.last.onclose!();
+    expect(c.state.status).toBe("engineChanged");
+    const n = env.sockets.length;
+    env.advance(ENGINE_RETRY_MS);
+    expect(env.sockets.length).toBe(n + 1);
   });
 });

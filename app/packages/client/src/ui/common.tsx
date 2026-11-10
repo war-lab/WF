@@ -133,6 +133,7 @@ export function NetCover({ state, since }: { state: NetState; since: number | nu
         <Cover>
           <p>エンジンの版が違うため、部屋を止めています。ホストに知らせてください</p>
           <p>{state.lastError?.message}</p>
+          <p>対処：記録を作った版に戻してデプロイし直してください（wrangler rollback）。戻すと、この画面は自動でつながり直します（BD05 2.10）</p>
         </Cover>
       );
     case "fatal":

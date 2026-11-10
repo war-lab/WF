@@ -54,6 +54,8 @@ export interface NetState {
 
 /** 再接続の間隔（BD03 3.5 の手順2）。1秒、2秒、4秒、以後は5秒おき */
 export const RETRY_MS = [1000, 2000, 4000, 5000];
+/** エンジンの版が違って止まった部屋に、つなぎ直しを試す間隔。版を戻すデプロイ（rollback）のあと、読み込み直さずに再開するため（BD06 DEV-05b） */
+export const ENGINE_RETRY_MS = 15_000;
 const PING_MS = 10_000;
 const PONG_WAIT_MS = 10_000;
 const VISIBLE_PONG_WAIT_MS = 3000;
@@ -69,6 +71,8 @@ export class Connection {
   private pongTimer: number | null = null;
   private pingN = 0;
   private stopped = false;
+  /** エンジンの版が違って止まった部屋を待っている間（表示は engineChanged のまま、つなぎ直しを試し続ける） */
+  private engineWait = false;
   private listeners = new Set<(s: NetState, m: ServerMsg | null) => void>();
 
   private d: NetDeps;
@@ -101,7 +105,7 @@ export class Connection {
 
   private connect(): void {
     if (this.stopped) return;
-    this.state.status = "connecting";
+    if (!this.engineWait) this.state.status = "connecting";
     const ws = this.d.open(this.opts.url);
     this.ws = ws;
     // 今の接続以外から届いたメッセージは無視する（BD03 3.5 の手順6）
@@ -129,6 +133,10 @@ export class Connection {
       this.ws = null;
       this.stopPing();
       if (this.stopped) return;
+      if (this.engineWait) {
+        this.d.setTimer(() => this.connect(), ENGINE_RETRY_MS);
+        return;
+      }
       this.state.status = "closed";
       this.emit(null);
       const wait = RETRY_MS[Math.min(this.tries, RETRY_MS.length - 1)]!;
@@ -161,6 +169,7 @@ export class Connection {
   private onMessage(m: ServerMsg): void {
     switch (m.t) {
       case "welcome":
+        this.engineWait = false;
         this.state.status = "open";
         this.state.welcome = m;
         if (m.token) this.d.durable.set(this.tokenKey, m.token);
@@ -208,8 +217,18 @@ export class Connection {
           this.state.status = "needJoin";
           this.stop();
         } else if (m.code === "ENGINE_CHANGED") {
+          // 止めたままにせず、間をおいてつなぎ直しを試す。版を戻すと、そのまま続きから再開する
           this.state.status = "engineChanged";
-          this.stop();
+          this.engineWait = true;
+          const ws = this.ws;
+          this.ws = null;
+          this.stopPing();
+          try {
+            ws?.close();
+          } catch {
+            // すでに切れている
+          }
+          this.d.setTimer(() => this.connect(), ENGINE_RETRY_MS);
         } else if (m.code === "VERSION" || m.code === "ROOM") {
           this.state.status = "fatal";
           this.stop();

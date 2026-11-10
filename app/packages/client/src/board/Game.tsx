@@ -86,7 +86,10 @@ function BoardGameView({ net, view }: { net: Net; view: BoardView }) {
   const name = (seat: number) => view.players[seat]?.name ?? `席${seat}`;
   const colorOf = (seat: number): Color => view.players[seat]?.color ?? "red";
 
-  useEffect(() => setReceivedAt(Date.now()), [view.rev]);
+  // 経過時間は「届いた elapsedMs＋届いてからの時間」で出す。届くたびに受け取った時刻を更新する。
+  // rev が変わったときだけ更新すると、再接続で同じ rev の状態が届いたときに、切れていた間を二重に数える
+  // （2026-11-10、本番の DEV-05 でデプロイ後に 0:04→1:12→0:39 と出た）
+  useEffect(() => setReceivedAt(Date.now()), [view]);
   // 届いたメッセージ：pointer、拒否、出来事の音
   useEffect(() => {
     const m = net.last;
